@@ -523,6 +523,77 @@ router.get('/coinflips', authenticateAdmin, (req, res) => {
   }
 });
 
+// Delete every user except POOpPANTSpro (+ their inventories, trades, offers).
+// OWNER ONLY. Used to reset the player base while keeping the owner account.
+router.post('/wipe-users', authenticateAdmin, (req, res) => {
+  try {
+    const who = String(req.user.robloxUsername || '').toLowerCase();
+    if (who !== 'pooppantspro') {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+    const usersDb = dbManager.getUsersDb();
+    const db = dbManager.getMainDb();
+
+    const doomed = (usersDb.users || []).filter(
+      (u) => String(u.robloxUsername || '').toLowerCase() !== 'pooppantspro'
+    );
+    const doomedIds = new Set(doomed.map((u) => u.id));
+
+    // Drop their inventories
+    let wipedInventories = 0;
+    const invs = db.inventories || [];
+    const invList = Array.isArray(invs) ? invs : Object.values(invs);
+    for (const inv of invList) {
+      const ownerId = inv.userId || inv.id;
+      if (ownerId && doomedIds.has(ownerId)) {
+        if (Array.isArray(inv.items) && inv.items.length > 0) wipedInventories++;
+        inv.items = [];
+        inv.totalValue = 0;
+      }
+    }
+
+    // Close trades they created, strip their offers from others' trades
+    let closedTrades = 0;
+    let strippedOffers = 0;
+    for (const t of db.trades || []) {
+      if (t.status !== 'open') continue;
+      if (doomedIds.has(t.creatorId)) {
+        t.status = 'cancelled';
+        t.updatedAt = new Date().toISOString();
+        closedTrades++;
+      } else if (Array.isArray(t.offers)) {
+        const before = t.offers.length;
+        t.offers = t.offers.filter((o) => !doomedIds.has(o.userId));
+        strippedOffers += before - t.offers.length;
+      }
+    }
+
+    usersDb.users = (usersDb.users || []).filter(
+      (u) => String(u.robloxUsername || '').toLowerCase() === 'pooppantspro'
+    );
+
+    dbManager.saveUsersDb();
+    dbManager.saveMainDb();
+
+    try {
+      const { emitToAll } = require('../realtime');
+      emitToAll('inventoryUpdate', { all: true });
+      emitToAll('tradeUpdate', { at: new Date().toISOString() });
+    } catch (_) { /* ignore */ }
+
+    res.json({
+      wipedUsers: doomed.length,
+      wipedInventories,
+      closedTrades,
+      strippedOffers,
+      remainingUsers: usersDb.users.length
+    });
+  } catch (error) {
+    console.error('Error wiping users:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Remove every inventory copy of items matching a name — OWNER ONLY.
 // Used to wipe a specific pet (e.g. "Bat Dragon (MFR)") from all users.
 router.post('/remove-item-everywhere', authenticateAdmin, (req, res) => {

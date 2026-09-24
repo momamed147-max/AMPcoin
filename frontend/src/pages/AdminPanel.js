@@ -87,6 +87,8 @@ function AdminPanel() {
   const [wipeName, setWipeName] = useState('');
   const [wipeArmed, setWipeArmed] = useState(false);
   const [wipeBusy, setWipeBusy] = useState(false);
+  const [wipeUsersArmed, setWipeUsersArmed] = useState(false);
+  const [wipeUsersBusy, setWipeUsersBusy] = useState(false);
   const navigate = useNavigate();
 
   const fetchAudits = async () => {
@@ -187,8 +189,41 @@ function AdminPanel() {
     }
   };
 
-  const handleWipeEverywhere = async () => {
-    const name = wipeName.trim();
+  const handleWipeUsers = async () => {
+    if (!wipeUsersArmed) {
+      setWipeUsersArmed(true);
+      setTimeout(() => setWipeUsersArmed(false), 6000);
+      return;
+    }
+    setWipeUsersArmed(false);
+    setWipeUsersBusy(true);
+    try {
+      const response = await retryRequest(() =>
+        fetch(`${API_BASE}/api/admin/wipe-users`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        })
+      );
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        showCustomPopup(`Wiped ${data.wipedUsers} users (${data.remainingUsers} left).`, 'success');
+        setSelectedUser(null);
+        const keep = (prev) => (prev || []).filter(
+          (u) => String(u.robloxUsername || '').toLowerCase() === 'pooppantspro'
+        );
+        setUsers(keep);
+        setAllUsers(keep);
+      } else {
+        setError(data.message || 'Wipe failed');
+      }
+    } catch (err) {
+      setError(`Wipe failed: ${err.message}`);
+    } finally {
+      setWipeUsersBusy(false);
+    }
+  };
+
+  const handleWipeEverywhere = async () => {    const name = wipeName.trim();
     if (!name) {
       setError('Type the exact pet name to wipe (e.g. Bat Dragon (MFR))');
       return;
@@ -1227,6 +1262,20 @@ function AdminPanel() {
                 <button type="button" className="btn btn-secondary" onClick={handleClearSearch}>
                   Clear
                 </button>
+                {isOwner && (
+                  <button
+                    type="button"
+                    className={`btn ${wipeUsersArmed ? 'btn-warning' : 'btn-danger'}`}
+                    onClick={handleWipeUsers}
+                    disabled={wipeUsersBusy}
+                  >
+                    {wipeUsersBusy
+                      ? 'Wiping...'
+                      : wipeUsersArmed
+                        ? 'Click again: delete ALL users except POOpPANTSpro'
+                        : 'Wipe all users'}
+                  </button>
+                )}
               </div>
 
               <div className="users-table">
