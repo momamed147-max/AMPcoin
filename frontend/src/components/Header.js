@@ -16,6 +16,9 @@ import {
 import './ModBadges.css';
 import './WalletModal.css';
 
+// Pets shown per page in the wallet so a big inventory stays readable
+const WM_PAGE_SIZE = 24;
+
 const DEFAULT_AVATAR = '/default-avatar.png';
 
 const Header = ({ balance, socket }) => {
@@ -29,6 +32,7 @@ const Header = ({ balance, socket }) => {
   const [wmSearch, setWmSearch] = useState('');
   const [wmSort, setWmSort] = useState('high-low');
   const [wmFilter, setWmFilter] = useState('all');
+  const [wmPage, setWmPage] = useState(1);
   const [modalMsg, setModalMsg] = useState('');
   const [invError, setInvError] = useState('');
   const [botInfo, setBotInfo] = useState(null); // { botUser, redirectLink, botEnabled, avatar }
@@ -310,6 +314,7 @@ const Header = ({ balance, socket }) => {
     setModalMsg('');
     setInvError('');
     setBotInfo(null);
+    setWmPage(1);
     setShowWalletModal(true);
     fetchInventory();
     fetchBotInfo();
@@ -360,10 +365,11 @@ const Header = ({ balance, socket }) => {
     );
   };
 
-  const toggleSelectAll = () => {
-    setSelectedUnits((prev) =>
-      prev.length === unitTiles.length ? [] : unitTiles.map((u) => u.unitKey)
-    );
+  // With pagination on, "select all" only ever touches the page on screen so a
+  // large inventory can never be cleared out by accident.
+  const togglePageSelectAll = (pageItems, allSelected) => {
+    const keys = pageItems.map((u) => u.unitKey);
+    setSelectedUnits((prev) => (allSelected ? prev.filter((k) => !keys.includes(k)) : [...new Set([...prev, ...keys])]));
   };
 
   const selectedValue = unitTiles
@@ -564,6 +570,19 @@ const Header = ({ balance, socket }) => {
           return true;
         });
         visible = [...visible].sort((a, b) => wmSort === 'low-high' ? getVal(a) - getVal(b) : getVal(b) - getVal(a));
+        // Paginate so a large inventory stays readable instead of one wall of pets
+        const totalPages = Math.max(1, Math.ceil(visible.length / WM_PAGE_SIZE));
+        const currentPage = Math.min(Math.max(1, wmPage), totalPages);
+        const pageItems = visible.slice((currentPage - 1) * WM_PAGE_SIZE, currentPage * WM_PAGE_SIZE);
+        const pageAllSelected = pageItems.length > 0 && pageItems.every((u) => selectedUnits.includes(u.unitKey));
+        const goToPage = (page) => {
+          const next = Math.min(Math.max(1, page), totalPages);
+          setWmPage(next);
+          if (typeof document !== 'undefined') {
+            const grid = document.querySelector('.wm-grid');
+            if (grid && grid.scrollIntoView) grid.scrollIntoView({ block: 'nearest' });
+          }
+        };
         return (
         <ModalPortal>
         <div className="wm-overlay" onClick={() => setShowWalletModal(false)}>
@@ -595,12 +614,12 @@ const Header = ({ balance, socket }) => {
                 type="text"
                 placeholder="Search for items"
                 value={wmSearch}
-                onChange={(e) => setWmSearch(e.target.value)}
+                onChange={(e) => { setWmSearch(e.target.value); setWmPage(1); }}
               />
               <select
                 className="wm-select"
                 value={wmSort}
-                onChange={(e) => setWmSort(e.target.value)}
+                onChange={(e) => { setWmSort(e.target.value); setWmPage(1); }}
               >
                 <option value="high-low">High to low</option>
                 <option value="low-high">Low to high</option>
@@ -608,7 +627,7 @@ const Header = ({ balance, socket }) => {
               <select
                 className="wm-select"
                 value={wmFilter}
-                onChange={(e) => setWmFilter(e.target.value)}
+                onChange={(e) => { setWmFilter(e.target.value); setWmPage(1); }}
               >
                 <option value="all">All items</option>
                 {rarities.map((r) => (
@@ -626,7 +645,7 @@ const Header = ({ balance, socket }) => {
               {invLoading ? (
                 <div className="wm-empty">Loading inventory...</div>
               ) : visible.length > 0 ? (
-                visible.map((unit) => {
+                pageItems.map((unit) => {
                   const isSelected = selectedUnits.includes(unit.unitKey);
                   const flagged = unit.withdrawOnly === true || unit.details?.withdrawOnly === true;
                   const showBadge = anyWithdrawOnly ? flagged : true;
@@ -669,9 +688,23 @@ const Header = ({ balance, socket }) => {
                 <div className="wm-empty">No items in your inventory</div>
               )}
             </div>
+            {totalPages > 1 && !invLoading && (
+              <div className="wm-pager">
+                <span className="wm-pager-count">
+                  Showing {((currentPage - 1) * WM_PAGE_SIZE) + 1}–{Math.min(currentPage * WM_PAGE_SIZE, visible.length)} of {visible.length}
+                </span>
+                <div className="wm-pager-controls">
+                  <button className="wm-page-btn" onClick={() => goToPage(1)} disabled={currentPage === 1} aria-label="First page">«</button>
+                  <button className="wm-page-btn" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1} aria-label="Previous page">‹</button>
+                  <span className="wm-page-label">Page {currentPage} of {totalPages}</span>
+                  <button className="wm-page-btn" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages} aria-label="Next page">›</button>
+                  <button className="wm-page-btn" onClick={() => goToPage(totalPages)} disabled={currentPage === totalPages} aria-label="Last page">»</button>
+                </div>
+              </div>
+            )}
             <div className="wm-footer">
-              <button className="wm-btn" onClick={toggleSelectAll}>
-                {selectedUnits.length === unitTiles.length && unitTiles.length > 0 ? 'Deselect All' : 'Select All'}
+              <button className="wm-btn" onClick={togglePageSelectAll(pageItems, pageAllSelected)}>
+                {pageAllSelected ? 'Deselect Page' : 'Select Page'}
               </button>
               <button
                 className="wm-btn wm-btn-deposit"
