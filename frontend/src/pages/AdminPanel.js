@@ -2,9 +2,17 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
 import ModeratorPanel from '../components/ModeratorPanel';
+import AdminPetsTab from '../components/AdminPetsTab';
 import ModalPortal from '../components/ModalPortal';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
+import {
+  MOD_BONUS as SHARED_MOD_BONUS,
+  MOD_LABELS as SHARED_MOD_LABELS,
+  normalizeMods as normalizePetMods,
+  baseValueOf as sharedBaseValueOf,
+  moddedValue as sharedModdedValue
+} from '../lib/petMods';
 import './AdminPanel.css';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
@@ -47,7 +55,7 @@ function FullAdminPanel() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
-  const [newPet, setNewPet] = useState({ name: '', value: 0, rarity: 'common', mods: [] });
+  const [newPet, setNewPet] = useState({ name: '', value: '', baseValue: '', rarity: 'common', description: '', imageUrl: '', mods: [] });
   const [selectedUser, setSelectedUser] = useState(null);
   const [userPets, setUserPets] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,7 +98,6 @@ function FullAdminPanel() {
   const [wipeUsersArmed, setWipeUsersArmed] = useState(false);
   const [wipeUsersBusy, setWipeUsersBusy] = useState(false);
 
-  const [petSearch, setPetSearch] = useState('');
   const [addUserPetSearch, setAddUserPetSearch] = useState('');
   const [viewTxItems, setViewTxItems] = useState(null); // item_withdrawal pets modal
   const [taxSettings, setTaxSettings] = useState({ taxEnabled: true, taxPercent: 15, taxRecipient: '' });
@@ -314,7 +321,7 @@ function FullAdminPanel() {
 
         try {
           const petsResponse = await retryRequest(() =>
-            fetch(`${API_BASE}/api/items`, {
+            fetch(`${API_BASE}/api/admin/items`, {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem('token')}`,
                 'Content-Type': 'application/json'
@@ -464,6 +471,7 @@ function FullAdminPanel() {
 
   const handleAddPet = async (e) => {
     e.preventDefault();
+    setError(null);
 
     if (!newPet.name || !newPet.rarity || newPet.value === '') {
       setError('Please fill in all required fields');
@@ -477,7 +485,7 @@ function FullAdminPanel() {
     }
 
     try {
-      const newMods = Array.isArray(newPet.mods) ? newPet.mods.filter((m) => MOD_BONUS[m]) : [];
+      const newMods = normalizePetMods(newPet.mods);
       const computedValue = moddedValue(numericValue, newMods);
       const response = await retryRequest(() =>
         fetch(`${API_BASE}/api/items`, {
@@ -497,8 +505,8 @@ function FullAdminPanel() {
 
       if (response.ok) {
         const result = await response.json();
-        setItems([...items, result.pet]);
-        setNewPet({ name: '', rarity: 'common', value: 0, imageUrl: '', mods: [] });
+        setItems((current) => [...current, result.pet]);
+        setNewPet({ name: '', value: '', baseValue: '', rarity: 'common', description: '', imageUrl: '', mods: [] });
         showCustomPopup('Pet added successfully!', 'success');
       } else {
         const errorData = await response.json();
@@ -510,19 +518,12 @@ function FullAdminPanel() {
     }
   };
 
-  // ---- Pet modifiers: F +5%, R +5%, M +20%, N +8% (stack on base value) ----
-  const MOD_BONUS = { F: 0.05, R: 0.05, M: 0.20, N: 0.08 };
-  const MOD_LABELS = { F: 'Fly', R: 'Ride', M: 'Mega', N: 'Neon' };
-
-  const petModsOf = (pet) => (Array.isArray(pet.mods) ? pet.mods.filter((m) => MOD_BONUS[m]) : []);
-  const petBaseOf = (pet) => {
-    const b = Number(pet.baseValue);
-    return !isNaN(b) && b >= 0 ? b : Number(pet.value || 0);
-  };
-  const moddedValue = (base, mods) => {
-    const mult = 1 + mods.reduce((s, m) => s + (MOD_BONUS[m] || 0), 0);
-    return Math.round(Number(base || 0) * mult);
-  };
+  // Pet modifier rules are shared with the catalog and value checker.
+  const MOD_BONUS = SHARED_MOD_BONUS;
+  const MOD_LABELS = SHARED_MOD_LABELS;
+  const petModsOf = (pet) => normalizePetMods(pet?.mods);
+  const petBaseOf = (pet) => sharedBaseValueOf(pet);
+  const moddedValue = (base, mods) => sharedModdedValue(base, mods);
 
   const togglePetMod = async (pet, mod) => {
     if (!MOD_BONUS[mod] || modBusyId) return;
@@ -719,6 +720,10 @@ function FullAdminPanel() {
   const handleViewUserPets = async (usr) => {
     setSelectedUser(usr);
     setEditDisplayName(usr.customDisplayName || '');
+    setSelectedPetIds([]);
+    setGiveMods([]);
+    setAddUserQty(1);
+    setAddUserPetSearch('');
     try {
       const response = await retryRequest(() =>
         fetch(`${API_BASE}/api/users/inventory/${usr.id}`, {
@@ -794,35 +799,30 @@ function FullAdminPanel() {
     const qty = Math.max(1, parseInt(addUserQty || 1, 10) || 1);
 
     setAddUserBusy(true);
-    let ok = 0;
-    let failed = 0;
     try {
-      for (const itemId of ids) {
-        try {
-          const response = await retryRequest(() =>
-            fetch(`${API_BASE}/api/admin/user/${selectedUser.id}/add-item`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${localStorage.getItem('token')}`
-              },
-              body: JSON.stringify({ itemId, quantity: qty, mods: giveMods })
-            })
-          );
-          if (response.ok) ok++;
-          else failed++;
-        } catch (e) {
-          failed++;
-        }
-      }
-      if (ok > 0) {
-        const modSuffix = giveMods.length > 0 ? ` with ${giveMods.join('')} (+${Math.round(giveMods.reduce((s, m) => s + (MOD_BONUS[m] || 0), 0) * 100)}%)` : '';
-        showCustomPopup(`Gave ${ids.length} item${ids.length === 1 ? '' : 's'} × ${qty} to ${displayUser(selectedUser)}${modSuffix}!`, 'success');
-        handleViewUserPets(selectedUser);
+      const response = await retryRequest(() =>
+        fetch(`${API_BASE}/api/admin/user/${selectedUser.id}/add-items`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({
+            items: ids.map((itemId) => ({ itemId, quantity: qty, mods: giveMods }))
+          })
+        })
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not give items');
+      const added = Array.isArray(data.added) ? data.added.length : 0;
+      if (added > 0) {
+        const modSuffix = giveMods.length > 0 ? ` with ${giveMods.join('')}` : '';
+        showCustomPopup(`Gave ${added} item${added === 1 ? '' : 's'} × ${qty} to ${displayUser(selectedUser)}${modSuffix}!`, 'success');
+        setUserPets(data.inventory?.items || userPets);
         setSelectedPetIds([]);
         setGiveMods([]);
       }
-      if (failed > 0) setError(`Failed for ${failed} item(s)`);
+      if (data.failed?.length) setError(`${data.failed.length} item${data.failed.length === 1 ? '' : 's'} could not be added.`);
     } catch (err) {
       console.error('Error adding items to user:', err);
       setError(`Error adding items to user: ${err.message}`);
@@ -831,29 +831,33 @@ function FullAdminPanel() {
     }
   };
 
-  const handleRemovePetFromUser = async (petId) => {
-    if (!selectedUser) {
+  const handleRemovePetFromUser = async (item) => {
+    if (!selectedUser || !item) {
       setError('No user selected');
       return;
     }
+    const petId = item.itemId || item.id;
+    const quantity = Math.max(1, parseInt(item.quantity || 1, 10) || 1);
+    if (!window.confirm(`Remove ${quantity} × ${item.name || item.itemName || 'pet'} from ${displayUser(selectedUser)}?`)) return;
 
     try {
       const response = await retryRequest(() =>
-        fetch(`${API_BASE}/api/admin/user/${selectedUser.id}/remove-pet/${petId}`, {
+        fetch(`${API_BASE}/api/admin/user/${selectedUser.id}/remove-pet/${encodeURIComponent(petId)}`, {
           method: 'DELETE',
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
             'Content-Type': 'application/json'
-          }
+          },
+          body: JSON.stringify({ quantity })
         })
       );
 
+      const data = await response.json().catch(() => ({}));
       if (response.ok) {
-        setUserPets(userPets.filter((pet) => pet.id !== petId));
-        showCustomPopup('Pet removed from user successfully!', 'success');
+        setUserPets(data.inventory?.items || userPets.filter((pet) => (pet.itemId || pet.id) !== petId));
+        showCustomPopup(`${quantity} pet${quantity === 1 ? '' : 's'} removed from ${displayUser(selectedUser)}.`, 'success');
       } else {
-        const errorData = await response.json();
-        setError(errorData.message || `Failed to remove pet from user: ${response.statusText}`);
+        setError(data.message || `Failed to remove pet from user: ${response.statusText}`);
       }
     } catch (err) {
       console.error('Error removing pet from user:', err);
@@ -1481,7 +1485,7 @@ function FullAdminPanel() {
                           </div>
                           <button
                             className="btn btn-danger"
-                            onClick={() => handleRemovePetFromUser(item.id)}
+                            onClick={() => handleRemovePetFromUser(item)}
                           >
                             Remove
                           </button>
@@ -1491,66 +1495,36 @@ function FullAdminPanel() {
                       <div className="empty-row">This user has no items</div>
                     )}
                   </div>
-                  <div className="add-pet-to-user">
-                    <input
-                      type="text"
-                      className="form-control"
-                      placeholder="Search items..."
-                      value={addUserPetSearch}
-                      onChange={(e) => setAddUserPetSearch(e.target.value)}
-                    />
-                    <select
-                      multiple
-                      size={5}
-                      className="form-control"
-                      value={selectedPetIds}
-                      onChange={(e) => setSelectedPetIds(Array.from(e.target.selectedOptions, (o) => o.value))}
-                      title="Hold Ctrl/Cmd to pick multiple items"
-                    >
-                      {items
-                        .filter((pet) => !addUserPetSearch || (pet.name || '').toLowerCase().includes(addUserPetSearch.toLowerCase()))
-                        .map((pet) => (
-                          <option key={pet.id} value={pet.id}>
-                            {pet.name} ({Number(pet.value || 0).toLocaleString()} AMP)
-                          </option>
-                        ))}
-                    </select>
-                    <input
-                      type="number"
-                      min="1"
-                      className="form-control add-user-qty"
-                      value={addUserQty}
-                      onChange={(e) => setAddUserQty(e.target.value)}
-                      title="How many of each selected item"
-                    />
-                    <div className="mod-btn-row give-mods">
-                      <span className="mod-row-label">Mods:</span>
-                      {['F', 'R', 'M', 'N'].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          className={`mod-btn small ${giveMods.includes(m) ? 'active' : ''}`}
-                          title={`${MOD_LABELS[m]} (+${Math.round(MOD_BONUS[m] * 100)}%)`}
-                          onClick={() => toggleGiveMod(m)}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                      {givePreview && (
-                        <span className="mod-preview">
-                          {givePreview.name} → {givePreview.value.toLocaleString()} AMP
-                        </span>
-                      )}
+                  <div className="give-picker">
+                    <div className="give-picker-heading">
+                      <div><span className="give-picker-kicker"><Icon name="gift" size={13} /> Give items</span><h4>Build a care package</h4><p>Select pets from the catalog, then tune the bundle before sending.</p></div>
+                      {selectedPetIds.length > 0 && <button type="button" className="give-clear-button" onClick={() => { setSelectedPetIds([]); setGiveMods([]); }}>Clear {selectedPetIds.length}</button>}
                     </div>
-                    <button
-                      className="btn btn-primary"
-                      onClick={handleAddPetToUser}
-                      disabled={addUserBusy || selectedPetIds.length === 0}
-                    >
-                      {addUserBusy
-                        ? 'Giving...'
-                        : `Add ${selectedPetIds.length} item${selectedPetIds.length === 1 ? '' : 's'} × ${addUserQty}`}
-                    </button>
+                    <div className="give-picker-search"><Icon name="search" size={15} /><input value={addUserPetSearch} onChange={(e) => setAddUserPetSearch(e.target.value)} placeholder="Search the pet catalog..." aria-label="Search pets to give" /></div>
+                    <div className="give-picker-grid">
+                      {items
+                        .filter((pet) => !addUserPetSearch || `${pet.name || ''} ${pet.description || ''}`.toLowerCase().includes(addUserPetSearch.toLowerCase()))
+                        .slice(0, 96)
+                        .map((pet) => {
+                          const selected = selectedPetIds.includes(pet.id || pet.itemId);
+                          return <button type="button" key={pet.id || pet.itemId} className={`give-picker-item ${selected ? 'selected' : ''}`} onClick={() => setSelectedPetIds((current) => selected ? current.filter((id) => id !== (pet.id || pet.itemId)) : [...current, pet.id || pet.itemId])}><img src={pet.imageUrl || pet.image || '/default-item.png'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.png'; }} /><span><strong>{pet.name || pet.itemName}</strong><small>{Number(pet.value || 0).toLocaleString()} AMP · {pet.rarity || 'common'}</small></span>{selected && <Icon name="check" size={14} />}</button>;
+                        })}
+                    </div>
+                    {items.filter((pet) => !addUserPetSearch || `${pet.name || ''} ${pet.description || ''}`.toLowerCase().includes(addUserPetSearch.toLowerCase())).length > 96 && <small className="give-picker-limit">Showing the first 96 matches — refine your search to narrow the catalog.</small>}
+                    <div className="give-selection-tray">
+                      <div className="give-selection-chips">
+                        {selectedPetIds.length === 0 ? <span className="give-empty-selection">No pets selected yet</span> : selectedPetIds.map((id) => {
+                          const pet = items.find((candidate) => (candidate.id || candidate.itemId) === id);
+                          return pet ? <button type="button" key={id} className="give-selection-chip" onClick={() => setSelectedPetIds((current) => current.filter((selectedId) => selectedId !== id))}><img src={pet.imageUrl || pet.image || '/default-item.png'} alt="" /><span>{pet.name || pet.itemName}</span><Icon name="close" size={11} /></button> : null;
+                        })}
+                      </div>
+                      <div className="give-controls-row">
+                        <label className="give-quantity"><span>Qty each</span><input type="number" min="1" value={addUserQty} onChange={(e) => setAddUserQty(e.target.value)} /></label>
+                        <div className="give-mod-controls"><span>Mods</span><div>{['F', 'R', 'M', 'N'].map((m) => <button type="button" key={m} className={giveMods.includes(m) ? 'active' : ''} onClick={() => toggleGiveMod(m)} title={MOD_LABELS[m]}>{m}</button>)}</div></div>
+                        <button type="button" className="btn btn-primary give-submit" onClick={handleAddPetToUser} disabled={addUserBusy || selectedPetIds.length === 0}>{addUserBusy ? 'Sending...' : `Give ${selectedPetIds.length} × ${addUserQty}`}</button>
+                      </div>
+                      {givePreview && <div className="give-preview-line"><Icon name="diamond" size={12} /> {givePreview.name} becomes <strong>{givePreview.value.toLocaleString()} AMP</strong> per unit</div>}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1558,175 +1532,25 @@ function FullAdminPanel() {
           )}
 
           {activeTab === 'pets' && (
-            <div className="manage-pets">
-              <div className="add-pet-form">
-                <h3>Add New Pet</h3>
-                <form onSubmit={handleAddPet}>
-                  <div className="form-group">
-                    <label className="form-label">Pet Name</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={newPet.name}
-                      onChange={(e) => setNewPet({ ...newPet, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Rarity</label>
-                    <select
-                      className="form-control"
-                      value={newPet.rarity}
-                      onChange={(e) => setNewPet({ ...newPet, rarity: e.target.value })}
-                    >
-                      <option value="common">Common</option>
-                      <option value="uncommon">Uncommon</option>
-                      <option value="rare">Rare</option>
-                      <option value="epic">Epic</option>
-                      <option value="legendary">Legendary</option>
-                      <option value="mythic">Mythic</option>
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Value (AMP) — base before modifiers</label>
-                    <input
-                      type="number"
-                      className="form-control"
-                      value={newPet.value}
-                      onChange={(e) => setNewPet({ ...newPet, value: parseInt(e.target.value) || 0 })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Modifiers</label>
-                    <div className="mod-btn-row">
-                      {['F', 'R', 'M', 'N'].map((m) => {
-                        const active = (newPet.mods || []).includes(m);
-                        return (
-                          <button
-                            key={m}
-                            type="button"
-                            className={`mod-btn ${active ? 'active' : ''}`}
-                            title={`${MOD_LABELS[m]} (+${Math.round(MOD_BONUS[m] * 100)}%)`}
-                            onClick={() => toggleNewPetMod(m)}
-                          >
-                            {m}
-                          </button>
-                        );
-                      })}
-                      <span className="mod-preview">
-                        → {moddedValue(parseFloat(newPet.value) || 0, newPet.mods || []).toLocaleString()} AMP
-                      </span>
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Image URL</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={newPet.imageUrl || ''}
-                      onChange={(e) => setNewPet({ ...newPet, imageUrl: e.target.value })}
-                    />
-                  </div>
-                  <button type="submit" className="btn btn-primary">Add Pet</button>
-                </form>
-              </div>
-
-              <div className="pets-list">
-                <h3>All Pets</h3>
-                {isOwner && (
-                  <div className="danger-zone">
-                    <button
-                      className={`btn ${purgeArmed ? 'btn-warning' : 'btn-danger'}`}
-                      onClick={handlePurgeCommons}
-                      disabled={purgeBusy}
-                    >
-                      {purgeBusy
-                        ? 'Deleting...'
-                        : purgeArmed
-                          ? 'Click again to confirm: delete ALL commons/uncommons'
-                          : 'Delete all Common + Uncommon pets'}
-                    </button>
-                    <div className="wipe-row">
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Pet name to wipe everywhere, e.g. Bat Dragon (MFR)"
-                        value={wipeName}
-                        onChange={(e) => setWipeName(e.target.value)}
-                      />
-                      <button
-                        className={`btn ${wipeArmed ? 'btn-warning' : 'btn-danger'}`}
-                        onClick={handleWipeEverywhere}
-                        disabled={wipeBusy}
-                      >
-                        {wipeBusy
-                          ? 'Wiping...'
-                          : wipeArmed
-                            ? 'Click again to confirm wipe'
-                            : 'Wipe from everyone'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-                <div className="search-bar">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Search items by name..."
-                    value={petSearch}
-                    onChange={(e) => setPetSearch(e.target.value)}
-                  />
-                </div>
-                <div className="inventory-grid">
-                  {items
-                    .filter((pet) => !petSearch || (pet.name || '').toLowerCase().includes(petSearch.toLowerCase()))
-                    .map((pet) => (
-                      <div key={pet.id} className="inventory-item">
-                        <img
-                          className="admin-thumb"
-                          src={pet.imageUrl || pet.image || '/default-item.png'}
-                          alt={pet.name || 'item'}
-                          onError={(e) => { e.target.src = '/default-item.png'; }}
-                        />
-                        <div className="inventory-item-info">
-                          <div className="item-name">{pet.name}</div>
-                          <div className="item-value">{Number(pet.value || 0).toLocaleString()} AMP</div>
-                          {petModsOf(pet).length > 0 && (
-                            <div className="mod-active-row">
-                              {petModsOf(pet).map((m) => (
-                                <span key={m} className="mod-tag" title={`${MOD_LABELS[m]} (+${Math.round(MOD_BONUS[m] * 100)}%)`}>{m}</span>
-                              ))}
-                              <span className="mod-base">base {petBaseOf(pet).toLocaleString()}</span>
-                            </div>
-                          )}
-                          <span className={`badge badge-${pet.rarity}`}>{pet.rarity}</span>
-                        </div>
-                        <div className="mod-btn-row">
-                          {['F', 'R', 'M', 'N'].map((m) => (
-                            <button
-                              key={m}
-                              type="button"
-                              className={`mod-btn small ${petModsOf(pet).includes(m) ? 'active' : ''}`}
-                              title={`${MOD_LABELS[m]} (+${Math.round(MOD_BONUS[m] * 100)}%)`}
-                              disabled={modBusyId === (pet.id || pet.itemId)}
-                              onClick={() => togglePetMod(pet, m)}
-                            >
-                              {m}
-                            </button>
-                          ))}
-                        </div>
-                        <button
-                          className="btn btn-danger"
-                          onClick={() => handleRemovePet(pet.id)}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
+            <AdminPetsTab
+              items={items}
+              newPet={newPet}
+              setNewPet={setNewPet}
+              onSubmit={handleAddPet}
+              onToggleNewMod={toggleNewPetMod}
+              onTogglePetMod={togglePetMod}
+              onRemovePet={handleRemovePet}
+              modBusyId={modBusyId}
+              isOwner={isOwner}
+              purgeBusy={purgeBusy}
+              purgeArmed={purgeArmed}
+              onPurge={handlePurgeCommons}
+              wipeName={wipeName}
+              setWipeName={setWipeName}
+              wipeBusy={wipeBusy}
+              wipeArmed={wipeArmed}
+              onWipe={handleWipeEverywhere}
+            />
           )}
 
           {activeTab === 'transactions' && (

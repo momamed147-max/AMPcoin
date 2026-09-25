@@ -1,5 +1,9 @@
 const { Pool } = require('pg');
 const { v4: uuidv4 } = require('uuid');
+const fs = require('fs');
+const path = require('path');
+
+const LOCAL_JSON_MODE = process.env.NODE_ENV !== 'production' && !process.env.DATABASE_URL;
 
 // ─── PostgreSQL connection ───────────────────────────────────────────
 const pool = new Pool({
@@ -45,6 +49,7 @@ async function initDatabase() {
         giveaways: [],
         notifications: [],
         adminLogs: [],
+        rpsMatches: [],
         settings: []
       },
       settings: {}
@@ -79,11 +84,53 @@ let db = {
   giveaways: [],
   notifications: [],
   adminLogs: [],
+  rpsMatches: [],
   settings: []
 };
 let settingsCache = {};
 
 let _loaded = false;
+
+function readLocalJson(fileName, fallback) {
+  try {
+    const filePath = path.join(__dirname, fileName);
+    if (!fs.existsSync(filePath)) return fallback;
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    console.warn(`[Local JSON] Could not read ${fileName}:`, error.message);
+    return fallback;
+  }
+}
+
+function loadLocalJson() {
+  const localUsers = readLocalJson('users.json', { users: [] });
+  const localItems = readLocalJson('items.json', { items: [] });
+  const localMain = readLocalJson('db.json', {});
+  usersDb = {
+    users: Array.isArray(localUsers.users) ? localUsers.users.map(normalizeUser).filter(Boolean) : []
+  };
+  itemsDb = Array.isArray(localItems.items) ? localItems : { items: [] };
+  db = {
+    coinflips: localMain.coinflips || [],
+    inventories: localMain.inventories || [],
+    transactions: localMain.transactions || [],
+    deposits: localMain.deposits || [],
+    withdrawals: localMain.withdrawals || [],
+    itemWithdrawals: localMain.itemWithdrawals || [],
+    pendingTransactions: localMain.pendingTransactions || [],
+    blackjackGames: localMain.blackjackGames || [],
+    jackpots: localMain.jackpots || [],
+    chatMessages: localMain.chatMessages || [],
+    giveaways: localMain.giveaways || [],
+    notifications: localMain.notifications || [],
+    adminLogs: localMain.adminLogs || [],
+    rpsMatches: localMain.rpsMatches || [],
+    settings: localMain.settings || {}
+  };
+  settingsCache = readLocalJson('settings.json', {});
+  _loaded = true;
+  console.log('[Local JSON] Loaded development data into memory (changes reset on restart)');
+}
 
 async function loadFromDatabase() {
   const client = await pool.connect();
@@ -112,6 +159,7 @@ async function loadFromDatabase() {
             giveaways: data?.giveaways || [],
             notifications: data?.notifications || [],
             adminLogs: data?.adminLogs || [],
+            rpsMatches: data?.rpsMatches || [],
             settings: data?.settings || {}
           };
           break;
@@ -129,6 +177,7 @@ async function loadFromDatabase() {
 
 // ─── Save helpers ────────────────────────────────────────────────────
 async function saveToStore(key, data) {
+  if (LOCAL_JSON_MODE) return Promise.resolve();
   const client = await pool.connect();
   try {
     await client.query(
@@ -195,6 +244,10 @@ function normalizeUser(user) {
 const dbManager = {
   // Init: connect + load everything into memory
   async init() {
+    if (LOCAL_JSON_MODE) {
+      loadLocalJson();
+      return;
+    }
     await initDatabase();
     await loadFromDatabase();
   },

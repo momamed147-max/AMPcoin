@@ -229,6 +229,25 @@ const AuthProvider = ({ children }) => {
   };
 
   // Step 2: backend issues a seven-word bio code
+  const devLogin = useCallback(async (username) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/dev-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) return { success: false, message: data.message || 'Local test login failed' };
+      localStorage.setItem('token', data.token);
+      const enhanced = enhanceUserWithRoblox(data.user, null);
+      persistUser(enhanced);
+      setUser(enhanced);
+      return { success: true, user: enhanced };
+    } catch (error) {
+      return { success: false, message: error.message || 'Local test login failed' };
+    }
+  }, [persistUser]);
+
   const requestVerifyCode = async (robloxUsername) => {
     try {
       const response = await fetch(`${API_BASE}/api/auth/verify-request`, {
@@ -312,6 +331,7 @@ const AuthProvider = ({ children }) => {
   const value = {
     user,
     login,
+    devLogin,
     register,
     resolveRobloxAccount,
     requestVerifyCode,

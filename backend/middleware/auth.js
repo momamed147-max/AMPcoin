@@ -10,10 +10,16 @@ const getBearerToken = (req) => {
 const findTokenUser = (decoded) => {
   const usersDb = dbManager.getUsersDb();
   if (!usersDb || !Array.isArray(usersDb.users)) return null;
-  return usersDb.users.find((user) =>
-    (decoded.userId && user.id === decoded.userId) ||
-    (decoded.robloxUsername && user.robloxUsername === decoded.robloxUsername)
-  );
+  // The token id is authoritative — a username match is only a fallback so a
+  // duplicate name can never resolve to the wrong account.
+  if (decoded.userId) {
+    const byId = usersDb.users.find((user) => user.id === decoded.userId);
+    if (byId) return byId;
+  }
+  if (decoded.robloxUsername) {
+    return usersDb.users.find((user) => user.robloxUsername === decoded.robloxUsername) || null;
+  }
+  return null;
 };
 
 const attachUser = (user) => {

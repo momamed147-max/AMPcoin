@@ -1042,6 +1042,9 @@ a.cf-tab { text-decoration: none; }
 .cf-join-modal img { max-width: 100%; }
 
 .cf-join-content { display: flex; gap: 0; flex: 1; min-height: 0; }
+.cf-rps-wager-note { display: flex; align-items: flex-start; gap: 7px; padding: 9px 10px; color: #c4b5fd; font-size: .68rem; line-height: 1.45; border: 1px solid rgba(155,124,255,.22); border-radius: 9px; background: rgba(139,92,246,.08); }
+.cf-rps-wager-note svg { flex: 0 0 auto; margin-top: 1px; }
+.cf-rps-wager-note span { color: var(--mut); }
 
 .cf-join-left {
   width: 300px;

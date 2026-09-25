@@ -27,6 +27,7 @@ function Sidebar() {
   const navItems = [
     { path: '/coinflip', label: 'Coinflip', icon: 'coin' },
     { path: '/jackpot', label: 'Jackpot', icon: 'jackpot' },
+    { path: '/rps', label: 'RPS', icon: 'rpsScissors' },
     { path: '/trading', label: 'Trading', icon: 'wave' },
     { path: '/stats', label: 'Stats', icon: 'chart' },
     { path: '/provably-fair', label: 'Fair', icon: 'shield' },

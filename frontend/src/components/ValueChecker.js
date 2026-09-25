@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
 import { playError } from '../sound';
+import { baseValueOf, moddedValue } from '../lib/petMods';
 import './ValueChecker.css';
 
 const RARITY_COLORS = {
@@ -21,9 +22,9 @@ const RARITY_LABELS = {
 };
 
 const valueForField = (item, field) => {
-  const base = Number(item.baseValue ?? item.value ?? 0);
-  if (field === 'neon') return Math.round(base * 1.18);
-  if (field === 'mega') return Math.round(base * 1.30);
+  const base = baseValueOf(item);
+  if (field === 'neon') return moddedValue(base, ['N']);
+  if (field === 'mega') return moddedValue(base, ['M']);
   return base;
 };
 

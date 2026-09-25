@@ -1,3 +1,15 @@
+.auth-dev-panel { margin-top: 20px; padding: 12px; border: 1px solid rgba(155,124,255,.25); border-radius: 11px; background: rgba(139,92,246,.07); }
+.auth-dev-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.auth-dev-heading > span { display: inline-flex; align-items: center; gap: 6px; color: #c4b5fd; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.auth-dev-heading small { color: var(--dim); font-size: .6rem; }
+.auth-dev-panel p { margin: 6px 0 9px; color: var(--mut); font-size: .7rem; line-height: 1.45; }
+.auth-dev-form { display: flex; gap: 6px; }
+.auth-dev-form input { min-width: 0; flex: 1; padding: 8px 9px; color: var(--txt); font-size: .74rem; border: 1px solid var(--line); border-radius: 7px; outline: 0; background: var(--bg0); }
+.auth-dev-form input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,.12); }
+.auth-dev-form .auth-btn-secondary { width: auto; flex: 0 0 auto; margin: 0; padding: 8px 9px; font-size: .67rem; }
+.auth-dev-note { display: block; margin-top: 7px; color: var(--dim); font-size: .6rem; line-height: 1.4; }
+@media (max-width: 440px) { .auth-dev-form { flex-direction: column; }.auth-dev-form .auth-btn-secondary { width: 100%; } }
+
 /* Auth page — premium centered card, refined inputs, glowing primary button */
 :root {
   --bg0:#070a11; --bg1:#0b0f17; --panel:#0e141d; --panel2:#121924;

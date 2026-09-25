@@ -10,6 +10,54 @@ const router = express.Router();
 
 const ROBLOX_THUMBNAIL_CACHE_TTL = 1000 * 60 * 60;
 
+// Development-only account shortcut for local RPS testing. It is unavailable
+// whenever a real database or production mode is configured.
+router.post('/dev-login', (req, res) => {
+  if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+    return res.status(404).json({ message: 'Not found' });
+  }
+  try {
+    const username = String(req.body?.username || '').trim();
+    const localAdmin = username.toLowerCase() === 'local-admin' || req.body?.admin === true;
+    if (!username || username.length > 32 || !/^[a-zA-Z0-9_ -]+$/.test(username)) {
+      return res.status(400).json({ message: 'Enter a simple local test username.' });
+    }
+    const usersDb = dbManager.getUsersDb();
+    if (!Array.isArray(usersDb.users)) usersDb.users = [];
+    let user = usersDb.users.find((candidate) => String(candidate.robloxUsername || '').toLowerCase() === username.toLowerCase());
+    if (!user) {
+      user = {
+        id: uuidv4(),
+        robloxUsername: username,
+        robloxDisplayName: username,
+        displayName: username,
+        balance: 100000,
+        isAdmin: localAdmin,
+        isModerator: false,
+        isActive: true,
+        isBanned: false,
+        isFrozen: false,
+        isMuted: false,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      usersDb.users.push(user);
+      dbManager.saveUsersDb();
+    } else if (localAdmin) {
+      user.isAdmin = true;
+      user.updatedAt = new Date().toISOString();
+      dbManager.saveUsersDb();
+    }
+    const token = jwt.sign({ userId: user.id, robloxUsername: user.robloxUsername }, jwtSecret(), { expiresIn: '12h' });
+    const { password: _password, ...safeUser } = user;
+    res.json({ token, user: safeUser, localTest: true });
+  } catch (error) {
+    console.error('Local test login error:', error);
+    res.status(500).json({ message: 'Could not create local test account' });
+  }
+});
+
 async function getRobloxUserIdFromUsername(robloxUsername) {
   try {
     const https = require('https');

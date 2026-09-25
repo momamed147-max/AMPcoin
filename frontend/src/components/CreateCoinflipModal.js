@@ -10,7 +10,9 @@ import './ModBadges.css';
 import '../pages/CoinflipPage.css';
 import './CreateCoinflipModal.css';
 
-const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, userInventory }) => {
+const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, userInventory, gameType = 'coinflip', match = null }) => {
+  const isRps = gameType === 'rps' || gameType === 'rps-join';
+  const isRpsJoin = gameType === 'rps-join';
   const [selectedQty, setSelectedQty] = useState({}); // stackKey -> units selected
   const [selectedSide, setSelectedSide] = useState('heads');
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,13 +87,21 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
 
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/coinflip`, {
+      const rpsEndpoint = isRpsJoin ? `/api/rps/matches/${match?.id}/join` : '/api/rps';
+      const response = await fetch(`${API_BASE}${isRps ? rpsEndpoint : '/api/coinflip'}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({
+        body: JSON.stringify(isRps ? {
+          selectedItems: selectedEntries.map(({ item, qty }) => ({
+            itemId: item.itemId || item.id,
+            name: item.details?.name || item.name,
+            quantity: qty,
+            value: item.value || item.details?.value || 0
+          }))
+        } : {
           selectedItems: selectedEntries.map(({ item, qty }) => ({
             itemId: item.itemId || item.id,
             name: item.details?.name || item.name,
@@ -115,8 +125,8 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
           try { onCreated(data); } catch (e) { console.error('onCreated handler failed:', e); }
         }
 
-        // Update user balance
-        if (setBalance) {
+        // Coinflip displays a cash balance; RPS wagers inventory only.
+        if (!isRps && setBalance) {
           const totalWagered = getTotalValue();
           setBalance(prev => prev - totalWagered);
         }
@@ -126,12 +136,12 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
         if (response.status === 429) {
           showNotice('Too many requests — slow down a few seconds and try again.', 'error');
         } else {
-          showNotice(data.message || 'Failed to create coinflip', 'error');
+          showNotice(data.message || (isRps ? 'Failed to update the RPS bet' : 'Failed to create coinflip'), 'error');
         }
       }
     } catch (error) {
-      console.error('Error creating coinflip:', error);
-      showNotice('Error creating coinflip', 'error');
+      console.error(`Error creating ${isRps ? 'RPS bet' : 'coinflip'}:`, error);
+      showNotice(`Error creating ${isRps ? 'RPS bet' : 'coinflip'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -173,16 +183,16 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
     return (
       <ModalPortal>
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Create coinflip">
+        <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={isRps ? 'RPS bet' : 'Create coinflip'}>
           <div className="modal-header">
-            <h2>Create Coinflip Game</h2>
+            <h2>{isRps ? (isRpsJoin ? 'Join RPS Bet' : 'Create RPS Bet') : 'Create Coinflip Game'}</h2>
             <button className="close-modal" onClick={onClose} aria-label="Close create bet">
               <Icon name="close" size={18} />
             </button>
           </div>
           <div className="loading-container">
             <div className="loading-spinner"></div>
-            <p>Loading...</p>
+            <p>{isRps ? 'Preparing your items...' : 'Loading...'}</p>
           </div>
         </div>
       </div>
@@ -200,7 +210,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
           onClose={() => setNotice(null)}
         />
       )}
-      <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Create coinflip">
+      <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={isRps ? 'RPS bet' : 'Create coinflip'}>
         <button className="cf-modal-close" onClick={onClose} aria-label="Close">
           <Icon name="close" size={15} />
         </button>
@@ -209,15 +219,23 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
           {/* Left: your side + limits + select controls */}
           <div className="cf-join-left">
             <div className="cf-join-vs-head">
-              <span className="cf-join-vs-label">CREATE BET</span>
+              <span className="cf-join-vs-label">{isRps ? (isRpsJoin ? 'JOIN RPS BET' : 'POST RPS BET') : 'CREATE BET'}</span>
               <div className="cf-join-vs-total">
                 <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {getTotalValue().toLocaleString()}
                 <span className="cf-join-vs-sub">{selectedCount} items selected</span>
               </div>
             </div>
 
-            <div className="cf-create-opt-group">
-              <div className="cf-join-bet-items-title">YOUR SIDE</div>
+            {isRps && (
+              <div className="cf-rps-wager-note">
+                <Icon name="info" size={14} />
+                <span>{isRpsJoin ? `Join with ${Number(match?.minJoinValue || 0).toLocaleString()}–${Number(match?.maxJoinValue || 0).toLocaleString()} AMP. Your side is chosen after joining.` : 'Your items are escrowed while you wait for a challenger. No side is picked yet.'}</span>
+              </div>
+            )}
+
+            {!isRps && (<>
+              <div className="cf-create-opt-group">
+                <div className="cf-join-bet-items-title">YOUR SIDE</div>
               <div className="cf-create-side-row">
                 <button
                   type="button"
@@ -289,6 +307,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
                 </div>
               </div>
             </div>
+            </>)}
 
             <div className="cf-create-opt-group">
               <div className="cf-join-bet-items-title">SELECT</div>
@@ -419,7 +438,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
               onClick={handleCreateCoinflip}
               disabled={selectedCount === 0 || loading}
             >
-              {loading ? 'Creating...' : `Create Game (${getTotalValue().toLocaleString()} AMP)`}
+              {loading ? (isRps ? 'Posting...' : 'Creating...') : isRps ? `${isRpsJoin ? 'Join' : 'Post'} RPS Bet (${getTotalValue().toLocaleString()} AMP)` : `Create Game (${getTotalValue().toLocaleString()} AMP)`}
             </button>
           </div>
         </div>

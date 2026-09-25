@@ -230,6 +230,8 @@ const Header = ({ balance, socket }) => {
         return { title: 'Jackpot', subtitle: 'Winner takes the pot', icon: 'jackpot' };
       case '/coinflip':
         return { title: 'Coinflip', subtitle: 'Head-to-head item bets', icon: 'coin' };
+      case '/rps':
+        return { title: 'RPS Arena', subtitle: 'Rock, Paper, Scissors — item bets', icon: 'rpsScissors' };
       case '/trading':
         return { title: 'Trading', subtitle: 'Secure player-to-player trades', icon: 'wave' };
       case '/leaderboard':

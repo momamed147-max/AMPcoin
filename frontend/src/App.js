@@ -9,6 +9,7 @@ import Header from './components/Header';
 import Logo from './components/Logo';
 import CoinflipPage from './pages/CoinflipPage';
 import JackpotPage from './pages/JackpotPage';
+import RpsPage from './pages/RpsPage';
 import TradingPage from './pages/TradingPage';
 import StatsPage from './pages/StatsPage';
 import ProvablyFairPage from './pages/ProvablyFairPage';
@@ -171,6 +172,7 @@ function AppContent() {
               <Route path="/" element={user ? <Navigate to="/coinflip" replace /> : <Navigate to="/login" replace />} />
               <Route path="/coinflip" element={<ProtectedRoute><CoinflipPage socket={socket} setBalance={setBalance} /></ProtectedRoute>} />
               <Route path="/jackpot" element={<ProtectedRoute><JackpotPage socket={socket} setBalance={setBalance} /></ProtectedRoute>} />
+              <Route path="/rps" element={<ProtectedRoute><RpsPage socket={socket} /></ProtectedRoute>} />
               <Route path="/trading" element={<ProtectedRoute><TradingPage socket={socket} /></ProtectedRoute>} />
               <Route path="/blackjack" element={<ProtectedRoute><JackpotPage socket={socket} setBalance={setBalance} /></ProtectedRoute>} />
               <Route path="/wallet" element={<ProtectedRoute><Navigate to="/coinflip" replace /></ProtectedRoute>} />

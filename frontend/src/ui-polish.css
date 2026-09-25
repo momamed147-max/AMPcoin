@@ -2228,6 +2228,67 @@ textarea:focus,
   .modal-actions { padding: 16px !important; }
 }
 
+/* Motion polish for the primary game surfaces */
+.app::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .55;
+  background:
+    radial-gradient(420px 180px at 8% 20%, rgba(76,141,255,.07), transparent 72%),
+    radial-gradient(520px 220px at 92% 72%, rgba(139,92,246,.045), transparent 74%);
+  animation: ambient-breathe 12s ease-in-out infinite alternate;
+}
+@keyframes ambient-breathe { from { transform: translate3d(-1%, -.5%, 0) scale(1); } to { transform: translate3d(1%, .5%, 0) scale(1.04); } }
+
+.sidebar .nav-link,
+.cf-tab,
+.jp-tab,
+.tr-tab {
+  transition: color .18s ease, background .18s ease, transform .18s var(--ease), border-color .18s ease;
+}
+.sidebar .nav-link:hover,
+.cf-tab:hover:not(:disabled),
+.jp-tab:hover:not(:disabled),
+.tr-tab:hover:not(:disabled) { transform: translateY(-1px); }
+
+.btn-primary,
+.cf-topbar-btn,
+.jp-btn-primary,
+.rps-find-button {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.btn-primary::after,
+.cf-topbar-btn::after,
+.jp-btn-primary::after,
+.rps-find-button::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 -45%;
+  z-index: -1;
+  width: 32%;
+  transform: skewX(-18deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.2), transparent);
+  transition: left .45s ease;
+}
+.btn-primary:hover::after,
+.cf-topbar-btn:hover::after,
+.jp-btn-primary:hover::after,
+.rps-find-button:hover::after { left: 120%; }
+
+.cf-row,
+.jp-history-item,
+.tr-card,
+.wm-card,
+.rps-main-card { will-change: transform; }
+.cf-row:hover,
+.jp-history-item:hover,
+.tr-card:hover { transform: translateY(-2px); }
+
 /* Respect motion and energy preferences */
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }

@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateAdmin, authenticateStaff } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
+const { normalizeMods, baseValueOf, moddedValue } = require('../lib/petMods');
 
 function serializeStaffUser(user, includePrivateFields = false) {
   const { password, ...safeUser } = user;
@@ -429,32 +430,22 @@ router.post('/user/:userId/add-item', authenticateAdmin, (req, res) => {
       return res.status(404).json({ message: 'Item not found' });
     }
 
-    // Optional pet modifiers: F +5%, R +5%, M +20%, N +8% on base value.
-    // Modded copies get a distinct itemId suffix so they stack separately
-    // from unmodded copies in the user's inventory.
-    const MOD_BONUS = { F: 0.05, R: 0.05, M: 0.20, N: 0.08 };
-    let cleanMods = Array.isArray(mods) ? [...new Set(mods)].filter((m) => MOD_BONUS[m]) : [];
-    // M = Mega+Fly+Ride, N = Neon+Fly+Ride; M and N mutually exclusive (Mega wins)
-    if (cleanMods.includes('M')) cleanMods = [...cleanMods.filter((m) => m !== 'N'), 'M', 'F', 'R'];
-    else if (cleanMods.includes('N')) cleanMods = [...cleanMods, 'N', 'F', 'R'];
-    cleanMods = [...new Set(cleanMods)];
-    // Display order: M/N first, then F, then R (e.g. MFR, NFR)
+    // Optional pet modifiers get a distinct itemId suffix so copies stack
+    // separately in the target inventory.
+    const cleanMods = normalizeMods(mods);
     const ORDER = { M: 0, N: 0, F: 1, R: 2 };
     cleanMods.sort((a, b) => (ORDER[a] ?? 3) - (ORDER[b] ?? 3));
     let itemToGive = item;
     if (cleanMods.length > 0) {
-      const base = Number(item.baseValue);
-      const baseValue = (!isNaN(base) && base >= 0) ? base : Number(item.value || 0);
-      const mult = 1 + cleanMods.reduce((s, m) => s + MOD_BONUS[m], 0);
-      const moddedValue = Math.round(baseValue * mult);
+      const baseValue = baseValueOf(item);
       const suffix = cleanMods.join('');
       itemToGive = {
         ...item,
         itemId: `${item.itemId || item.id}:${suffix}`,
         id: `${item.id || item.itemId}:${suffix}`,
-        name: `${item.name || item.itemName}${cleanMods.length ? ` (${cleanMods.join('')})` : ''}`,
-        itemName: `${item.itemName || item.name}${cleanMods.length ? ` (${cleanMods.join('')})` : ''}`,
-        value: moddedValue,
+        name: `${item.name || item.itemName} (${suffix})`,
+        itemName: `${item.itemName || item.name} (${suffix})`,
+        value: moddedValue(baseValue, cleanMods),
         baseValue,
         mods: cleanMods
       };
@@ -489,6 +480,67 @@ router.post('/user/:userId/add-item', authenticateAdmin, (req, res) => {
   }
 });
 
+// Add several catalog items to a user in one admin action.
+router.post('/user/:userId/add-items', authenticateAdmin, (req, res) => {
+  try {
+    const { userId } = req.params;
+    const requested = Array.isArray(req.body?.items) ? req.body.items.slice(0, 100) : [];
+    if (requested.length === 0) return res.status(400).json({ message: 'Select at least one pet to add' });
+
+    const usersDb = dbManager.getUsersDb();
+    const user = (usersDb.users || []).find((candidate) => candidate.id === userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const itemsDb = dbManager.getItemsDb();
+    const added = [];
+    const failed = [];
+    const order = { M: 0, N: 0, F: 1, R: 2 };
+
+    for (const entry of requested) {
+      const item = (itemsDb.items || []).find((candidate) => candidate.id === entry.itemId || candidate.itemId === entry.itemId);
+      const quantity = Math.min(1000, Math.max(1, parseInt(entry.quantity || 1, 10) || 1));
+      if (!item) {
+        failed.push({ itemId: entry.itemId, message: 'Pet not found' });
+        continue;
+      }
+      const mods = normalizeMods(entry.mods);
+      mods.sort((a, b) => (order[a] ?? 3) - (order[b] ?? 3));
+      const itemToGive = mods.length
+        ? {
+            ...item,
+            itemId: `${item.itemId || item.id}:${mods.join('')}`,
+            id: `${item.id || item.itemId}:${mods.join('')}`,
+            name: `${item.name || item.itemName} (${mods.join('')})`,
+            itemName: `${item.itemName || item.name} (${mods.join('')})`,
+            baseValue: baseValueOf(item),
+            mods,
+            value: moddedValue(baseValueOf(item), mods)
+          }
+        : item;
+      dbManager.addItemToUserInventory(userId, itemToGive, quantity);
+      added.push({ itemId: item.id, name: item.name, quantity, mods });
+    }
+
+    const db = dbManager.getMainDb();
+    db.adminLogs = db.adminLogs || [];
+    db.adminLogs.push({
+      id: uuidv4(),
+      adminId: req.user.userId,
+      adminUsername: req.user.robloxUsername,
+      action: 'add_items_to_user',
+      targetUserId: userId,
+      targetUsername: user.robloxUsername,
+      items: added,
+      timestamp: new Date().toISOString()
+    });
+    dbManager.saveMainDb();
+    res.json({ added, failed, inventory: dbManager.getUserInventory(userId) });
+  } catch (error) {
+    console.error('Error adding multiple items to user:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // Alias for add-pet to user inventory
 router.post('/user/:userId/add-pet', authenticateAdmin, (req, res) => {
   const { userId } = req.params;
@@ -507,29 +559,20 @@ router.post('/user/:userId/add-pet', authenticateAdmin, (req, res) => {
     return res.status(404).json({ message: 'Pet not found' });
   }
 
-  const MOD_BONUS = { F: 0.05, R: 0.05, M: 0.20, N: 0.08 };
-  let cleanMods = Array.isArray(mods) ? [...new Set(mods)].filter((m) => MOD_BONUS[m]) : [];
-    // M = Mega+Fly+Ride, N = Neon+Fly+Ride; M and N mutually exclusive (Mega wins)
-    if (cleanMods.includes('M')) cleanMods = [...cleanMods.filter((m) => m !== 'N'), 'M', 'F', 'R'];
-    else if (cleanMods.includes('N')) cleanMods = [...cleanMods, 'N', 'F', 'R'];
-    cleanMods = [...new Set(cleanMods)];
-    // Display order: M/N first, then F, then R (e.g. MFR, NFR)
-    const ORDER = { M: 0, N: 0, F: 1, R: 2 };
-    cleanMods.sort((a, b) => (ORDER[a] ?? 3) - (ORDER[b] ?? 3));
+  const cleanMods = normalizeMods(mods);
+  const ORDER = { M: 0, N: 0, F: 1, R: 2 };
+  cleanMods.sort((a, b) => (ORDER[a] ?? 3) - (ORDER[b] ?? 3));
   let itemToGive = item;
   if (cleanMods.length > 0) {
-    const base = Number(item.baseValue);
-    const baseValue = (!isNaN(base) && base >= 0) ? base : Number(item.value || 0);
-    const mult = 1 + cleanMods.reduce((s, m) => s + MOD_BONUS[m], 0);
-    const moddedValue = Math.round(baseValue * mult);
+    const baseValue = baseValueOf(item);
     const suffix = cleanMods.join('');
     itemToGive = {
       ...item,
       itemId: `${item.itemId || item.id}:${suffix}`,
       id: `${item.id || item.itemId}:${suffix}`,
-      name: `${item.name || item.itemName}${cleanMods.length ? ` (${cleanMods.join('')})` : ''}`,
-      itemName: `${item.itemName || item.name}${cleanMods.length ? ` (${cleanMods.join('')})` : ''}`,
-      value: moddedValue,
+      name: `${item.name || item.itemName} (${suffix})`,
+      itemName: `${item.itemName || item.name} (${suffix})`,
+      value: moddedValue(baseValue, cleanMods),
       baseValue,
       mods: cleanMods
     };

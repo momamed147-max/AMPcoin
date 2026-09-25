@@ -79,6 +79,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
   const [activeCount, setActiveCount] = useState(0);
   const [totalInGames, setTotalInGames] = useState(0);
   const [jackpotCount, setJackpotCount] = useState(0);
+  const [rpsCount, setRpsCount] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -179,6 +180,19 @@ const CoinflipPage = ({ socket, setBalance }) => {
     } catch (_) { /* ignore */ }
   }, []);
 
+  // Fetch open RPS bet count for the tab badge
+  const fetchRpsCount = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/rps/lobby`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setRpsCount(Array.isArray(data.matches) ? data.matches.length : 0);
+      }
+    } catch (_) { /* ignore */ }
+  }, []);
+
   // Fetch user inventory
   const fetchInventory = useCallback(async () => {
     if (!user) return;
@@ -201,6 +215,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
     fetchCoinflips();
     fetchInventory();
     fetchJackpotCount();
+    fetchRpsCount();
     if (socket) {
       socket.on('newCoinflip', (data) => {
         if (data && data.id) {
@@ -238,6 +253,9 @@ const CoinflipPage = ({ socket, setBalance }) => {
         }
       });
       socket.on('inventoryUpdate', () => fetchInventory());
+      socket.on('rpsLobbyUpdate', (data) => {
+        setRpsCount(data && Array.isArray(data.matches) ? data.matches.length : 0);
+      });
     }
     return () => {
       if (socket) {
@@ -247,9 +265,10 @@ const CoinflipPage = ({ socket, setBalance }) => {
         socket.off('coinflipResult');
         socket.off('coinflipCancelled');
         socket.off('inventoryUpdate');
+        socket.off('rpsLobbyUpdate');
       }
     };
-  }, [socket, user, fetchCoinflips, fetchInventory, fetchJackpotCount]);
+  }, [socket, user, fetchCoinflips, fetchInventory, fetchJackpotCount, fetchRpsCount]);
 
   const playChipFlip = (gameData) => {
     if (!gameData || !gameData.id) return;
@@ -613,6 +632,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
             <span className="cf-tab-label"><Icon name="jackpot" size={12} /> Jackpot</span>
             <span className="cf-tab-count">{jackpotCount}</span>
           </Link>
+          <Link to="/rps" className="cf-tab"><span className="cf-tab-label"><Icon name="rpsScissors" size={12} /> RPS</span><span className="cf-tab-count">{rpsCount}</span></Link>
           <span className="cf-tab-divider" />
           <button className="cf-tab cf-tab-disabled" disabled title="Coming soon">
             <span className="cf-tab-label"><Icon name="shop" size={12} /> Market</span>

@@ -117,6 +117,7 @@ app.use('/api/giveaways', giveawayRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/rps', require('./backend/routes/rps'));
 
 // Serve frontend for all other routes — AFTER API routes
 const frontendBuild = path.join(__dirname, 'frontend', 'build');
@@ -158,6 +159,7 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
+const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 
 // Initialize PostgreSQL then start server
 async function start() {
@@ -219,8 +221,8 @@ async function start() {
     process.exit(1);
   }
 
-  server.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  server.listen(PORT, HOST, () => {
+    console.log(`Server running on ${HOST}:${PORT}`);
   });
 }
 

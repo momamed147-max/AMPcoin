@@ -6,15 +6,19 @@ import Logo from '../components/Logo';
 import { playError } from '../sound';
 import './AuthPage.css';
 
+const LOCAL_DEV_TOOLS = process.env.NODE_ENV !== 'production';
+
 const LoginPage = () => {
   const [step, setStep] = useState(1); // 1 = username, 2 = bio code
   const [robloxUsername, setRobloxUsername] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [copyStatus, setCopyStatus] = useState('');
+  const [devName, setDevName] = useState('local-player-1');
+  const [devLoading, setDevLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { requestVerifyCode, verifyAndRegister, loading: authLoading } = useAuth();
+  const { requestVerifyCode, verifyAndRegister, devLogin, loading: authLoading } = useAuth();
 
   const showLoginError = (message) => {
     setError(message);
@@ -60,6 +64,17 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDevLogin = async (event) => {
+    event.preventDefault();
+    if (!devName.trim()) return;
+    setDevLoading(true);
+    setError('');
+    const result = await devLogin(devName.trim());
+    setDevLoading(false);
+    if (result.success) navigate('/rps');
+    else showLoginError(result.message || 'Local test login failed');
   };
 
   const copyCode = async () => {
@@ -145,6 +160,18 @@ const LoginPage = () => {
               ← Use a different username
             </button>
           </form>
+        )}
+
+        {LOCAL_DEV_TOOLS && (
+          <div className="auth-dev-panel">
+            <div className="auth-dev-heading"><span><Icon name="target" size={13} /> Local test mode</span><small>RPS only</small></div>
+            <p>Use a throwaway local account to test the arena without Roblox verification.</p>
+            <form onSubmit={handleDevLogin} className="auth-dev-form">
+              <input value={devName} onChange={(event) => setDevName(event.target.value)} placeholder="local-player-1" aria-label="Local test username" maxLength={32} />
+              <button type="submit" className="auth-btn-secondary" disabled={devLoading}>{devLoading ? 'Starting...' : 'Use local account'}</button>
+            </form>
+            <small className="auth-dev-note">Open a second browser profile with another name to test 1v1 RPS.</small>
+          </div>
         )}
       </div>
     </div>
