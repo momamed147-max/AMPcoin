@@ -106,7 +106,7 @@
 
 /* Section labels */
 .admin-dashboard + h3, .recent-activity h3, .user-pets-section h3,
-.manage-pets h3, .admin-taxes h3, .admin-settings h3, .admin-audit h3 {
+.manage-pets h3, .admin-taxes h3, .admin-settings h3 {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .08em;
@@ -410,41 +410,6 @@ select.form-control[multiple] { min-height: 130px; }
 .danger-zone { margin-bottom: 12px; padding: 14px; border: 1px solid rgba(248,81,73,.3); border-radius: var(--r-md); background: rgba(248,81,73,.04); }
 .wipe-row { display: flex; gap: 8px; margin-top: 8px; }
 .wipe-row .form-control { flex: 1; }
-
-/* Seed audit */
-.admin-audit { padding: 4px 0; }
-.audit-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
-.audit-header h3 { color: var(--txt); font-size: 1rem; margin: 0; }
-.audit-sub { color: var(--mut); font-size: .8rem; margin: 0 0 14px 0; }
-.audit-actions { display: flex; gap: 8px; flex-shrink: 0; }
-.audit-list { display: flex; flex-direction: column; gap: 8px; }
-.audit-row {
-  display: flex; align-items: center; gap: 12px; padding: 10px 14px;
-  background: var(--bg1); border: 1px solid var(--line-soft); border-radius: var(--r-md);
-}
-.audit-row.win { border-color: rgba(63,185,80,.45); }
-.audit-row.lose { border-color: rgba(248,81,73,.35); }
-.audit-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--line); background: var(--panel2); }
-.audit-info { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.audit-creator { font-weight: 700; color: var(--txt); font-size: .88rem; }
-.audit-meta { color: var(--mut); font-size: .76rem; font-variant-numeric: tabular-nums; }
-.audit-meta strong { color: var(--txt); }
-.audit-badge { font-size: .7rem; font-weight: 800; padding: 6px 12px; border-radius: var(--r-sm); white-space: nowrap; flex-shrink: 0; border: 1px solid transparent; }
-.audit-badge.win { background: rgba(63,185,80,.12); color: var(--grn); border-color: rgba(63,185,80,.4); }
-.audit-badge.lose { background: rgba(248,81,73,.1); color: var(--red); border-color: rgba(248,81,73,.35); }
-.audit-join-btn { font-size: .75rem; padding: 6px 12px; }
-.audit-seed { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
-.audit-seed-label { font-size: .66rem; font-weight: 800; color: var(--dim); text-transform: uppercase; letter-spacing: .05em; }
-.seed-btn {
-  width: 30px; height: 30px; border-radius: 50%;
-  border: 1px solid var(--line); background: var(--panel2); color: var(--mut);
-  font-size: .7rem; font-weight: 800; cursor: pointer; transition: all .12s ease;
-  display: flex; align-items: center; justify-content: center;
-}
-.seed-btn:hover:not(:disabled) { transform: scale(1.08); color: var(--txt); }
-.seed-btn:disabled { opacity: .55; cursor: wait; }
-.seed-btn.heads.active { background: var(--acc); border-color: #1f6feb; color: #fff; }
-.seed-btn.tails.active { background: #9e6a03; border-color: var(--gold); color: #fff; }
 
 /* Bot settings */
 .bot-settings { display: flex; flex-direction: column; gap: 12px; }
@@ -757,6 +722,5 @@ select.form-control[multiple] { min-height: 130px; }
   .tax-row-controls { justify-content: stretch !important; flex-wrap: wrap; }
   .tax-slider { max-width: none !important; }
   .activity-item { flex-wrap: wrap; gap: 4px; }
-  .audit-row { flex-wrap: wrap; }
   .admin-table-wrap { overflow-x: auto; }
 }

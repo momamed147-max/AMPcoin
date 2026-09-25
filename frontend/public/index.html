@@ -4,9 +4,12 @@
     <meta charset="utf-8" />
     <script>
       try {
-        var savedTheme = localStorage.getItem('ampbet-theme');
+        var themeKey = 'ampcoin-theme';
+        var legacyThemeKey = 'ampbet-theme';
+        var savedTheme = localStorage.getItem(themeKey) || localStorage.getItem(legacyThemeKey);
         if (['default', 'mikayla', 'pitch-dark', 'verity'].includes(savedTheme)) {
           document.documentElement.dataset.theme = savedTheme;
+          if (!localStorage.getItem(themeKey)) localStorage.setItem(themeKey, savedTheme);
         } else {
           document.documentElement.dataset.theme = 'default';
         }
@@ -19,7 +22,7 @@
     <meta name="theme-color" content="#060910" />
     <meta
       name="description"
-      content="AMPbet - An Adopt Me Casino-style item betting platform"
+      content="AMPcoin - An Adopt Me Casino-style item betting platform"
     />
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <!--
@@ -30,7 +33,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <title>AMPbet - Item Betting Platform</title>
+    <title>AMPcoin - Item Betting Platform</title>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

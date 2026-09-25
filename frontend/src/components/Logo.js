@@ -1,6 +1,6 @@
 import React, { useId } from 'react';
 
-/* AMPbet logo — poker-chip "A" mark + wordmark. Pure SVG, no assets. */
+/* AMPcoin logo — poker-chip "A" mark + wordmark. Pure SVG, no assets. */
 const LogoMark = ({ size = 32 }) => {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const spots = Array.from({ length: 8 }, (_, i) => i * 45);
@@ -60,7 +60,7 @@ const Logo = ({ size = 32, showText = true, textSize }) => (
         className="logo-text"
         style={textSize ? { fontSize: textSize } : undefined}
       >
-        AMPbet
+        AMPcoin
       </span>
     )}
   </span>

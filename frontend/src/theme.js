@@ -1,5 +1,6 @@
-const THEME_STORAGE_KEY = 'ampbet-theme';
-export const THEME_CHANGE_EVENT = 'ampbet:themechange';
+const THEME_STORAGE_KEY = 'ampcoin-theme';
+const LEGACY_THEME_STORAGE_KEY = 'ampbet-theme';
+export const THEME_CHANGE_EVENT = 'ampcoin:themechange';
 
 export const THEMES = {
   default: {
@@ -32,7 +33,14 @@ export const DEFAULT_THEME = 'default';
 
 function readTheme() {
   try {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    let stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (!Object.prototype.hasOwnProperty.call(THEMES, stored)) {
+      const legacyStored = window.localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
+      if (Object.prototype.hasOwnProperty.call(THEMES, legacyStored)) {
+        stored = legacyStored;
+        window.localStorage.setItem(THEME_STORAGE_KEY, legacyStored);
+      }
+    }
     return Object.prototype.hasOwnProperty.call(THEMES, stored) ? stored : DEFAULT_THEME;
   } catch (_) {
     return DEFAULT_THEME;
@@ -65,10 +73,12 @@ export function applyTheme(themeId, persist = true) {
 
 export function initializeTheme() {
   const themeId = applyTheme(readTheme(), false);
-  if (typeof window !== 'undefined' && !window.__ampbetThemeStorageBound) {
-    window.__ampbetThemeStorageBound = true;
+  if (typeof window !== 'undefined' && !window.__ampcoinThemeStorageBound) {
+    window.__ampcoinThemeStorageBound = true;
     window.addEventListener('storage', (event) => {
-      if (event.key === THEME_STORAGE_KEY) applyTheme(readTheme(), false);
+      if (event.key === THEME_STORAGE_KEY || event.key === LEGACY_THEME_STORAGE_KEY) {
+        applyTheme(readTheme(), false);
+      }
     });
   }
   return themeId;

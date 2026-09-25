@@ -1,5 +1,6 @@
-const STORAGE_KEY = 'ampbet:sound-enabled';
-export const SOUND_CHANGE_EVENT = 'ampbet:soundchange';
+const STORAGE_KEY = 'ampcoin:sound-enabled';
+const LEGACY_STORAGE_KEY = 'ampbet:sound-enabled';
+export const SOUND_CHANGE_EVENT = 'ampcoin:soundchange';
 
 let enabled = readEnabled();
 let audioContext = null;
@@ -12,10 +13,17 @@ const lastPlayedAt = new Map();
 
 function readEnabled() {
   try {
-    return window.localStorage.getItem(STORAGE_KEY) !== 'false';
+    const current = window.localStorage.getItem(STORAGE_KEY);
+    if (current !== null) return current !== 'false';
+    const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+    if (legacy !== null) {
+      window.localStorage.setItem(STORAGE_KEY, legacy);
+      return legacy !== 'false';
+    }
   } catch (_) {
-    return true;
+    // Fall through to the default when storage is unavailable.
   }
+  return true;
 }
 
 function ensureAudio() {
@@ -53,8 +61,13 @@ function ensureAudio() {
   if (!storageListenerAttached) {
     storageListenerAttached = true;
     window.addEventListener('storage', (event) => {
-      if (event.key !== STORAGE_KEY) return;
-      enabled = event.newValue !== 'false';
+      if (event.key !== STORAGE_KEY && event.key !== LEGACY_STORAGE_KEY) return;
+      let nextValue = event.newValue;
+      try {
+        const current = window.localStorage.getItem(STORAGE_KEY);
+        if (current !== null) nextValue = current;
+      } catch (_) { /* private browsing can deny storage */ }
+      enabled = nextValue !== 'false';
       if (masterGain && audioContext) {
         masterGain.gain.setTargetAtTime(enabled ? 0.28 : 0, audioContext.currentTime, 0.015);
       }

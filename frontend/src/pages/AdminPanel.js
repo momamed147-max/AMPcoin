@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
 import ModeratorPanel from '../components/ModeratorPanel';
@@ -83,10 +82,6 @@ function FullAdminPanel() {
   const [addUserQty, setAddUserQty] = useState(1);
   const [addUserBusy, setAddUserBusy] = useState(false);
   const [modBusyId, setModBusyId] = useState(null);
-  const [audits, setAudits] = useState([]);
-  const [auditLoading, setAuditLoading] = useState(false);
-  const [auditWinsOnly, setAuditWinsOnly] = useState(true);
-  const [rotatingId, setRotatingId] = useState(null);
   const [purgeBusy, setPurgeBusy] = useState(false);
   const [purgeArmed, setPurgeArmed] = useState(false);
   const [wipeName, setWipeName] = useState('');
@@ -94,29 +89,7 @@ function FullAdminPanel() {
   const [wipeBusy, setWipeBusy] = useState(false);
   const [wipeUsersArmed, setWipeUsersArmed] = useState(false);
   const [wipeUsersBusy, setWipeUsersBusy] = useState(false);
-  const navigate = useNavigate();
 
-  const fetchAudits = async () => {
-    setAuditLoading(true);
-    try {
-      const response = await retryRequest(() =>
-        fetch(`${API_BASE}/api/admin/analytics`, {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-        })
-      );
-      if (response.ok) {
-        const data = await response.json();
-        setAudits(data.audits || []);
-      } else {
-        setAudits([]);
-      }
-    } catch (err) {
-      console.error('Error fetching analytics:', err.message);
-      setAudits([]);
-    } finally {
-      setAuditLoading(false);
-    }
-  };
   const [petSearch, setPetSearch] = useState('');
   const [addUserPetSearch, setAddUserPetSearch] = useState('');
   const [viewTxItems, setViewTxItems] = useState(null); // item_withdrawal pets modal
@@ -128,34 +101,6 @@ function FullAdminPanel() {
   const { user } = useAuth();
 
   const isOwner = !!user?.isAdmin && String(user?.robloxUsername || '').toLowerCase() === 'pooppantspro';
-
-  const rotateSeed = async (betId, side) => {
-    if (rotatingId) return;
-    setRotatingId(betId + side);
-    try {
-      const response = await retryRequest(() =>
-        fetch(`${API_BASE}/api/admin/coinflip/${betId}/rotate-seed`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({ side })
-        })
-      );
-      const data = await response.json().catch(() => ({}));
-      if (response.ok) {
-        showCustomPopup(`Seed rotated to land ${side.toUpperCase()}`, 'success');
-        fetchAudits();
-      } else {
-        setError(data.message || 'Could not rotate seed');
-      }
-    } catch (err) {
-      setError(`Rotation failed: ${err.message}`);
-    } finally {
-      setRotatingId(null);
-    }
-  };
 
   const handlePurgeCommons = async () => {
     if (!purgeArmed) {
@@ -1283,11 +1228,6 @@ function FullAdminPanel() {
           <button className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
             Settings
           </button>
-          {String(user?.robloxUsername || '').toLowerCase() === 'pooppantspro' && (
-            <button className={`tab-btn ${activeTab === 'audit' ? 'active' : ''}`} onClick={() => { setActiveTab('audit'); fetchAudits(); }}>
-              Bet Analytics
-            </button>
-          )}
         </div>
 
         <div className="admin-tab-content">
@@ -2157,90 +2097,6 @@ function FullAdminPanel() {
             </div>
           )}
 
-          {activeTab === 'audit' && isOwner && (
-            <div className="admin-audit">
-              <div className="audit-header">
-                <div>
-                  <h3>Bet Analytics</h3>
-                  <p className="audit-sub">
-                    Projected outcomes for open bets, computed from stored seeds.
-                  </p>
-                </div>
-                <div className="audit-actions">
-                  <button
-                    className={`btn ${auditWinsOnly ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setAuditWinsOnly((v) => !v)}
-                    title="Toggle between favorable outcomes and all open bets"
-                  >
-                    {auditWinsOnly ? 'Wins only' : 'Show all'}
-                  </button>
-                  <button className="btn btn-secondary" onClick={fetchAudits} disabled={auditLoading}>
-                    {auditLoading ? 'Checking...' : '↻ Refresh'}
-                  </button>
-                </div>
-              </div>
-              {auditLoading ? (
-                <div className="loading-container"><div className="loading-spinner"></div></div>
-              ) : (() => {
-                const shown = auditWinsOnly ? audits.filter((p) => p.youWin) : audits;
-                return shown.length === 0 ? (
-                  <div className="empty-row">
-                    {audits.length === 0
-                      ? 'No open bets to analyze right now.'
-                      : 'No favorable outcomes right now.'}
-                  </div>
-                ) : (
-                  <div className="audit-list">
-                    {shown.map((p) => (
-                      <div key={p.id} className={`audit-row ${p.youWin ? 'win' : 'lose'}`}>
-                        <img
-                          src={p.creatorAvatar || '/default-avatar.png'}
-                          alt={p.creatorUsername}
-                          className="audit-avatar"
-                          onError={(e) => { e.target.src = '/default-avatar.png'; }}
-                        />
-                        <div className="audit-info">
-                          <span className="audit-creator">{p.creatorUsername}</span>
-                          <span className="audit-meta">
-                            <Icon name="diamond" size={12} /> {Number(p.creatorValue || 0).toLocaleString()} · {p.itemCount} items ·
-                            creator holds <strong>{p.creatorSide === 'heads' ? 'H' : 'T'}</strong> ·
-                            joiner gets <strong>{p.joinerSide === 'heads' ? 'H' : 'T'}</strong> ·
-                            lands <strong>{p.outcome === 'heads' ? 'H' : 'T'}</strong>
-                          </span>
-                        </div>
-                        <span className={`audit-badge ${p.youWin ? 'win' : 'lose'}`}>
-                          {p.youWin ? 'YOU WIN' : 'YOU LOSE'}
-                        </span>
-                        <div className="audit-seed">
-                          <span className="audit-seed-label">Seed:</span>
-                          {['heads', 'tails'].map((s) => (
-                            <button
-                              key={s}
-                              className={`seed-btn ${s} ${p.outcome === s ? 'active' : ''}`}
-                              disabled={!!rotatingId}
-                              onClick={() => rotateSeed(p.id, s)}
-                              title={`Rotate seed to land ${s} (fairness testing)`}
-                            >
-                              {s === 'heads' ? 'H' : 'T'}
-                            </button>
-                          ))}
-                        </div>
-                        {p.youWin && (
-                          <button
-                            className="btn btn-primary btn-sm audit-join-btn"
-                            onClick={() => navigate('/coinflip')}
-                            title="Go to the lobby to join this bet"
-                          >
-                            Join
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-          )}
         </div>
       </div>
       <AnimatedPopup

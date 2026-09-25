@@ -135,7 +135,7 @@ function AppContent() {
       <div className="loading-container">
         <div className="app-loading-logo"><Logo size={64} showText={false} /></div>
         <div className="loading-spinner"></div>
-        <p>Loading AMPbet...</p>
+        <p>Loading AMPcoin...</p>
       </div>
     );
   }

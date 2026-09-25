@@ -149,7 +149,7 @@ const SettingsModal = ({ isOpen, onClose, initialNotice = '' }) => {
               <span className="settings-heading-icon"><Icon name="settings" size={18} /></span>
               <div>
                 <h2 id="settings-title">Settings</h2>
-                <p>Personalize your AMPbet experience.</p>
+                <p>Personalize your AMPcoin experience.</p>
               </div>
             </div>
             <button className="settings-close" onClick={onClose} aria-label="Close settings">
@@ -170,7 +170,7 @@ const SettingsModal = ({ isOpen, onClose, initialNotice = '' }) => {
                 <span className="settings-section-icon"><Icon name="target" size={16} /></span>
                 <div>
                   <h3 id="settings-profile-title">Profile</h3>
-                  <p>How your name appears around AMPbet.</p>
+                  <p>How your name appears around AMPcoin.</p>
                 </div>
               </div>
               <form className="settings-form" onSubmit={saveDisplayName}>
@@ -239,7 +239,7 @@ const SettingsModal = ({ isOpen, onClose, initialNotice = '' }) => {
                   <span className="settings-discord-avatar-fallback"><Icon name="chat" size={16} /></span>
                   <div>
                     <strong>{user.discordUsername || 'Discord linked'}</strong>
-                    <small>Connected to your AMPbet account</small>
+                    <small>Connected to your AMPcoin account</small>
                   </div>
                   <button className="btn btn-secondary settings-unlink-button" type="button" onClick={unlinkDiscord} disabled={discordBusy}>
                     {discordBusy ? 'Unlinking...' : 'Unlink'}

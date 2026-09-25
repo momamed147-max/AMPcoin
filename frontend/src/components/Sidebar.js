@@ -35,7 +35,7 @@ function Sidebar() {
 
   return (
     <nav className="sidebar" aria-label="Main navigation">
-      <Link to="/coinflip" className="sidebar-brand" aria-label="AMPbet home">
+      <Link to="/coinflip" className="sidebar-brand" aria-label="AMPcoin home">
         <Logo size={31} />
         <span className="brand-live" aria-label="Servers online">
           <span /> LIVE

@@ -52,8 +52,8 @@ const Header = ({ balance, socket }) => {
       error_expired: 'Discord linking expired. Please try again.',
       error_token: 'Discord could not verify the connection. Please try again.',
       error_profile: 'Discord profile lookup failed. Please try again.',
-      error_taken: 'That Discord account is already linked to another AMPbet account.',
-      error_nouser: 'Your AMPbet account could not be found after Discord verification.',
+      error_taken: 'That Discord account is already linked to another AMPcoin account.',
+      error_nouser: 'Your AMPcoin account could not be found after Discord verification.',
       error_server: 'Discord linking hit a server error. Please try again.'
     };
     setSettingsNotice(discordMessages[discordFlag] || 'Discord linking needs attention. Please try again.');
@@ -245,7 +245,7 @@ const Header = ({ balance, socket }) => {
           ? { title: 'Moderation', subtitle: 'Chat safety and user controls', icon: 'shield' }
           : { title: 'Admin Panel', subtitle: 'Owner controls and site operations', icon: 'gear' };
       default:
-        return { title: 'Dashboard', subtitle: 'AMPbet game server', icon: 'diamond' };
+        return { title: 'Dashboard', subtitle: 'AMPcoin game server', icon: 'diamond' };
     }
   };
 

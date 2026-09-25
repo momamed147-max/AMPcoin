@@ -211,7 +211,7 @@ const ProfilePage = () => {
                   placeholder="Leave blank to use Roblox display name"
                 />
                 <small className="form-hint">
-                  This name is used around AMPbet; leave it blank to use your Roblox display name.
+                  This name is used around AMPcoin; leave it blank to use your Roblox display name.
                 </small>
               </div>
 

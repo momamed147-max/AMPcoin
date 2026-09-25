@@ -1,4 +1,4 @@
-# AMPbet Backend — Railway Deploy Guide
+# AMPcoin Backend — Railway Deploy Guide
 
 ## 1. Push (already done — repo is `momamed147-max/AMPcoin`)
 

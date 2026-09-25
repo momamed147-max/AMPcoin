@@ -1,4 +1,4 @@
-/* AMPbet — refined professional dark system (App.css) */
+/* AMPcoin — refined professional dark system (App.css) */
 
 :root {
   --bg0: #070a11;
@@ -789,7 +789,7 @@ body {
 .jp-player-card:hover, .jp-history-item:hover { transform: translateY(-1px); }
 .jp-inv-tile, .cf-inv-tile { transition: transform 0.15s, border-color 0.15s; }
 .jp-inv-tile:active, .cf-inv-tile:active { transform: scale(0.93); }
-.stat-card, .audit-row { transition: border-color 0.15s, transform 0.15s; }
+.stat-card { transition: border-color 0.15s, transform 0.15s; }
 .auth-input, .chat-input, .vc-search, .cf-create-search, .cf-value-input, .form-control, .wm-search {
   transition: border-color 0.15s;
 }
