@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import InventoryPickerModal from './InventoryPickerModal';
+import ErrorBoundary from './ErrorBoundary';
 import SettingsModal from './SettingsModal';
 import ModalPortal from './ModalPortal';
 import Icon from './Icon';
@@ -557,7 +558,7 @@ const Header = ({ balance, socket }) => {
         onClose={() => setSettingsOpen(false)}
       />
 
-      {showWalletModal && (() => {
+      {showWalletModal && <ErrorBoundary label="Your wallet" onClose={() => setShowWalletModal(false)}>{(() => {
         const getVal = (u) => num(u.value || u.details?.value);
         const getName = (u) => u.name || u.details?.name || u.itemName || 'Unknown';
         const getRarity = (u) => u.rarity || u.details?.rarity || 'common';
@@ -725,7 +726,7 @@ const Header = ({ balance, socket }) => {
         </div>
         </ModalPortal>
         );
-      })()}
+      })()}</ErrorBoundary>}
 
       {tradeModal && (
         <ModalPortal>
