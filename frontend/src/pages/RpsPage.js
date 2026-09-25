@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
@@ -275,11 +275,15 @@ const RpsPage = ({ socket }) => {
     };
   }, [socket, applyLobby, fetchInventory]);
 
-  // Auto-open the modal for the player's own match, once per new turn.
+  // Auto-open the modal for the player's own match, once per new turn. The ref
+  // keeps the 4s poll from snapping a manually opened View back to this match.
+  const autoOpenRef = useRef(null);
   useEffect(() => {
     if (!myMatch) return;
     const key = `${myMatch.id}:${myMatch.round}:${myMatch.status}`;
+    if (autoOpenRef.current === key) return;
     if (dismissedKey === key) return;
+    autoOpenRef.current = key;
     setViewId(myMatch.id);
   }, [myMatch, dismissedKey]);
 
@@ -416,7 +420,7 @@ const RpsPage = ({ socket }) => {
             match={match}
             isSelf={match.playerOne?.id === user?.id || match.playerTwo?.id === user?.id}
             onJoin={openJoinModal}
-            onView={setViewId}
+            onView={(target) => setViewId(target.id)}
           />
         )) : (
           <div className="cf-empty">
@@ -432,7 +436,14 @@ const RpsPage = ({ socket }) => {
       {viewMatch && (() => {
         const one = viewMatch.playerOne;
         const two = viewMatch.playerTwo;
-        const viewerSide = myMatch?.id === viewMatch.id ? myMatch.viewerSide : null;
+        // Finished matches are no longer "active", so fall back to the player
+        // ids to still show your own side and payout.
+        const isSelfMatch = one?.id === user?.id || two?.id === user?.id;
+        const viewerSide = myMatch?.id === viewMatch.id
+          ? myMatch.viewerSide
+          : isSelfMatch
+            ? (one?.id === user?.id ? 'one' : 'two')
+            : null;
         const isParticipant = !!viewerSide;
         const waiting = viewMatch.status === 'waiting';
         const completed = viewMatch.status === 'completed';

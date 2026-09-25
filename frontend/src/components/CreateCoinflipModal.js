@@ -443,6 +443,11 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
                 <button type="button" className="cf-join-action-btn" onClick={selectAll}>
                   Select All
                 </button>
+                {isRpsJoin && (
+                  <button type="button" className="cf-join-action-btn" onClick={autoSelect} disabled={loading || inventory.length === 0}>
+                    Auto Select
+                  </button>
+                )}
                 <button type="button" className="cf-join-action-btn" onClick={clearAll}>
                   Clear
                 </button>
@@ -553,13 +558,9 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
         {/* Bottom bar */}
         <div className="cf-join-bottom">
           <div className="cf-join-bottom-left">
-            <button className="cf-join-action-btn" onClick={selectAll} disabled={loading}>Select All</button>
-            {isRpsJoin && (
-              <button className="cf-join-action-btn" onClick={autoSelect} disabled={loading || inventory.length === 0}>Auto Select</button>
-            )}
-            {isRps && !isRpsJoin && (
-              <button className="cf-join-action-btn" onClick={clearAll} disabled={loading || selectedCount === 0}>Clear</button>
-            )}
+            <span className="cf-join-selected-info">
+              {selectedCount} items · <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {getTotalValue().toLocaleString()} AMP
+            </span>
           </div>
           <div className="cf-join-bottom-right">
             <div className="cf-join-selected-info">
