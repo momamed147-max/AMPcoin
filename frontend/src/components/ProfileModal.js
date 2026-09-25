@@ -141,7 +141,7 @@ const ProfileModal = ({ viewer, profileUser, isOwn, onClose }) => {
 
   if (!person) return null;
 
-  const displayName = person.robloxDisplayName || person.displayName || person.robloxUsername || 'Anonymous';
+  const displayName = person.customDisplayName || person.displayName || person.robloxDisplayName || person.robloxUsername || 'Anonymous';
   const avatarSrc = person.avatar || '/default-avatar.png';
   const idTag = person.robloxUserId ? `#${person.robloxUserId}` : `#${String(person.id || '').slice(0, 10)}`;
   const rank = getRank(stats.wager);

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import InventoryPickerModal from './InventoryPickerModal';
+import SettingsModal from './SettingsModal';
 import ModalPortal from './ModalPortal';
 import Icon from './Icon';
 import ModBadges from './ModBadges';
@@ -19,7 +20,7 @@ const DEFAULT_AVATAR = '/default-avatar.png';
 
 const Header = ({ balance, socket }) => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [inventory, setInventory] = useState([]);
   const [invLoading, setInvLoading] = useState(false);
@@ -33,6 +34,32 @@ const Header = ({ balance, socket }) => {
   const [botInfo, setBotInfo] = useState(null); // { botUser, redirectLink, botEnabled, avatar }
   const [tradeModal, setTradeModal] = useState(null); // { kind: 'withdraw'|'deposit', items, amount }
   const [soundEnabled, setSoundEnabledState] = useState(isSoundEnabled);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsNotice, setSettingsNotice] = useState('');
+  const handledDiscordQueryRef = useRef('');
+
+  useEffect(() => {
+    const discordFlag = new URLSearchParams(location.search).get('discord');
+    if (!discordFlag) {
+      handledDiscordQueryRef.current = '';
+      return;
+    }
+    if (handledDiscordQueryRef.current === location.search) return;
+    handledDiscordQueryRef.current = location.search;
+    setSettingsOpen(true);
+    const discordMessages = {
+      linked: 'Discord account linked successfully.',
+      error_expired: 'Discord linking expired. Please try again.',
+      error_token: 'Discord could not verify the connection. Please try again.',
+      error_profile: 'Discord profile lookup failed. Please try again.',
+      error_taken: 'That Discord account is already linked to another AMPbet account.',
+      error_nouser: 'Your AMPbet account could not be found after Discord verification.',
+      error_server: 'Discord linking hit a server error. Please try again.'
+    };
+    setSettingsNotice(discordMessages[discordFlag] || 'Discord linking needs attention. Please try again.');
+    window.history.replaceState({}, '', location.pathname);
+    if (discordFlag === 'linked' && refreshUser) refreshUser(false);
+  }, [location.pathname, location.search, refreshUser]);
 
   useEffect(() => {
     const syncSoundSetting = (event) => {
@@ -415,6 +442,18 @@ const Header = ({ balance, socket }) => {
       <div className="header-right">
         <button
           type="button"
+          className="settings-trigger"
+          onClick={() => {
+            setSettingsNotice('');
+            setSettingsOpen(true);
+          }}
+          aria-label="Open settings"
+          title="Settings"
+        >
+          <Icon name="settings" size={17} />
+        </button>
+        <button
+          type="button"
           className={`sound-toggle ${soundEnabled ? 'enabled' : 'muted'}`}
           data-sound-control
           onClick={toggleSound}
@@ -500,6 +539,12 @@ const Header = ({ balance, socket }) => {
         actionLabel="GIVE"
         onClose={() => setGwModalOpen(false)}
         onSelect={createGiveaway}
+      />
+
+      <SettingsModal
+        isOpen={settingsOpen}
+        initialNotice={settingsNotice}
+        onClose={() => setSettingsOpen(false)}
       />
 
       {showWalletModal && (() => {

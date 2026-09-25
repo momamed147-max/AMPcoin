@@ -94,7 +94,8 @@ router.get('/user/:userId', (req, res) => {
         robloxUserId: user.robloxUserId || null,
         robloxUsername: user.robloxUsername || '',
         robloxDisplayName: user.robloxDisplayName || null,
-        displayName: (user.robloxDisplayName || user.displayName || user.robloxUsername || 'Anonymous'),
+        customDisplayName: user.customDisplayName || null,
+        displayName: (user.customDisplayName || user.robloxDisplayName || user.displayName || user.robloxUsername || 'Anonymous'),
         avatar: user.avatar || (user.robloxUserId ? `https://www.roblox.com/headshot-thumbnail/image?userId=${user.robloxUserId}&width=150&height=150&format=png` : ''),
         balance: user.balance,
         gamesPlayed: user.gamesPlayed || 0,
@@ -129,7 +130,7 @@ function getFallbackAvatarForUser(user) {
 }
 
 function getRobloxDisplayName(user) {
-  return user?.robloxDisplayName || user?.displayName || user?.robloxUsername || 'Anonymous';
+  return user?.customDisplayName || user?.robloxDisplayName || user?.displayName || user?.robloxUsername || 'Anonymous';
 }
 
 function buildLeaderboardEntry(user) {
@@ -141,6 +142,7 @@ function buildLeaderboardEntry(user) {
     robloxUserId: user.robloxUserId || null,
     robloxUsername: user.robloxUsername || '',
     robloxDisplayName: user.robloxDisplayName || null,
+    customDisplayName: user.customDisplayName || null,
     displayName: getRobloxDisplayName(user),
     avatar: user.avatar || getFallbackAvatarForUser(user),
     balance: user.balance,

@@ -21,12 +21,13 @@ const ProfilePage = () => {
   const [editData, setEditData] = useState({});
   const [message, setMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
 
   useEffect(() => {
     if (user) {
       setProfile(user);
       setEditData({
-        displayName: user.displayName,
+        displayName: user.customDisplayName || '',
         robloxUsername: user.robloxUsername
       });
     }
@@ -50,7 +51,7 @@ const ProfilePage = () => {
         const patch = {};
         if (data.avatar) patch.avatar = data.avatar;
         if (data.displayName) {
-          patch.robloxDisplayName = data.displayName;
+          if (data.robloxDisplayName) patch.robloxDisplayName = data.robloxDisplayName;
           patch.displayName = data.displayName;
         }
         if (data.robloxUserId) patch.robloxUserId = data.robloxUserId;
@@ -78,32 +79,44 @@ const ProfilePage = () => {
     setEditing(!editing);
     if (!editing && profile) {
       setEditData({
-        displayName: profile.displayName,
+        displayName: profile.customDisplayName || '',
         robloxUsername: profile.robloxUsername
       });
     }
   };
 
   const handleSave = async () => {
+    const nextName = String(editData.displayName || '').trim();
+    if (nextName.length > 32) {
+      setMessage('Display names must be 32 characters or fewer.');
+      return;
+    }
+
+    setSavingProfile(true);
     try {
-      const updatedProfile = {
-        ...profile,
-        displayName: editData.displayName,
-        robloxUsername: editData.robloxUsername
-      };
-
-      setProfile(updatedProfile);
-      updateUser({
-        displayName: editData.displayName,
-        robloxUsername: editData.robloxUsername
+      const response = await fetch(`${API_BASE}/api/users/${encodeURIComponent(user.id)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({ displayName: nextName })
       });
-      setEditing(false);
-      setMessage('Profile saved. Click "Refresh from Roblox" to update display name and avatar.');
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not save profile.');
 
+      const savedUser = data.user || data;
+      const updatedProfile = { ...profile, ...savedUser };
+      setProfile(updatedProfile);
+      updateUser(savedUser);
+      setEditing(false);
+      setMessage(nextName ? 'Profile saved.' : 'Profile saved using your Roblox display name.');
       setTimeout(() => setMessage(''), 4000);
     } catch (error) {
       console.error('Error updating profile:', error);
-      setMessage('Error updating profile');
+      setMessage(error.message || 'Error updating profile');
+    } finally {
+      setSavingProfile(false);
     }
   };
 
@@ -131,7 +144,7 @@ const ProfilePage = () => {
     );
   }
 
-  const displayName = profile.robloxDisplayName || profile.displayName || profile.robloxUsername || 'Anonymous';
+  const displayName = profile.customDisplayName || profile.displayName || profile.robloxDisplayName || profile.robloxUsername || 'Anonymous';
   const avatarSrc = profile.avatar || getFallbackAvatar(profile);
   const winRate =
     profile.gamesPlayed && profile.gamesPlayed > 0
@@ -198,7 +211,7 @@ const ProfilePage = () => {
                   placeholder="Leave blank to use Roblox display name"
                 />
                 <small className="form-hint">
-                  Note: Roblox Display Name from Roblox API takes priority when available.
+                  This name is used around AMPbet; leave it blank to use your Roblox display name.
                 </small>
               </div>
 
@@ -209,13 +222,13 @@ const ProfilePage = () => {
                   id="robloxUsername"
                   name="robloxUsername"
                   value={editData.robloxUsername}
-                  onChange={handleChange}
+                  readOnly
                   className="form-control"
                 />
               </div>
 
-              <button className="btn btn-success" onClick={handleSave}>
-                Save Changes
+              <button className="btn btn-success" onClick={handleSave} disabled={savingProfile}>
+                {savingProfile ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           ) : (
@@ -224,7 +237,7 @@ const ProfilePage = () => {
                 <div className="profile-field">
                   <label>Roblox Display Name</label>
                   <p className="profile-field-value roblox-display">
-                    {profile.robloxDisplayName || displayName}{' '}
+                    {profile.robloxDisplayName || profile.robloxUsername || '—'}{' '}
                     {profile.robloxDisplayName && (
                       <span className="verified-roblox"><Icon name="check" size={11} /> Roblox</span>
                     )}

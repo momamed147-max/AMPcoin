@@ -89,13 +89,15 @@ async function ensureUserProfileCached(user) {
   if (cached) {
     return {
       avatar: dbUser.avatar,
-      displayName: dbUser.robloxDisplayName,
+      displayName: dbUser.customDisplayName || dbUser.robloxDisplayName,
+      robloxDisplayName: dbUser.robloxDisplayName,
+      customDisplayName: dbUser.customDisplayName || null,
       robloxUserId: dbUser.robloxUserId
     };
   }
 
   let robloxUserId = dbUser.robloxUserId;
-  let robloxDisplayName = dbUser.robloxDisplayName || dbUser.displayName || dbUser.robloxUsername;
+  let robloxDisplayName = dbUser.robloxDisplayName || (dbUser.customDisplayName ? null : dbUser.displayName) || dbUser.robloxUsername;
   if (!robloxUserId) {
     const res = await getRobloxUserIdFromUsername(dbUser.robloxUsername);
     if (res) {
@@ -114,7 +116,13 @@ async function ensureUserProfileCached(user) {
   dbUser.avatarCachedAt = now;
   dbUser.updatedAt = new Date().toISOString();
   dbManager.saveUsersDb();
-  return { avatar, displayName: robloxDisplayName, robloxUserId };
+  return {
+    avatar,
+    displayName: dbUser.customDisplayName || robloxDisplayName,
+    robloxDisplayName,
+    customDisplayName: dbUser.customDisplayName || null,
+    robloxUserId
+  };
 }
 
 // Get recent chat messages
@@ -206,6 +214,8 @@ router.post('/send', authenticateToken, async (req, res) => {
       robloxUsername: user.robloxUsername || '',
       username: displayName,
       displayName: displayName,
+      customDisplayName: user.customDisplayName || null,
+      robloxDisplayName: profile.robloxDisplayName || user.robloxDisplayName || null,
       avatar: avatar,
       robloxUserId: profile.robloxUserId || user.robloxUserId || null,
       isAdmin: !!user.isAdmin,

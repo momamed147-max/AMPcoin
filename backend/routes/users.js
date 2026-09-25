@@ -114,13 +114,15 @@ async function resolveAndCacheRobloxProfile(userId) {
   if (profileCached) {
     return {
       avatar: dbUser.avatar,
-      displayName: dbUser.robloxDisplayName,
+      displayName: dbUser.customDisplayName || dbUser.robloxDisplayName,
+      customDisplayName: dbUser.customDisplayName || null,
+      robloxDisplayName: dbUser.robloxDisplayName,
       robloxUserId: dbUser.robloxUserId
     };
   }
 
   let robloxUserId = dbUser.robloxUserId;
-  let robloxDisplayName = dbUser.robloxDisplayName || dbUser.displayName;
+  let robloxDisplayName = dbUser.robloxDisplayName || (dbUser.customDisplayName ? null : dbUser.displayName);
   if (!robloxUserId) {
     const resolved = await getRobloxUserIdFromUsername(dbUser.robloxUsername);
     if (resolved) {
@@ -144,7 +146,9 @@ async function resolveAndCacheRobloxProfile(userId) {
 
   return {
     avatar: avatarUrl,
-    displayName: robloxDisplayName || dbUser.displayName,
+    displayName: dbUser.customDisplayName || robloxDisplayName || dbUser.displayName,
+    customDisplayName: dbUser.customDisplayName || null,
+    robloxDisplayName: robloxDisplayName || null,
     robloxUserId: robloxUserId || null
   };
 }
@@ -177,7 +181,13 @@ router.get('/profile/:robloxUsername', async (req, res) => {
       }
     }
 
-    res.json({ avatar, displayName, robloxUserId });
+    res.json({
+      avatar,
+      displayName,
+      customDisplayName: user?.customDisplayName || null,
+      robloxDisplayName: user?.robloxDisplayName || (user ? null : displayName),
+      robloxUserId
+    });
   } catch (error) {
     console.error('Error fetching Roblox profile:', error);
     res.json({ avatar: '', displayName: '', robloxUserId: null });
@@ -266,26 +276,41 @@ router.get('/:robloxUsername', authenticateToken, (req, res) => {
 // Update user profile
 router.put('/:robloxUsername', authenticateToken, (req, res) => {
   try {
-    const robloxUsername = req.params.robloxUsername;
-    const updates = req.body;
+    const identifier = req.params.robloxUsername;
+    const updates = req.body || {};
     const usersDb = dbManager.getUsersDb();
-    
-    const userIndex = usersDb.users.findIndex(u => u.robloxUsername === robloxUsername || u.id === robloxUsername);
+
+    const userIndex = usersDb.users.findIndex((u) =>
+      String(u.robloxUsername).toLowerCase() === String(identifier).toLowerCase() ||
+      String(u.id) === String(identifier)
+    );
     if (userIndex === -1) {
       return res.status(404).json({ message: 'User not found' });
     }
-    
-    const allowedUpdates = ['displayName', 'avatar'];
-    allowedUpdates.forEach(field => {
-      if (updates[field] !== undefined) {
-        usersDb.users[userIndex][field] = updates[field];
+
+    const targetUser = usersDb.users[userIndex];
+    const ownsProfile = String(req.user.userId) === String(targetUser.id);
+    if (!ownsProfile && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'You can only update your own profile' });
+    }
+
+    if (updates.displayName !== undefined) {
+      if (typeof updates.displayName !== 'string' || updates.displayName.trim().length > 32) {
+        return res.status(400).json({ message: 'Display name must be 32 characters or fewer' });
       }
-    });
-    
-    usersDb.users[userIndex].updatedAt = new Date().toISOString();
+      const nextDisplayName = updates.displayName.trim();
+      targetUser.customDisplayName = nextDisplayName || null;
+      targetUser.displayName = nextDisplayName || targetUser.robloxDisplayName || targetUser.robloxUsername;
+    }
+
+    if (typeof updates.avatar === 'string') {
+      targetUser.avatar = updates.avatar.trim();
+    }
+
+    targetUser.updatedAt = new Date().toISOString();
     dbManager.saveUsersDb();
-    
-    const { password, ...updatedUser } = usersDb.users[userIndex];
+
+    const { password, ...updatedUser } = targetUser;
     res.json(updatedUser);
   } catch (error) {
     console.error('Error updating user profile:', error);

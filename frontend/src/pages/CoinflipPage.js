@@ -1005,7 +1005,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
                     <div className="cf-join-pcard">
                       <img src={user?.avatar || '/default-avatar.png'} alt="" className="cf-join-pcard-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
                       <div className="cf-join-pcard-info">
-                        <span className="cf-join-pcard-name">{user?.robloxDisplayName || user?.displayName || 'You'}</span>
+                        <span className="cf-join-pcard-name">{user?.customDisplayName || user?.displayName || user?.robloxDisplayName || 'You'}</span>
                         <span className="cf-join-pcard-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {totalVal.toLocaleString()}</span>
                       </div>
                       <span className="cf-join-pcard-pct">{totalVal > 0 ? sidePct(totalVal, meta.total) : '0.00%'}</span>

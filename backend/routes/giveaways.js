@@ -205,7 +205,7 @@ router.post('/', authenticateToken, (req, res) => {
       id: uuidv4(),
       creatorId: creator.id,
       creatorRobloxUsername: creator.robloxUsername || '',
-      creatorName: creator.robloxDisplayName || creator.displayName || creator.robloxUsername || 'Anonymous',
+      creatorName: creator.customDisplayName || creator.robloxDisplayName || creator.displayName || creator.robloxUsername || 'Anonymous',
       creatorAvatar: creator.avatar || '',
       item: itemSnapshot,
       escrow: { ...itemSnapshot },
@@ -287,7 +287,7 @@ router.post('/:id/join', authenticateToken, (req, res) => {
     const user = (usersDb.users || []).find((u) => u.id === userId);
     gw.entries.push({
       userId,
-      username: (user && (user.robloxDisplayName || user.displayName || user.robloxUsername)) || 'Anonymous',
+      username: (user && (user.customDisplayName || user.robloxDisplayName || user.displayName || user.robloxUsername)) || 'Anonymous',
       avatar: (user && user.avatar) || '',
       at: new Date().toISOString()
     });

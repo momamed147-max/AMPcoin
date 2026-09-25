@@ -19,6 +19,12 @@ function getFallbackAvatar(player) {
 
 function getDisplayName(player) {
   return (
+    player?.customDisplayName ||
+    player?.creatorCustomDisplayName ||
+    player?.opponentCustomDisplayName ||
+    player?.displayName ||
+    player?.creatorDisplayName ||
+    player?.opponentDisplayName ||
     player?.robloxDisplayName ||
     player?.creatorRobloxDisplayName ||
     player?.opponentRobloxDisplayName ||

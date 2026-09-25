@@ -14,13 +14,13 @@ const LogoMark = ({ size = 32 }) => {
     >
       <defs>
         <radialGradient id={`ac-${uid}`} cx="42%" cy="38%" r="72%">
-          <stop offset="0%" stopColor="#4da6ff" />
-          <stop offset="55%" stopColor="#1f6feb" />
-          <stop offset="100%" stopColor="#0a2a66" />
+          <stop offset="0%" stopColor="var(--acc-bright, #76a9ff)" />
+          <stop offset="55%" stopColor="var(--acc, #4c8dff)" />
+          <stop offset="100%" stopColor="var(--theme-accent-2, var(--acc))" />
         </radialGradient>
       </defs>
-      <circle cx="50" cy="50" r="48" fill="#0a0e18" />
-      <circle cx="50" cy="50" r="48" fill="none" stroke="#1c2a44" strokeWidth="2" />
+      <circle cx="50" cy="50" r="48" fill="var(--bg0, #060910)" />
+      <circle cx="50" cy="50" r="48" fill="none" stroke="var(--line, rgba(137,166,204,.16))" strokeWidth="2" />
       {spots.map((deg) => (
         <rect
           key={deg}
@@ -29,11 +29,11 @@ const LogoMark = ({ size = 32 }) => {
           width="12"
           height="13"
           rx="3"
-          fill="#e8f4ff"
+          fill="var(--txt, #f4f7fb)"
           transform={`rotate(${deg} 50 50)`}
         />
       ))}
-      <circle cx="50" cy="50" r="34" fill="none" stroke="#e8f4ff" strokeWidth="3.5" />
+      <circle cx="50" cy="50" r="34" fill="none" stroke="var(--txt, #f4f7fb)" strokeWidth="3.5" />
       <circle cx="50" cy="50" r="29" fill={`url(#ac-${uid})`} />
       <text
         x="50"
@@ -47,7 +47,7 @@ const LogoMark = ({ size = 32 }) => {
       >
         A
       </text>
-      <ellipse cx="40" cy="32" rx="14" ry="7" fill="#ffffff" opacity="0.22" transform="rotate(-24 40 32)" />
+      <ellipse cx="40" cy="32" rx="14" ry="7" fill="var(--txt, #f4f7fb)" opacity="0.22" transform="rotate(-24 40 32)" />
     </svg>
   );
 };

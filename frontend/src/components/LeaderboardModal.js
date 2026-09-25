@@ -113,8 +113,9 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
     const resolved = resolvedProfiles[key];
     return (
       resolved?.displayName ||
-      player.robloxDisplayName ||
+      player.customDisplayName ||
       player.displayName ||
+      player.robloxDisplayName ||
       player.robloxUsername ||
       'Anonymous'
     );

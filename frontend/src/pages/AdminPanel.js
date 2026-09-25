@@ -756,7 +756,7 @@ function AdminPanel() {
 
   const handleViewUserPets = async (usr) => {
     setSelectedUser(usr);
-    setEditDisplayName(usr.displayName || usr.robloxDisplayName || '');
+    setEditDisplayName(usr.customDisplayName || '');
     try {
       const response = await retryRequest(() =>
         fetch(`${API_BASE}/api/users/inventory/${usr.id}`, {
@@ -804,7 +804,12 @@ function AdminPanel() {
       );
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
-        const patch = { displayName: data.displayName || name, robloxDisplayName: data.displayName || name };
+        const savedUser = data.user || data;
+        const patch = {
+          ...savedUser,
+          customDisplayName: savedUser.customDisplayName || name,
+          displayName: savedUser.displayName || name
+        };
         setSelectedUser((prev) => (prev ? { ...prev, ...patch } : prev));
         setUsers((prev) => prev.map((u) => (u.id === selectedUser.id ? { ...u, ...patch } : u)));
         showCustomPopup(`Display name set to ${name}`, 'success');
@@ -1142,7 +1147,7 @@ function AdminPanel() {
     return units;
   };
 
-  const displayUser = (usr) => usr.robloxDisplayName || usr.displayName || usr.robloxUsername || 'Anonymous';
+  const displayUser = (usr) => usr.customDisplayName || usr.displayName || usr.robloxDisplayName || usr.robloxUsername || 'Anonymous';
 
   if (isLoading) {
     return (

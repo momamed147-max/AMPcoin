@@ -27,7 +27,9 @@ async function resolveUserProfile(identifier, force = false) {
       const data = await res.json();
       const result = {
         avatar: data.avatar || '',
-        displayName: data.displayName || ''
+        displayName: data.displayName || '',
+        robloxDisplayName: data.robloxDisplayName || '',
+        customDisplayName: data.customDisplayName || null
       };
       profileCache.set(key, result);
       return result;
@@ -456,7 +458,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
     setSending(true);
     setChatError('');
     const displayName =
-      user.robloxDisplayName || user.displayName || user.robloxUsername || 'Anonymous';
+      user.customDisplayName || user.displayName || user.robloxDisplayName || user.robloxUsername || 'Anonymous';
     const optimisticMsg = {
       id: `opt-${Date.now()}`,
       userId: user.id,
@@ -610,7 +612,8 @@ const ChatPanel = ({ socket, chatOpen }) => {
     setViewProfile({
       id: msg.userId,
       robloxUsername: msg.robloxUsername || '',
-      robloxDisplayName: resolved?.displayName || msg.displayName || msg.username || '',
+      customDisplayName: resolved?.customDisplayName || msg.customDisplayName || null,
+      robloxDisplayName: resolved?.robloxDisplayName || msg.robloxDisplayName || '',
       displayName: resolved?.displayName || msg.displayName || msg.username || msg.robloxUsername || 'Anonymous',
       avatar: resolved?.avatar || msg.avatar || '',
       robloxUserId: msg.robloxUserId || null

@@ -30,9 +30,10 @@ Then **redeploy** the backend.
 
 ## 3. Done
 
-Users click **Link Discord** in their profile → approve on Discord →
-return with the Discord name + avatar shown. One Discord account can
-only be linked to one site account. Unlink anytime from the same place.
+Users open **Settings** from the header and click **Link Discord** →
+approve on Discord → return with the Discord name + avatar shown. One
+Discord account can only be linked to one site account. Unlink anytime
+from the same Settings modal.
 
 ## Troubleshooting
 

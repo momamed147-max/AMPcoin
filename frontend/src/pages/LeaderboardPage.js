@@ -16,8 +16,9 @@ function getFallbackAvatar(player) {
 
 function getDisplayName(player) {
   return (
-    player?.robloxDisplayName ||
+    player?.customDisplayName ||
     player?.displayName ||
+    player?.robloxDisplayName ||
     player?.robloxUsername ||
     player?.username ||
     'Anonymous'
@@ -126,8 +127,9 @@ const LeaderboardPage = () => {
     const resolved = resolvedProfiles[key];
     return (
       resolved?.displayName ||
-      player?.robloxDisplayName ||
+      player?.customDisplayName ||
       player?.displayName ||
+      player?.robloxDisplayName ||
       player?.robloxUsername ||
       'Anonymous'
     );

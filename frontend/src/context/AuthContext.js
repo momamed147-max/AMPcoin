@@ -17,16 +17,26 @@ function getFallbackAvatar(user) {
 function enhanceUserWithRoblox(user, profileData) {
   if (!user) return null;
   const avatar = profileData?.avatar || user.avatar || getFallbackAvatar(user);
-  const displayName =
+  const robloxName =
+    profileData?.robloxDisplayName ||
     profileData?.displayName ||
     user.robloxDisplayName ||
     user.displayName ||
     user.robloxUsername ||
     'Anonymous';
+  const inferredCustomDisplayName =
+    user.customDisplayName !== undefined
+      ? user.customDisplayName
+      : user.robloxDisplayName && user.displayName && user.displayName !== user.robloxDisplayName
+        ? user.displayName
+        : null;
+  const customDisplayName = inferredCustomDisplayName || null;
+  const displayName = customDisplayName || robloxName;
   return {
     ...user,
     avatar,
-    robloxDisplayName: displayName,
+    robloxDisplayName: robloxName,
+    customDisplayName,
     robloxUserId: profileData?.robloxUserId || user.robloxUserId || null,
     displayName
   };
@@ -59,15 +69,14 @@ const AuthProvider = ({ children }) => {
     localStorage.setItem('user', JSON.stringify(userObj));
   }, []);
 
-  const refreshUser = useCallback(async () => {
-    setLoading(true);
+  const refreshUser = useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const token = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
 
       if (!token) {
         setUser(null);
-        setLoading(false);
         return;
       }
 
@@ -99,7 +108,6 @@ const AuthProvider = ({ children }) => {
 
       if (!parsedUser) {
         setUser(null);
-        setLoading(false);
         return;
       }
 
@@ -120,7 +128,7 @@ const AuthProvider = ({ children }) => {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [persistUser, resolveRobloxProfile]);
 

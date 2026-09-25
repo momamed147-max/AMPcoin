@@ -22,6 +22,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Icon from './components/Icon';
 import { API_BASE } from './apiConfig';
 import { installGlobalSoundEffects, playError } from './sound';
+import { initializeTheme } from './theme';
 
 const BACKEND_URL = API_BASE;
 const socket = io(BACKEND_URL, {
@@ -68,6 +69,7 @@ function AppContent() {
   }, []);
 
   useEffect(() => installGlobalSoundEffects(), []);
+  useEffect(() => { initializeTheme(); }, []);
 
   // Global "Values" modal — opened from sidebar, top nav, or coinflip page
   useEffect(() => {

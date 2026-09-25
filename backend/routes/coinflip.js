@@ -623,7 +623,7 @@ router.post('/:id/bot-join', authenticateToken, (req, res) => {
       dbManager.removeItemFromUserInventory(recipient.id, it.itemId, it.quantity || 1);
     }
 
-    const botName = botUser.displayName || botUser.robloxDisplayName || botUser.robloxUsername || 'House Bot';
+    const botName = botUser.customDisplayName || botUser.displayName || botUser.robloxDisplayName || botUser.robloxUsername || 'House Bot';
     const botAvatar = botUser.avatar || '';
     const opponentTotalValue = pick.total;
 

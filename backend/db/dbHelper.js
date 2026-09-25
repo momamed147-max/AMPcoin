@@ -149,7 +149,14 @@ function normalizeUser(user) {
     robloxUserId: user.robloxUserId || user.robloxId || null,
     robloxUsername: user.robloxUsername || user.username || '',
     robloxDisplayName: user.robloxDisplayName || user.robloxName || null,
-    displayName: user.displayName || user.robloxDisplayName || user.robloxUsername || user.username || 'Anonymous',
+    customDisplayName: user.customDisplayName !== undefined
+      ? (user.customDisplayName || null)
+      : (user.robloxDisplayName && user.displayName && user.displayName !== user.robloxDisplayName ? user.displayName : null),
+    displayName: user.customDisplayName || user.displayName || user.robloxDisplayName || user.robloxUsername || user.username || 'Anonymous',
+    discordId: user.discordId || null,
+    discordUsername: user.discordUsername || null,
+    discordAvatar: user.discordAvatar || null,
+    discordLinkedAt: user.discordLinkedAt || null,
     email: user.email || '',
     password: user.password || '',
     avatar: user.avatar || user.profilePicture || '',
