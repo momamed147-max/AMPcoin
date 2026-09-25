@@ -688,10 +688,10 @@ const Header = ({ balance, socket }) => {
                 <div className="wm-empty">No items in your inventory</div>
               )}
             </div>
-            {totalPages > 1 && !invLoading && (
+            {visible.length > 0 && !invLoading && (
               <div className="wm-pager">
                 <span className="wm-pager-count">
-                  Showing {((currentPage - 1) * WM_PAGE_SIZE) + 1}–{Math.min(currentPage * WM_PAGE_SIZE, visible.length)} of {visible.length}
+                  Showing {((currentPage - 1) * WM_PAGE_SIZE) + 1}–{Math.min(currentPage * WM_PAGE_SIZE, visible.length)} of {visible.length} items ({WM_PAGE_SIZE} per page)
                 </span>
                 <div className="wm-pager-controls">
                   <button className="wm-page-btn" onClick={() => goToPage(1)} disabled={currentPage === 1} aria-label="First page">«</button>
