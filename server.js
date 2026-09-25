@@ -168,7 +168,10 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
-const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
+// Always bind every interface. Container platforms proxy in from outside the
+// container, so binding to loopback makes the service unreachable (Railway
+// answers with its fallback 502). Override with HOST only if you know why.
+const HOST = process.env.HOST || '0.0.0.0';
 
 // A cold or briefly unreachable database should not take the whole service
 // down. Retry with backoff so the container stays alive and self-heals, instead
@@ -203,9 +206,6 @@ async function start() {
   try {
     await initDatabaseWithRetry();
     console.log('PostgreSQL connected and data loaded');
-    if (dbManager.usingBundledFallback && dbManager.usingBundledFallback()) {
-      console.warn('[startup] WARNING: running on the BUNDLED database fallback because DATABASE_URL is not set on this service.');
-    }
 
     // Auto-migrate: if no users exist, import from local JSON files if available
     const users = dbManager.getUsersDb();
