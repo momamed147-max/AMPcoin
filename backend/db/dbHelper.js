@@ -3,7 +3,15 @@ const { v4: uuidv4 } = require('uuid');
 const fs = require('fs');
 const path = require('path');
 
-const LOCAL_JSON_MODE = process.env.NODE_ENV !== 'production' && !process.env.DATABASE_URL;
+// The JSON sandbox is strictly opt-in via LOCAL_JSON_MODE=true.
+//
+// Two failure modes this avoids:
+//  - A stray DATABASE_URL in a local .env silently pointing dev at the live DB.
+//  - A host with no NODE_ENV set silently serving the repo's JSON files instead
+//    of PostgreSQL, which would hide every real user, balance and inventory.
+// Anything that is not an explicit sandbox always uses PostgreSQL.
+const SANDBOX = /^(1|true|yes)$/i.test(String(process.env.LOCAL_JSON_MODE || ''));
+const LOCAL_JSON_MODE = SANDBOX && process.env.NODE_ENV !== 'production';
 
 // ─── PostgreSQL connection ───────────────────────────────────────────
 function createPool(connectionString) {
