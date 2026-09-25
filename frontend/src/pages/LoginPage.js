@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import Logo from '../components/Logo';
+import { playError } from '../sound';
 import './AuthPage.css';
 
 const LoginPage = () => {
@@ -15,11 +16,16 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { requestVerifyCode, verifyAndRegister, loading: authLoading } = useAuth();
 
+  const showLoginError = (message) => {
+    setError(message);
+    playError();
+  };
+
   const handleGetCode = async (e) => {
     e.preventDefault();
     setError('');
     if (!robloxUsername.trim()) {
-      setError('Please enter your Roblox username');
+      showLoginError('Please enter your Roblox username');
       return;
     }
     setLoading(true);
@@ -29,10 +35,10 @@ const LoginPage = () => {
         setCode(result.code);
         setStep(2);
       } else {
-        setError(result.message || 'Could not create code');
+        showLoginError(result.message || 'Could not create code');
       }
     } catch (err) {
-      setError(err.message || 'Network error. Please try again.');
+      showLoginError(err.message || 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -47,10 +53,10 @@ const LoginPage = () => {
       if (result.success) {
         navigate('/coinflip');
       } else {
-        setError(result.message || 'Verification failed');
+        showLoginError(result.message || 'Verification failed');
       }
     } catch (err) {
-      setError(err.message || 'Network error. Please try again.');
+      showLoginError(err.message || 'Network error. Please try again.');
     } finally {
       setLoading(false);
     }

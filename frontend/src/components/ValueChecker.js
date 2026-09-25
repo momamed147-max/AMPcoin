@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
+import { playError } from '../sound';
 import './ValueChecker.css';
 
 const RARITY_COLORS = {
@@ -52,7 +53,10 @@ const ValueChecker = ({ isOpen, onClose }) => {
       })
       .then((data) => setAllItems(Array.isArray(data) ? data : data.items || []))
       .catch((error) => {
-        if (error.name !== 'AbortError') setLoadError('Could not load item values. Check your connection and try again.');
+        if (error.name !== 'AbortError') {
+          setLoadError('Could not load item values. Check your connection and try again.');
+          playError();
+        }
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);

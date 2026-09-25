@@ -1,4 +1,5 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
+import { playCoinflipFlip, playCoinflipLanding } from '../sound';
 import './CoinChip.css';
 
 let chipIdCounter = 0;
@@ -141,8 +142,13 @@ export function CoinFlipAnimation({ result = 'heads', size = 120, onDone }) {
   // Heads: land on a multiple of 360 (5 full spins). Tails: +180 (5.5 spins).
   const landingDeg = isHeads ? 1800 : 1980;
 
+  useEffect(() => {
+    playCoinflipFlip();
+  }, [normalized]);
+
   const handleAnimationEnd = (e) => {
     if (e.target !== e.currentTarget) return;
+    playCoinflipLanding(normalized);
     if (typeof onDone === 'function') onDone(normalized);
   };
 

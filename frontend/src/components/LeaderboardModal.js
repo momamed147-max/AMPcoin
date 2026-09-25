@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../apiConfig';
 import Icon from './Icon';
 import ModalPortal from './ModalPortal';
+import { playError } from '../sound';
 import './LeaderboardModal.css';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
@@ -83,6 +84,7 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
         } catch (error) {
           console.error('Error fetching leaderboard:', error);
           setLoadError('The leaderboard could not be loaded. Please try again.');
+          playError();
           setLoading(false);
         }
       };

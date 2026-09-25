@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
+import { playError } from '../sound';
 import './AnimatedPopup.css';
 
 const TYPE_META = {
@@ -28,7 +29,8 @@ const AnimatedPopup = ({
 
   useEffect(() => {
     setClosing(false);
-  }, [message, show]);
+    if (show && (type === 'error' || type === 'warning')) playError();
+  }, [message, show, type]);
 
   useEffect(() => {
     if (!show) return undefined;

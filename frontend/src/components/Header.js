@@ -6,6 +6,12 @@ import ModalPortal from './ModalPortal';
 import Icon from './Icon';
 import ModBadges from './ModBadges';
 import { API_BASE } from '../apiConfig';
+import {
+  SOUND_CHANGE_EVENT,
+  isSoundEnabled,
+  playButtonClick,
+  setSoundEnabled
+} from '../sound';
 import './ModBadges.css';
 import './WalletModal.css';
 
@@ -26,6 +32,22 @@ const Header = ({ balance, socket }) => {
   const [invError, setInvError] = useState('');
   const [botInfo, setBotInfo] = useState(null); // { botUser, redirectLink, botEnabled, avatar }
   const [tradeModal, setTradeModal] = useState(null); // { kind: 'withdraw'|'deposit', items, amount }
+  const [soundEnabled, setSoundEnabledState] = useState(isSoundEnabled);
+
+  useEffect(() => {
+    const syncSoundSetting = (event) => {
+      setSoundEnabledState(event.detail?.enabled ?? isSoundEnabled());
+    };
+    window.addEventListener(SOUND_CHANGE_EVENT, syncSoundSetting);
+    return () => window.removeEventListener(SOUND_CHANGE_EVENT, syncSoundSetting);
+  }, []);
+
+  const toggleSound = () => {
+    const nextEnabled = !soundEnabled;
+    setSoundEnabled(nextEnabled);
+    setSoundEnabledState(nextEnabled);
+    if (nextEnabled) playButtonClick();
+  };
 
   // Notifications
   const [notifOpen, setNotifOpen] = useState(false);
@@ -391,6 +413,17 @@ const Header = ({ balance, socket }) => {
       </div>
 
       <div className="header-right">
+        <button
+          type="button"
+          className={`sound-toggle ${soundEnabled ? 'enabled' : 'muted'}`}
+          data-sound-control
+          onClick={toggleSound}
+          aria-label={soundEnabled ? 'Mute sound effects' : 'Enable sound effects'}
+          aria-pressed={soundEnabled}
+          title={soundEnabled ? 'Sound effects on — click to mute' : 'Sound effects muted — click to enable'}
+        >
+          <Icon name={soundEnabled ? 'volume' : 'volumeOff'} size={17} />
+        </button>
         <div className="notifications" ref={notifRef}>
           <button
             type="button"

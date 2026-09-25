@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../apiConfig';
 import Icon from '../components/Icon';
+import { playError } from '../sound';
 import './StatsPage.css';
 
 const StatsPage = () => {
@@ -31,6 +32,7 @@ const StatsPage = () => {
         if (error.name !== 'AbortError') {
           console.error('Error fetching stats:', error);
           setLoadError('Statistics could not be loaded right now.');
+          playError();
         }
       } finally {
         if (!controller.signal.aborted) setLoading(false);

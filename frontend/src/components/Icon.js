@@ -42,6 +42,8 @@ const PATHS = {
   arrowRight: (<g><path d="M5 12h14M14 7l5 5-5 5" /></g>),
   info: (<g><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></g>),
   sort: (<g><path d="m8 7 4-4 4 4M12 3v18M16 17l-4 4-4-4" /></g>),
+  volume: (<g><path d="M5 10v4h3l4 3V7L8 10H5Z" /><path d="M15 9.5a3.5 3.5 0 0 1 0 5M17.5 7a7 7 0 0 1 0 10" /></g>),
+  volumeOff: (<g><path d="M5 10v4h3l4 3V7L8 10H5Z" /><path d="m16 10 4 4M20 10l-4 4" /></g>),
   dot: (<g><circle cx="12" cy="12" r="4" /></g>)
 };
 

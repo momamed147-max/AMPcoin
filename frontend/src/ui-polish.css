@@ -620,6 +620,55 @@ textarea:focus-visible,
   margin-left: auto;
 }
 
+.sound-toggle {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  place-items: center;
+  color: #9ec4ff;
+  border: 1px solid rgba(76, 141, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(76, 141, 255, 0.08);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.12s ease;
+}
+
+.sound-toggle::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--bg1);
+  border-radius: 50%;
+  background: #55d16e;
+  box-shadow: 0 0 7px rgba(72, 200, 102, 0.6);
+}
+
+.sound-toggle.muted {
+  color: var(--dim);
+  border-color: var(--line-soft);
+  background: rgba(15, 23, 36, 0.65);
+}
+
+.sound-toggle.muted::after {
+  background: #667085;
+  box-shadow: none;
+}
+
+.sound-toggle:hover {
+  color: #c8ddff;
+  border-color: rgba(76, 141, 255, 0.35);
+  background: rgba(76, 141, 255, 0.12);
+}
+
+.sound-toggle:active {
+  transform: scale(0.94);
+}
+
 .notifications {
   position: relative;
   display: flex;
@@ -1988,6 +2037,7 @@ textarea:focus,
   .header-wallet-btn > span { display: none; }
   .header-right { gap: 5px; }
   .notification-icon,
+  .sound-toggle,
   .header-gw-btn { width: 36px !important; min-width: 36px; height: 36px !important; padding: 0 !important; }
   .header-gw-btn > span { display: none; }
 

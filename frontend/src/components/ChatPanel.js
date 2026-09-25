@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import ProfileModal from './ProfileModal';
 import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
+import { playError } from '../sound';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
 
@@ -222,6 +223,11 @@ const ChatPanel = ({ socket, chatOpen }) => {
   const [activeGiveaway, setActiveGiveaway] = useState(null); // persistent top banner
   const [winnerBanner, setWinnerBanner] = useState(null); // winner announcement
 
+  const showChatError = (message) => {
+    setChatError(message);
+    playError();
+  };
+
   // Giveaway interaction state (creation lives in the header GW button;
   // the winner is drawn automatically by the server when the timer ends)
   const [joiningGw, setJoiningGw] = useState(false);
@@ -378,10 +384,12 @@ const ChatPanel = ({ socket, chatOpen }) => {
         setMessages(regularMessages);
       } else {
         setChatLoadError('Recent messages could not be loaded.');
+        playError();
       }
     } catch (error) {
       console.error('Error fetching chat messages:', error);
       setChatLoadError('Could not reach chat. New messages may be delayed.');
+      playError();
     }
   };
 
@@ -490,7 +498,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
         // Rejected (cooldown/mute/rate-limit): drop the ghost message, keep the text
         setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
         setInputMessage(trimmed);
-        setChatError(data.message || 'Message was not sent. Please try again.');
+        showChatError(data.message || 'Message was not sent. Please try again.');
         if (response.status === 429) {
           startCooldown(data.retryAfter || 5);
         }
@@ -499,7 +507,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
       console.error('Error sending message:', error);
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
       setInputMessage(trimmed);
-      setChatError('Connection lost. Your message was not sent.');
+      showChatError('Connection lost. Your message was not sent.');
     } finally {
       setSending(false);
       if (inputRef.current) inputRef.current.focus();

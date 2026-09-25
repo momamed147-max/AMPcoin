@@ -9,6 +9,7 @@ import { CoinChip, CoinFlipAnimation, CoinLoader } from '../components/CoinChip'
 import ModBadges from '../components/ModBadges';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
+import { playBetPlaced, playCoinflipJoin } from '../sound';
 import '../components/CoinChip.css';
 import '../components/ModBadges.css';
 import './CoinflipPage.css';
@@ -210,6 +211,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
         }
       });
       socket.on('coinflipJoined', (data) => {
+        if (data) playCoinflipJoin();
         setCoinflips(prev => prev.map(cf => cf.id === data.id ? data : cf));
       });
       socket.on('coinflipUpdated', (data) => {
@@ -327,6 +329,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
         // Backend broadcasts coinflipResult + inventoryUpdate via socket;
         // update immediately too so the row flips without waiting.
         setCoinflips((prev) => prev.map((x) => (x.id === data.id ? data : x)));
+        playCoinflipJoin();
         playChipFlip(data);
         fetchInventory();
       } else {
@@ -350,6 +353,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
 
   const handleBetCreated = (newBet) => {
     if (newBet && newBet.id) {
+      playBetPlaced();
       setCoinflips((prev) => [newBet, ...prev.filter((cf) => cf.id !== newBet.id)]);
       setActiveCount((prev) => prev + 1);
       setTotalInGames((prev) => prev + (newBet.totalValue || 0));
@@ -571,6 +575,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
       const data = await response.json();
       if (response.ok) {
         setShowJoinModal(false);
+        playCoinflipJoin();
         playChipFlip(data);
         fetchInventory();
         fetchCoinflips();

@@ -5,6 +5,7 @@ import '../components/CoinChip.css';
 import Icon from '../components/Icon';
 import ModBadges from '../components/ModBadges';
 import { API_BASE } from '../apiConfig';
+import { playBetPlaced } from '../sound';
 import '../components/ModBadges.css';
 import './JackpotPage.css';
 
@@ -210,6 +211,7 @@ const JackpotPage = ({ socket, setBalance }) => {
       });
       const data = await res.json();
       if (res.ok) {
+        playBetPlaced();
         showCustomPopup('Entered jackpot!', 'success');
         setSelectedItems([]);
         fetchJackpot();

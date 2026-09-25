@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 
@@ -21,6 +21,7 @@ import AuthProvider, { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Icon from './components/Icon';
 import { API_BASE } from './apiConfig';
+import { installGlobalSoundEffects, playError } from './sound';
 
 const BACKEND_URL = API_BASE;
 const socket = io(BACKEND_URL, {
@@ -39,6 +40,7 @@ function AppContent() {
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   const [apiDown, setApiDown] = useState(false);
+  const apiDownRef = useRef(false);
 
   // Backend reachability canary — shows a banner instead of silent failures
   const checkApi = async () => {
@@ -47,8 +49,11 @@ function AppContent() {
     try {
       const response = await fetch(`${BACKEND_URL}/api/health`, { signal: ctrl.signal });
       if (!response.ok) throw new Error(`API check failed (${response.status})`);
+      apiDownRef.current = false;
       setApiDown(false);
     } catch (_) {
+      if (!apiDownRef.current) playError();
+      apiDownRef.current = true;
       setApiDown(true);
     } finally {
       clearTimeout(timeout);
@@ -61,6 +66,8 @@ function AppContent() {
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => installGlobalSoundEffects(), []);
 
   // Global "Values" modal — opened from sidebar, top nav, or coinflip page
   useEffect(() => {
