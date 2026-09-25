@@ -72,6 +72,7 @@ function toStack(catalogItem, quantity) {
     name: catalogItem.name || catalogItem.itemName || 'Item',
     value: priceOf(catalogItem),
     rarity: catalogItem.rarity || 'common',
+    type: catalogItem.type || 'pet',
     image: catalogItem.imageUrl || catalogItem.image || '',
     mods: normalizeMods(catalogItem.mods),
     quantity
@@ -105,7 +106,7 @@ function adjustHeld(stacks, sign) {
   for (const stack of stacks) {
     const row = db.tradeBotHeld.find((h) => h.itemId === stack.itemId);
     if (row) row.quantity = Math.max(0, (row.quantity || 0) + sign * stack.quantity);
-    else if (sign > 0) db.tradeBotHeld.push({ itemId: stack.itemId, name: stack.name, quantity: stack.quantity });
+    else if (sign > 0) db.tradeBotHeld.push({ itemId: stack.itemId, name: stack.name, type: stack.type || 'pet', quantity: stack.quantity });
   }
   db.tradeBotHeld = db.tradeBotHeld.filter((h) => h.quantity > 0);
   db.tradeBotUpdatedAt = new Date().toISOString();
@@ -253,7 +254,7 @@ router.post('/deposits', (req, res) => {
         newBalance: Number(inventory?.totalValue || 0),
         newInventoryValue: Number(inventory?.totalValue || 0),
         cashBalance: Number(user.balance || 0),
-        items: priced.map((s) => ({ id: s.itemId, name: s.name, unitValue: s.value, quantity: s.quantity }))
+        itemsReceived: priced.map((s) => ({ id: s.itemId, name: s.name, type: s.type, unitValue: s.value, quantity: s.quantity }))
       },
       message: 'Deposit recorded successfully'
     });
@@ -341,7 +342,7 @@ router.post('/withdrawals/confirm', (req, res) => {
     // The items left the player's inventory when the request was created in
     // withdraw-items, so this only closes the record and updates the bot's
     // held count. Nothing is deducted twice.
-    const stacks = (target.items || []).map((i) => ({ itemId: i.itemId, name: i.name, quantity: i.quantity || 1 }));
+    const stacks = (target.items || []).map((i) => ({ itemId: i.itemId, name: i.name, type: i.type, quantity: i.quantity || 1 }));
     adjustHeld(stacks, -1);
 
     target.status = 'completed';
@@ -399,8 +400,9 @@ router.get(['/inventory', '/inventory/bot'], (req, res) => {
       return {
         id: held.itemId,
         name: held.name || catalogItem?.name || 'Item',
-        quantity: held.quantity || 0,
-        value: catalogItem ? priceOf(catalogItem) : 0
+        value: catalogItem ? priceOf(catalogItem) : 0,
+        type: catalogItem?.type || held.type || 'pet',
+        quantity: held.quantity || 0
       };
     });
     // `inventory` is exposed at the top level too so a client can assign the
@@ -428,6 +430,7 @@ router.get('/catalog', (req, res) => {
       robloxAssetId: item.robloxAssetId ?? null,
       name: item.name || item.itemName,
       rarity: item.rarity || 'common',
+      type: item.type || 'pet',
       mods: normalizeMods(item.mods),
       value: priceOf(item)
     }));
