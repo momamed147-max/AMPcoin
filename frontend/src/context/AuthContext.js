@@ -216,7 +216,7 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  // Step 2: backend issues the "AMPbet | word word word word" bio code
+  // Step 2: backend issues a seven-word bio code
   const requestVerifyCode = async (robloxUsername) => {
     try {
       const response = await fetch(`${API_BASE}/api/auth/verify-request`, {

@@ -384,10 +384,11 @@ const pendingVerifications = new Map();
 
 function makeVerifyCode() {
   const words = [];
-  for (let i = 0; i < 4; i++) {
-    words.push(VERIFY_WORDS[Math.floor(Math.random() * VERIFY_WORDS.length)]);
+  while (words.length < 7) {
+    const word = VERIFY_WORDS[Math.floor(Math.random() * VERIFY_WORDS.length)];
+    if (!words.includes(word)) words.push(word);
   }
-  return `AMPbet | ${words.join(' ')}`;
+  return words.join(' ');
 }
 
 // Step 2: confirm "is this u?" -> backend issues the bio code.
