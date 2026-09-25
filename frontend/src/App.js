@@ -8,10 +8,8 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Logo from './components/Logo';
 import CoinflipPage from './pages/CoinflipPage';
-import BlackjackPage from './pages/BlackjackPage';
 import JackpotPage from './pages/JackpotPage';
 import TradingPage from './pages/TradingPage';
-import WalletPage from './pages/WalletPage';
 import StatsPage from './pages/StatsPage';
 import ProvablyFairPage from './pages/ProvablyFairPage';
 import LoginPage from './pages/LoginPage';
@@ -38,7 +36,6 @@ function AppContent() {
   const { user, loading, refreshUser } = useAuth();
   const location = useLocation();
   const [balance, setBalance] = useState(0);
-  const [notifications, setNotifications] = useState([]);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   const [discordPopup, setDiscordPopup] = useState(null);
@@ -147,7 +144,7 @@ function AppContent() {
           </>
         )}
         <div className="main-content">
-          {user && <Header balance={balance} setBalance={setBalance} notifications={notifications} socket={socket} />}
+          {user && <Header balance={balance} setBalance={setBalance} socket={socket} />}
           <div className="page-content" key={location.pathname}>
             <Routes>
               <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/coinflip" />} />

@@ -18,7 +18,7 @@ function getFallbackAvatar(user) {
   return DEFAULT_AVATAR;
 }
 
-const Header = ({ balance, notifications, socket }) => {
+const Header = ({ balance, socket }) => {
   const location = useLocation();
   const { user } = useAuth();
   const [showWalletModal, setShowWalletModal] = useState(false);

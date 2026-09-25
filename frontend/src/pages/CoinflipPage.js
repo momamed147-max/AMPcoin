@@ -243,7 +243,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
         socket.off('inventoryUpdate');
       }
     };
-  }, [socket, user, fetchCoinflips, fetchInventory]);
+  }, [socket, user, fetchCoinflips, fetchInventory, fetchJackpotCount]);
 
   const playChipFlip = (gameData) => {
     if (!gameData || !gameData.id) return;
@@ -364,10 +364,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
     setSelectedBet(bet);
     setJoinSelectedQty({});
     setShowJoinModal(true);
-  };
-
-  const clearJoinStack = (stackKey) => {
-    setJoinSelectedQty((prev) => { const n = { ...prev }; delete n[stackKey]; return n; });
   };
 
   const getJoinTotalValue = () => {
@@ -516,12 +512,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
     } finally {
       setCancelling(false);
     }
-  };
-
-  const handleChipClick = (bet) => {
-    const finished = bet.status === 'completed' || bet.isCompleted || !!bet.result;
-    if (finished) playChipFlip(bet);
-    else setViewBet(bet);
   };
 
   const getJoinMin = (bet) => {

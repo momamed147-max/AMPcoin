@@ -119,52 +119,6 @@ const BlackjackPage = ({ socket, setBalance }) => {
 
   const startGame = async () => {
     showCustomPopup('Blackjack is not available yet');
-    return;
-    if (selected.length === 0) {
-      setMessage('Select at least one item to wager');
-      return;
-    }
-    setBusy(true);
-    setMessage('');
-    try {
-      const response = await fetch(`${API_BASE}/api/blackjack/start`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          selectedItems: selected.map((item) => ({
-            itemId: item.itemId || item.id,
-            name: item.details?.name || item.name,
-            quantity: item.quantity || 1
-          }))
-        })
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        setGameId(data.gameId);
-        setGameState('in_progress');
-        setPlayerHand(data.playerHand || []);
-        setDealerHand(data.dealerHand || []);
-        setPlayerValue(data.playerValue ?? calculateHandValue(data.playerHand || []));
-        setDealerValue(data.dealerValue ?? 0);
-        setResult('');
-        setLastPayout(null);
-        setShowFinalResult(false);
-        setMessage('');
-        fetchInventory();
-      } else {
-        setMessage(data.message || 'Error starting game');
-      }
-    } catch (error) {
-      console.error('Error starting blackjack game:', error);
-      setMessage('Error starting game');
-    } finally {
-      setBusy(false);
-    }
   };
 
   const hit = async () => {

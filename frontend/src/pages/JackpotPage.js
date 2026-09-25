@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
 import { CoinLoader } from '../components/CoinChip';
 import '../components/CoinChip.css';
@@ -11,7 +10,6 @@ import './JackpotPage.css';
 const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const JackpotPage = ({ socket, setBalance }) => {
-  const { user, refreshUser } = useAuth();
   const [jackpot, setJackpot] = useState(null);
   const [history, setHistory] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -20,7 +18,6 @@ const JackpotPage = ({ socket, setBalance }) => {
   const [joining, setJoining] = useState(false);
   const [popup, setPopup] = useState({ show: false, message: '', type: 'info' });
   const [timer, setTimer] = useState(null);
-  const [showHistory, setShowHistory] = useState(false);
   const [activeTab, setActiveTab] = useState('active'); // active, history
   const [spinId, setSpinId] = useState(null); // userId currently highlighted by the sweep
   const [spinning, setSpinning] = useState(false);
@@ -178,7 +175,7 @@ const JackpotPage = ({ socket, setBalance }) => {
       socket.off('jackpotUpdate');
       socket.off('inventoryUpdate');
     };
-  }, [socket, fetchInventory, fetchHistory]);
+  }, [socket, fetchInventory, fetchHistory, runSpin]);
 
   // Toggle item selection
   const toggleItem = (item) => {

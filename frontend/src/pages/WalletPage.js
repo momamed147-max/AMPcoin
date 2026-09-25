@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
 import Icon from '../components/Icon';
@@ -17,18 +17,11 @@ const WalletPage = () => {
   const [popupType, setPopupType] = useState('info');
   const [selectedItems, setSelectedItems] = useState([]);
   const [selectAllChecked, setSelectAllChecked] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [successMessage, setSuccessMessage] = '';
+  const [, setIsLoading] = useState(false);
+  const [, setError] = useState(null);
+  const [, setSuccessMessage] = useState('');
 
-  useEffect(() => {
-    if (user) {
-      fetchBalance();
-      fetchInventory();
-    }
-  }, [user]);
-
-  const fetchBalance = async () => {
+  const fetchBalance = useCallback(async () => {
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wallet/balance`, {
         headers: {
@@ -44,7 +37,8 @@ const WalletPage = () => {
     }
   };
 
-  const fetchInventory = async () => {
+  const fetchInventory = useCallback(async () => {
+    if (!user) return;
     try {
       const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/users/inventory/${user.id}`, {
         headers: {
@@ -56,7 +50,14 @@ const WalletPage = () => {
     } catch (error) {
       console.error('Error fetching inventory:', error);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      fetchBalance();
+      fetchInventory();
+    }
+  }, [user, fetchBalance, fetchInventory]);
 
   const toggleItemSelection = (itemid) => {
     setSelectedItems(prev => {

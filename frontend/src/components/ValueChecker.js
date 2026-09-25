@@ -59,7 +59,7 @@ const ValueChecker = ({ isOpen, onClose }) => {
       return sortDir === 'desc' ? vb - va : va - vb;
     });
     return list;
-  }, [allItems, search, rarityFilter, sortField, sortDir]);
+  }, [allItems, search, rarityFilter, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const pageItems = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);

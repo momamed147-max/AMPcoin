@@ -46,16 +46,11 @@ function AdminPanel() {
   const [activeTab, setActiveTab] = useState('users');
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
-  const [newItem] = useState({ name: '', value: 0, rarity: 'common', type: 'pet' });
   const [newPet, setNewPet] = useState({ name: '', value: 0, rarity: 'common', mods: [] });
   const [selectedUser, setSelectedUser] = useState(null);
   const [userPets, setUserPets] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedPet] = useState(null);
   const [pendingTransactions, setPendingTransactions] = useState([]);
-  const [coinflipGames] = useState([]);
-  const [blackjackGames] = useState([]);
-  const [chatMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [, setSuccessMessage] = useState('');
@@ -116,10 +111,9 @@ function AdminPanel() {
   const [addUserPetSearch, setAddUserPetSearch] = useState('');
   const [viewTxItems, setViewTxItems] = useState(null); // item_withdrawal pets modal
   const [taxSettings, setTaxSettings] = useState({ taxEnabled: true, taxPercent: 15, taxRecipient: '' });
-  const [taxLoading, setTaxLoading] = useState(false);
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxHistory, setTaxHistory] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [, setLoading] = useState(false);
 
   const { user } = useAuth();
 
@@ -1917,7 +1911,7 @@ function AdminPanel() {
                 <button
                   className="btn btn-primary"
                   onClick={handleSaveTaxSettings}
-                  disabled={taxSaving || taxLoading}
+                  disabled={taxSaving}
                 >
                   {taxSaving ? 'Saving...' : 'Save Tax Settings'}
                 </button>
