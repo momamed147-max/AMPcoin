@@ -6,9 +6,11 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
 const dbManager = require('./backend/db/dbHelper');
+const { jwtSecret } = require('./backend/jwtSecret');
 
 const app = express();
 const server = http.createServer(app);
@@ -17,6 +19,7 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
   'https://ampcoin.co.uk',
   'https://ampcoin.pages.dev',
+  'https://ampcoin-4v8.pages.dev',
   'http://localhost:3000',
   'https://ampcoin.b-cdn.net',
   'https://ampcoin.co.uk.b-cdn.net',
@@ -28,6 +31,31 @@ const io = socketIo(server, {
     origin: allowedOrigins,
     methods: ["GET", "POST"],
     credentials: true
+  }
+});
+
+// Authenticate the socket handshake and derive identity from the verified JWT.
+// Client-provided user IDs are never trusted for targeted realtime events.
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (!token) return next(new Error('Authentication required'));
+
+  try {
+    const decoded = jwt.verify(token, jwtSecret());
+    const usersDb = dbManager.getUsersDb();
+    const user = (usersDb.users || []).find((candidate) =>
+      (decoded.userId && candidate.id === decoded.userId) ||
+      (decoded.robloxUsername && candidate.robloxUsername === decoded.robloxUsername)
+    );
+    if (!user || user.isActive === false || user.isFrozen || user.isBanned) {
+      return next(new Error('Authentication failed'));
+    }
+    socket.data.userId = user.id;
+    socket.data.robloxUsername = user.robloxUsername;
+    socket.data.displayName = user.displayName;
+    return next();
+  } catch (_) {
+    return next(new Error('Authentication failed'));
   }
 });
 
@@ -104,12 +132,13 @@ if (process.env.NODE_ENV === 'production' && fs.existsSync(indexHtml)) {
   });
 }
 
-// Socket.IO connection handling
+// Socket.IO connection handling. Identity comes from the authenticated
+// handshake, never from the joinChat payload.
 io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+  console.log('A user connected:', socket.id, socket.data.robloxUsername || 'unknown');
 
-  socket.on('joinChat', (data) => {
-    realtime.registerUser(data && data.userId, socket.id);
+  socket.on('joinChat', () => {
+    realtime.registerUser(socket.data.userId, socket.id);
   });
 
   socket.on('disconnect', () => {
@@ -117,11 +146,14 @@ io.on('connection', (socket) => {
     console.log('A user disconnected:', socket.id);
   });
 
-  socket.on('typingStart', (data) => {
-    socket.broadcast.emit('typingStart', data);
+  socket.on('typingStart', () => {
+    socket.broadcast.emit('typingStart', {
+      userId: socket.data.userId,
+      username: socket.data.displayName || socket.data.robloxUsername || 'Anonymous'
+    });
   });
-  socket.on('typingStop', (data) => {
-    socket.broadcast.emit('typingStop', data);
+  socket.on('typingStop', () => {
+    socket.broadcast.emit('typingStop', { userId: socket.data.userId });
   });
 });
 

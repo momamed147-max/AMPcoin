@@ -21,6 +21,9 @@ function Sidebar() {
 
   if (!user) return null;
 
+  const isStaff = !!(user.isAdmin || user.isModerator);
+  const staffLabel = user.isAdmin ? 'Admin' : 'Moderator';
+
   const navItems = [
     { path: '/coinflip', label: 'Coinflip', icon: 'coin' },
     { path: '/jackpot', label: 'Jackpot', icon: 'jackpot' },
@@ -68,17 +71,17 @@ function Sidebar() {
           )}
         </div>
 
-        {user.isAdmin && (
+        {isStaff && (
           <div className="nav-section nav-section-admin">
             <span className="nav-section-rule" />
             <Link
               to="/admin"
               className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}
-              aria-label="Admin panel"
+              aria-label={`${staffLabel} panel`}
               aria-current={location.pathname === '/admin' ? 'page' : undefined}
             >
-              <Icon name="gear" size={15} />
-              <span className="nav-label">Admin</span>
+              <Icon name={user.isAdmin ? 'gear' : 'shield'} size={15} />
+              <span className="nav-label">{staffLabel}</span>
             </Link>
           </div>
         )}
@@ -99,7 +102,7 @@ function Sidebar() {
             <span className="user-name">{user.displayName || user.robloxUsername}</span>
             <span className="user-handle">@{user.robloxUsername || 'player'}</span>
           </div>
-          {user.isAdmin && <span className="admin-badge">Admin</span>}
+          {isStaff && <span className={`admin-badge ${user.isModerator ? 'moderator' : ''}`}>{staffLabel}</span>}
         </button>
         <button className="logout-btn" onClick={logout} title="Log out" aria-label="Log out">
           <Icon name="door" size={16} />

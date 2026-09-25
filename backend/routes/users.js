@@ -186,6 +186,8 @@ router.get('/profile/:robloxUsername', async (req, res) => {
       displayName,
       customDisplayName: user?.customDisplayName || null,
       robloxDisplayName: user?.robloxDisplayName || (user ? null : displayName),
+      isAdmin: !!user?.isAdmin,
+      isModerator: !!user?.isModerator,
       robloxUserId
     });
   } catch (error) {

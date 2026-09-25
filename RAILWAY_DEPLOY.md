@@ -34,6 +34,12 @@ Cloudflare Pages → `dasdif123`/new project → env var:
   (either JSON = server alive; `false` just means Discord env vars missing)
 - `https://xxx.up.railway.app/api/items` → item array
 
+## Staff roles
+- Full admins retain the complete operations console.
+- In **Admin Panel → Manage Users**, an admin can use **Make Moderator**.
+- Moderators receive a restricted console with only **Dashboard** and **Manage Users**.
+- The moderator user list exposes only the **Mute/Unmute** action; all other admin APIs remain admin-only.
+
 ## Notes
 - First boot with an empty DB auto-imports `backend/db/*.json` seed files.
 - Healthcheck hits `/api/auth/discord/status` (public, no auth).

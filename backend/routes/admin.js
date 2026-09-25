@@ -1,33 +1,73 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { authenticateAdmin } = require('../middleware/auth');
+const { authenticateAdmin, authenticateStaff } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
 
-// Admin dashboard stats
+function serializeStaffUser(user, includePrivateFields = false) {
+  const { password, ...safeUser } = user;
+  if (includePrivateFields) {
+    return {
+      ...safeUser,
+      isAdmin: safeUser.isAdmin === true,
+      isModerator: safeUser.isModerator === true,
+      isMuted: safeUser.isMuted === true
+    };
+  }
+
+  return {
+    id: safeUser.id,
+    robloxUserId: safeUser.robloxUserId || null,
+    robloxUsername: safeUser.robloxUsername || '',
+    robloxDisplayName: safeUser.robloxDisplayName || null,
+    customDisplayName: safeUser.customDisplayName || null,
+    displayName: safeUser.displayName || safeUser.robloxDisplayName || safeUser.robloxUsername || 'Anonymous',
+    avatar: safeUser.avatar || '',
+    isAdmin: safeUser.isAdmin === true,
+    isModerator: safeUser.isModerator === true,
+    isActive: safeUser.isActive !== false,
+    isBanned: safeUser.isBanned === true,
+    isFrozen: safeUser.isFrozen === true,
+    isMuted: safeUser.isMuted === true,
+    mutedAt: safeUser.mutedAt || null,
+    muteReason: safeUser.muteReason || null,
+    createdAt: safeUser.createdAt || null,
+    lastLogin: safeUser.lastLogin || null
+  };
+}
+
+// Staff dashboard stats. Moderators receive only safe operational counters.
 function dashboardStats(req, res) {
   try {
     const usersDb = dbManager.getUsersDb();
     const itemsDb = dbManager.getItemsDb();
     const db = dbManager.getMainDb();
+    const users = usersDb.users || [];
+    const today = new Date();
 
     const stats = {
-      totalUsers: (usersDb.users || []).length,
-      totalItems: (itemsDb.items || []).length,
+      role: req.user.role,
+      totalUsers: users.length,
+      activeUsers: users.filter((user) => user.isActive !== false && !user.isBanned).length,
+      mutedUsers: users.filter((user) => user.isMuted === true).length,
+      bannedUsers: users.filter((user) => user.isBanned === true).length,
       totalCoinflips: (db.coinflips || []).length,
       totalBlackjackGames: (db.blackjackGames || []).length,
-      totalTransactions: (db.transactions || []).length,
-      totalDeposits: (db.deposits || []).length,
-      totalWithdrawals: (db.withdrawals || []).length,
       totalChatMessages: (db.chatMessages || []).length,
-      totalBalance: (usersDb.users || []).reduce((sum, user) => sum + (user.balance || 0), 0),
-      dailyActiveUsers: (usersDb.users || []).filter(u => {
-        const lastLogin = new Date(u.lastLogin);
-        const today = new Date();
-        return lastLogin.toDateString() === today.toDateString();
+      dailyActiveUsers: users.filter((user) => {
+        const lastLogin = new Date(user.lastLogin);
+        return !Number.isNaN(lastLogin.getTime()) && lastLogin.toDateString() === today.toDateString();
       }).length
     };
+
+    if (req.user.isAdmin) {
+      stats.totalItems = (itemsDb.items || []).length;
+      stats.totalTransactions = (db.transactions || []).length;
+      stats.totalDeposits = (db.deposits || []).length;
+      stats.totalWithdrawals = (db.withdrawals || []).length;
+      stats.totalBalance = users.reduce((sum, user) => sum + (user.balance || 0), 0);
+    }
 
     res.json(stats);
   } catch (error) {
@@ -36,38 +76,41 @@ function dashboardStats(req, res) {
   }
 }
 
-router.get('/dashboard', authenticateAdmin, dashboardStats);
+router.get('/dashboard', authenticateStaff, dashboardStats);
 // Alias used by the frontend admin panel
-router.get('/stats', authenticateAdmin, dashboardStats);
+router.get('/stats', authenticateStaff, dashboardStats);
 
-// Get all users
-router.get('/users', authenticateAdmin, (req, res) => {
+// Get all users. Moderators receive a deliberately limited projection.
+router.get('/users', authenticateStaff, (req, res) => {
   try {
     const { search, page = 1, limit = 1000 } = req.query;
     const usersDb = dbManager.getUsersDb();
     let users = [...(usersDb.users || [])];
 
     if (search) {
-      const term = search.toLowerCase();
-      users = users.filter(user => 
+      const term = String(search).toLowerCase();
+      users = users.filter((user) =>
         (user.displayName && user.displayName.toLowerCase().includes(term)) ||
+        (user.customDisplayName && user.customDisplayName.toLowerCase().includes(term)) ||
         (user.robloxUsername && user.robloxUsername.toLowerCase().includes(term)) ||
         (user.id && user.id.toLowerCase().includes(term))
       );
     }
 
-    // Pagination
-    const startIndex = (parseInt(page) - 1) * parseInt(limit);
-    const endIndex = startIndex + parseInt(limit);
-    const paginatedUsers = users.slice(startIndex, endIndex);
+    const safeLimit = Math.min(Math.max(parseInt(limit, 10) || 1000, 1), 1000);
+    const safePage = Math.max(parseInt(page, 10) || 1, 1);
+    const startIndex = (safePage - 1) * safeLimit;
+    const paginatedUsers = users.slice(startIndex, startIndex + safeLimit);
+    const includePrivateFields = !!req.user.isAdmin;
 
     res.json({
-      users: paginatedUsers,
+      users: paginatedUsers.map((user) => serializeStaffUser(user, includePrivateFields)),
       pagination: {
-        currentPage: parseInt(page),
-        totalPages: Math.ceil(users.length / parseInt(limit)) || 1,
+        currentPage: safePage,
+        totalPages: Math.ceil(users.length / safeLimit) || 1,
         total: users.length
-      }
+      },
+      role: req.user.role
     });
   } catch (error) {
     console.error('Error fetching users:', error);
@@ -103,7 +146,7 @@ router.get('/users/:robloxUsername', authenticateAdmin, (req, res) => {
     );
 
     res.json({
-      user,
+      user: serializeStaffUser(user, true),
       inventory,
       transactions,
       gameHistory: {
@@ -238,7 +281,7 @@ router.put('/users/:robloxUsername/status', authenticateAdmin, (req, res) => {
 
     res.json({
       message: `User status updated to ${status}`,
-      user
+      user: serializeStaffUser(user, true)
     });
   } catch (error) {
     console.error('Error updating user status:', error);
@@ -246,19 +289,52 @@ router.put('/users/:robloxUsername/status', authenticateAdmin, (req, res) => {
   }
 });
 
-// Toggle admin status for a user
+// Set admin status for a user. Explicit state changes prevent accidental
+// self-demotion and protect the last active administrator.
 router.put('/users/:robloxUsername/admin', authenticateAdmin, (req, res) => {
   try {
-    const robloxUsername = req.params.robloxUsername;
-    const usersDb = dbManager.getUsersDb();
-    const db = dbManager.getMainDb();
-
-    const user = usersDb.users.find(u => u.robloxUsername === robloxUsername || u.id === robloxUsername);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+    const identifier = req.params.robloxUsername;
+    const { enabled } = req.body || {};
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ message: 'enabled must be true or false' });
     }
 
-    user.isAdmin = !user.isAdmin;
+    const usersDb = dbManager.getUsersDb();
+    const db = dbManager.getMainDb();
+    const user = (usersDb.users || []).find((candidate) =>
+      candidate.id === identifier ||
+      String(candidate.robloxUsername || '').toLowerCase() === String(identifier).toLowerCase()
+    );
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const isOwner = String(user.robloxUsername || '').toLowerCase() === 'pooppantspro';
+    if (!enabled && isOwner) {
+      return res.status(403).json({ message: 'The owner account cannot be demoted' });
+    }
+    if (!enabled && String(user.id) === String(req.user.userId)) {
+      return res.status(403).json({ message: 'You cannot demote your own account' });
+    }
+    if (!enabled && user.isAdmin === true) {
+      const otherActiveAdmins = (usersDb.users || []).filter((candidate) =>
+        candidate.id !== user.id &&
+        candidate.isAdmin === true &&
+        candidate.isActive !== false &&
+        candidate.isBanned !== true
+      );
+      if (otherActiveAdmins.length === 0) {
+        return res.status(409).json({ message: 'At least one active admin must remain' });
+      }
+    }
+    if (user.isAdmin === enabled) {
+      return res.json({
+        message: enabled ? `${user.robloxUsername} is already an admin` : `${user.robloxUsername} is already not an admin`,
+        user: serializeStaffUser(user, true),
+        unchanged: true
+      });
+    }
+
+    user.isAdmin = enabled;
+    user.isModerator = false;
     user.updatedAt = new Date().toISOString();
 
     db.adminLogs = db.adminLogs || [];
@@ -266,7 +342,8 @@ router.put('/users/:robloxUsername/admin', authenticateAdmin, (req, res) => {
       id: uuidv4(),
       adminId: req.user.userId,
       adminUsername: req.user.robloxUsername,
-      action: user.isAdmin ? 'made_admin' : 'removed_admin',
+      action: enabled ? 'made_admin' : 'removed_admin',
+      targetUserId: user.id,
       targetUsername: user.robloxUsername,
       timestamp: new Date().toISOString()
     });
@@ -275,11 +352,60 @@ router.put('/users/:robloxUsername/admin', authenticateAdmin, (req, res) => {
     dbManager.saveMainDb();
 
     res.json({
-      message: user.isAdmin ? `${user.robloxUsername} is now an admin` : `${user.robloxUsername} is no longer an admin`,
-      user
+      message: enabled ? `${user.robloxUsername} is now an admin` : `${user.robloxUsername} is no longer an admin`,
+      user: serializeStaffUser(user, true)
     });
   } catch (error) {
-    console.error('Error toggling admin:', error);
+    console.error('Error updating admin role:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Grant or revoke moderator access. Only full admins can change roles.
+router.put('/users/:robloxUsername/moderator', authenticateAdmin, (req, res) => {
+  try {
+    const identifier = req.params.robloxUsername;
+    const { enabled } = req.body || {};
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ message: 'enabled must be true or false' });
+    }
+
+    const usersDb = dbManager.getUsersDb();
+    const user = (usersDb.users || []).find((candidate) =>
+      candidate.id === identifier ||
+      String(candidate.robloxUsername || '').toLowerCase() === String(identifier).toLowerCase()
+    );
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    if (String(user.robloxUsername || '').toLowerCase() === 'pooppantspro') {
+      return res.status(403).json({ message: 'The owner account cannot be changed to moderator' });
+    }
+    if (user.isAdmin === true) {
+      return res.status(400).json({ message: 'Administrators already have full access' });
+    }
+
+    user.isModerator = enabled;
+    user.updatedAt = new Date().toISOString();
+
+    const db = dbManager.getMainDb();
+    db.adminLogs = db.adminLogs || [];
+    db.adminLogs.push({
+      id: uuidv4(),
+      adminId: req.user.userId,
+      adminUsername: req.user.robloxUsername,
+      action: enabled ? 'made_moderator' : 'removed_moderator',
+      targetUserId: user.id,
+      targetUsername: user.robloxUsername,
+      timestamp: new Date().toISOString()
+    });
+
+    dbManager.saveUsersDb();
+    dbManager.saveMainDb();
+    res.json({
+      message: enabled ? `${user.robloxUsername} is now a moderator` : `${user.robloxUsername} is no longer a moderator`,
+      user: serializeStaffUser(user, true)
+    });
+  } catch (error) {
+    console.error('Error updating moderator role:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

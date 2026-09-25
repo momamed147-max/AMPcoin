@@ -38,6 +38,10 @@ function enhanceUserWithRoblox(user, profileData) {
     robloxDisplayName: robloxName,
     customDisplayName,
     robloxUserId: profileData?.robloxUserId || user.robloxUserId || null,
+    isAdmin: user.isAdmin === true,
+    isModerator: user.isModerator === true,
+    isMuted: user.isMuted === true,
+    muteReason: user.muteReason || null,
     displayName
   };
 }
@@ -297,6 +301,14 @@ const AuthProvider = ({ children }) => {
     return !!user && !!user.isAdmin;
   }, [user]);
 
+  const isModerator = useCallback(() => {
+    return !!user && !!user.isModerator && !user.isAdmin;
+  }, [user]);
+
+  const isStaff = useCallback(() => {
+    return !!user && (!!user.isAdmin || !!user.isModerator);
+  }, [user]);
+
   const value = {
     user,
     login,
@@ -307,6 +319,8 @@ const AuthProvider = ({ children }) => {
     logout,
     loading,
     isAdmin,
+    isModerator,
+    isStaff,
     refreshUser,
     updateUserBalance,
     updateUser

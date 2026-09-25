@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
+import ModeratorPanel from '../components/ModeratorPanel';
 import ModalPortal from '../components/ModalPortal';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
@@ -43,8 +44,8 @@ async function resolveUserAvatar(robloxUsername, robloxUserId, existingAvatar) {
   return DEFAULT_AVATAR;
 }
 
-function AdminPanel() {
-  const [activeTab, setActiveTab] = useState('users');
+function FullAdminPanel() {
+  const [activeTab, setActiveTab] = useState('dashboard');
   const [users, setUsers] = useState([]);
   const [items, setItems] = useState([]);
   const [newPet, setNewPet] = useState({ name: '', value: 0, rarity: 'common', mods: [] });
@@ -64,8 +65,17 @@ function AdminPanel() {
   const [popupType, setPopupType] = useState('');
   const [allUsers, setAllUsers] = useState([]);
   const [userAvatars, setUserAvatars] = useState({});
-  const [adminStats, setAdminStats] = useState({ totalBalance: 0 });
+  const [adminStats, setAdminStats] = useState({
+    totalUsers: 0,
+    activeUsers: 0,
+    mutedUsers: 0,
+    totalChatMessages: 0,
+    dailyActiveUsers: 0,
+    totalBalance: 0
+  });
   const [statusActions, setStatusActions] = useState({});
+  const [moderatorActions, setModeratorActions] = useState({});
+  const [muteActions, setMuteActions] = useState({});
   const [selectedPetIds, setSelectedPetIds] = useState([]);
   const [giveMods, setGiveMods] = useState([]);
   const [editDisplayName, setEditDisplayName] = useState('');
@@ -117,7 +127,7 @@ function AdminPanel() {
 
   const { user } = useAuth();
 
-  const isOwner = String(user?.robloxUsername || '').toLowerCase() === 'pooppantspro';
+  const isOwner = !!user?.isAdmin && String(user?.robloxUsername || '').toLowerCase() === 'pooppantspro';
 
   const rotateSeed = async (betId, side) => {
     if (rotatingId) return;
@@ -342,7 +352,14 @@ function AdminPanel() {
           );
           if (statsRes.ok) {
             const stats = await statsRes.json();
-            setAdminStats({ totalBalance: stats.totalBalance || stats.totalAmp || 0 });
+            setAdminStats({
+              totalUsers: Number(stats.totalUsers || 0),
+              activeUsers: Number(stats.activeUsers || 0),
+              mutedUsers: Number(stats.mutedUsers || 0),
+              totalChatMessages: Number(stats.totalChatMessages || 0),
+              dailyActiveUsers: Number(stats.dailyActiveUsers || 0),
+              totalBalance: Number(stats.totalBalance || stats.totalAmp || 0)
+            });
           }
         } catch (err) {
           console.warn('Stats fetch error:', err.message);
@@ -970,13 +987,17 @@ function AdminPanel() {
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`
-          }
+          },
+          body: JSON.stringify({ enabled: !usr.isAdmin })
         })
       );
 
       if (response.ok) {
         const data = await response.json();
-        updateUserInState(usr.id, { isAdmin: !usr.isAdmin });
+        updateUserInState(usr.id, {
+          isAdmin: !!data.user?.isAdmin,
+          isModerator: !!data.user?.isModerator
+        });
         showCustomPopup(data.message, 'success');
         setRecentActivity((prev) => [
           {
@@ -995,6 +1016,70 @@ function AdminPanel() {
       setError(`Error: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggleModerator = async (usr) => {
+    if (!usr || moderatorActions[usr.id] === 'loading') return;
+    const enabled = !usr.isModerator;
+    setModeratorActions((prev) => ({ ...prev, [usr.id]: 'loading' }));
+    try {
+      const response = await retryRequest(() =>
+        fetch(`${API_BASE}/api/admin/users/${encodeURIComponent(usr.robloxUsername || usr.id)}/moderator`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ enabled })
+        })
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Failed to update moderator role');
+      updateUserInState(usr.id, { isModerator: enabled });
+      showCustomPopup(data.message || `Moderator role ${enabled ? 'granted' : 'removed'}.`, 'success');
+    } catch (roleError) {
+      setError(roleError.message || 'Failed to update moderator role');
+    } finally {
+      setModeratorActions((prev) => ({ ...prev, [usr.id]: 'idle' }));
+    }
+  };
+
+  const handleToggleMute = async (usr) => {
+    if (!usr || muteActions[usr.id] === 'loading') return;
+    const nextMuted = !usr.isMuted;
+    const protectedTarget = String(usr.robloxUsername || '').toLowerCase() === 'pooppantspro' || String(usr.id) === String(user?.id);
+    if (protectedTarget) {
+      showCustomPopup('The owner account and your own account cannot be muted.', 'warning');
+      return;
+    }
+
+    setMuteActions((prev) => ({ ...prev, [usr.id]: 'loading' }));
+    try {
+      const response = await retryRequest(() =>
+        fetch(`${API_BASE}/api/chat/${nextMuted ? 'mute' : 'unmute'}/${encodeURIComponent(usr.id)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ reason: 'Admin panel action' })
+        })
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || `Could not ${nextMuted ? 'mute' : 'unmute'} user.`);
+      const effectiveMuted = typeof data.user?.isMuted === 'boolean' ? data.user.isMuted : nextMuted;
+      updateUserInState(usr.id, {
+        ...(data.user || {}),
+        isMuted: effectiveMuted,
+        mutedAt: effectiveMuted ? (data.user?.mutedAt || new Date().toISOString()) : null,
+        muteReason: effectiveMuted ? (data.user?.muteReason || 'Admin panel action') : null
+      });
+      showCustomPopup(data.message || `${displayUser(usr)} ${effectiveMuted ? 'muted' : 'unmuted'}.`, data.unchanged ? 'info' : 'success');
+    } catch (muteError) {
+      setError(muteError.message || 'The mute action failed.');
+    } finally {
+      setMuteActions((prev) => ({ ...prev, [usr.id]: 'idle' }));
     }
   };
 
@@ -1169,7 +1254,12 @@ function AdminPanel() {
   return (
     <div className="admin-panel">
       <div className="page-header">
-        <h1>Admin Panel</h1>
+        <div className="admin-heading-copy">
+          <span className="admin-kicker"><Icon name="shield" size={13} /> Operations center</span>
+          <h1>Admin Panel</h1>
+          <p>Monitor the platform, manage player access, and keep game operations moving.</p>
+        </div>
+        <span className="admin-role-pill"><Icon name="gear" size={13} /> Full admin access</span>
         {error && <div className="admin-inline-error">{error}</div>}
       </div>
 
@@ -1221,6 +1311,26 @@ function AdminPanel() {
                   <p className="stat-number">
                     {Number(adminStats.totalBalance || 0).toLocaleString()} AMP
                   </p>
+                </div>
+                <div className="stat-card">
+                  <h3>Active Today</h3>
+                  <p className="stat-number">{Number(adminStats.dailyActiveUsers || 0).toLocaleString()}</p>
+                  <span className="stat-sub">Users active today</span>
+                </div>
+                <div className="stat-card">
+                  <h3>Muted Users</h3>
+                  <p className="stat-number">{Number(adminStats.mutedUsers || 0).toLocaleString()}</p>
+                  <span className="stat-sub">Chat restricted</span>
+                </div>
+                <div className="stat-card">
+                  <h3>Chat Messages</h3>
+                  <p className="stat-number">{Number(adminStats.totalChatMessages || 0).toLocaleString()}</p>
+                  <span className="stat-sub">Stored messages</span>
+                </div>
+                <div className="stat-card">
+                  <h3>Moderators</h3>
+                  <p className="stat-number">{allUsers.filter((candidate) => candidate.isModerator).length}</p>
+                  <span className="stat-sub">Limited staff accounts</span>
                 </div>
               </div>
 
@@ -1282,7 +1392,7 @@ function AdminPanel() {
                       <th>Display Name</th>
                       <th>Status</th>
                       <th>Role</th>
-                      <th style={{ width: '320px' }}>Actions</th>
+                      <th style={{ width: '420px' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1295,6 +1405,8 @@ function AdminPanel() {
                         ? 'frozen'
                         : !usr.isActive
                         ? 'inactive'
+                        : usr.isMuted
+                        ? 'muted'
                         : 'active';
                       const loading = statusActions[usr.id] === 'loading';
                       return (
@@ -1324,8 +1436,8 @@ function AdminPanel() {
                             </span>
                           </td>
                           <td>
-                            <span className={`role-badge ${usr.isAdmin ? 'admin' : 'user'}`}>
-                              {usr.isAdmin ? 'Admin' : 'User'}
+                            <span className={`role-badge ${usr.isAdmin ? 'admin' : usr.isModerator ? 'moderator' : 'user'}`}>
+                              {usr.isAdmin ? 'Admin' : usr.isModerator ? 'Moderator' : 'User'}
                             </span>
                           </td>
                           <td className="admin-user-actions">
@@ -1341,6 +1453,25 @@ function AdminPanel() {
                                 {loading ? '...' : usr.isAdmin ? 'Remove Admin' : 'Make Admin'}
                               </button>
                             )}
+                            {user?.isAdmin && !usr.isAdmin && usr.id !== user?.id && (
+                              <button
+                                className={`btn ${usr.isModerator ? 'btn-warning' : 'btn-info'} btn-sm`}
+                                onClick={() => handleToggleModerator(usr)}
+                                disabled={moderatorActions[usr.id] === 'loading'}
+                              >
+                                {moderatorActions[usr.id] === 'loading'
+                                  ? '...'
+                                  : usr.isModerator ? 'Remove Moderator' : 'Make Moderator'}
+                              </button>
+                            )}
+                            <button
+                              className={`btn ${usr.isMuted ? 'btn-success' : 'btn-warning'} btn-sm`}
+                              onClick={() => handleToggleMute(usr)}
+                              disabled={muteActions[usr.id] === 'loading' || String(usr.robloxUsername || '').toLowerCase() === 'pooppantspro' || usr.id === user?.id}
+                            >
+                              <Icon name={usr.isMuted ? 'volume' : 'volumeOff'} size={13} />
+                              {muteActions[usr.id] === 'loading' ? '...' : usr.isMuted ? 'Unmute' : 'Mute'}
+                            </button>
                             {userStatus !== 'banned' ? (
                               <button
                                 className="btn btn-danger btn-sm"
@@ -2120,6 +2251,16 @@ function AdminPanel() {
       />
     </div>
   );
+}
+
+function AdminPanel() {
+  const { user } = useAuth();
+
+  if (user?.isModerator && !user?.isAdmin) {
+    return <ModeratorPanel user={user} />;
+  }
+
+  return <FullAdminPanel />;
 }
 
 export default AdminPanel;

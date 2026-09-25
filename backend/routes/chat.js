@@ -1,10 +1,54 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { authenticateToken, authenticateAdmin } = require('../middleware/auth');
+const { authenticateToken, authenticateAdmin, authenticateModerator } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
+const { addNotification } = require('../notificationService');
+const { emitToUser } = require('../realtime');
 
 const ROBLOX_PROFILE_CACHE_TTL = 1000 * 60 * 60;
+const OWNER_USERNAME = 'pooppantspro';
+
+function canModerateTarget(actor, target) {
+  if (String(target.robloxUsername || '').toLowerCase() === OWNER_USERNAME) return false;
+  if (String(actor.userId) === String(target.id)) return false;
+  if (actor.isAdmin !== true && (target.isAdmin === true || target.isModerator === true)) return false;
+  return true;
+}
+
+function serializeMuteUser(user) {
+  return {
+    id: user.id,
+    robloxUsername: user.robloxUsername || '',
+    robloxDisplayName: user.robloxDisplayName || null,
+    customDisplayName: user.customDisplayName || null,
+    displayName: user.customDisplayName || user.displayName || user.robloxDisplayName || user.robloxUsername || 'Anonymous',
+    avatar: user.avatar || '',
+    isAdmin: user.isAdmin === true,
+    isModerator: user.isModerator === true,
+    isActive: user.isActive !== false,
+    isBanned: user.isBanned === true,
+    isFrozen: user.isFrozen === true,
+    isMuted: user.isMuted === true,
+    mutedAt: user.mutedAt || null,
+    muteReason: user.muteReason || null
+  };
+}
+
+const moderationCooldown = new Map();
+function isModerationRateLimited(actorId, targetId) {
+  const key = `${actorId}:${targetId}`;
+  const now = Date.now();
+  const last = moderationCooldown.get(key) || 0;
+  if (now - last < 750) return true;
+  if (moderationCooldown.size > 5000) {
+    for (const [entryKey, timestamp] of moderationCooldown) {
+      if (now - timestamp > 60_000) moderationCooldown.delete(entryKey);
+    }
+  }
+  moderationCooldown.set(key, now);
+  return false;
+}
 
 async function getRobloxUserIdFromUsername(robloxUsername) {
   try {
@@ -218,7 +262,8 @@ router.post('/send', authenticateToken, async (req, res) => {
       robloxDisplayName: profile.robloxDisplayName || user.robloxDisplayName || null,
       avatar: avatar,
       robloxUserId: profile.robloxUserId || user.robloxUserId || null,
-      isAdmin: !!user.isAdmin,
+      isAdmin: user.isAdmin === true,
+      isModerator: user.isModerator === true,
       message: message.trim(),
       timestamp: new Date().toISOString(),
       type: 'user_message'
@@ -279,8 +324,8 @@ router.delete('/messages/:messageId', authenticateAdmin, (req, res) => {
   }
 });
 
-// Admin: Mute a user
-router.put('/mute/:userId', authenticateAdmin, (req, res) => {
+// Staff: Mute a user from chat. Moderators may mute regular users only.
+router.put('/mute/:userId', authenticateModerator, (req, res) => {
   try {
     const userId = req.params.userId;
     const usersDb = dbManager.getUsersDb();
@@ -290,32 +335,64 @@ router.put('/mute/:userId', authenticateAdmin, (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    usersDb.users[userIndex].isMuted = true;
-    usersDb.users[userIndex].updatedAt = new Date().toISOString();
+    const targetUser = usersDb.users[userIndex];
+    if (!canModerateTarget(req.user, targetUser)) {
+      return res.status(403).json({ message: 'You cannot mute this account' });
+    }
+    if (targetUser.isMuted === true) {
+      return res.json({ message: 'User is already muted', user: serializeMuteUser(targetUser), unchanged: true });
+    }
+    if (isModerationRateLimited(req.user.userId, userId)) {
+      res.set('Retry-After', '1');
+      return res.status(429).json({ message: 'Please wait before changing moderation again.' });
+    }
+
+    const reason = typeof req.body?.reason === 'string'
+      ? req.body.reason.trim().slice(0, 160) || 'Muted by staff'
+      : 'Muted by staff';
+    targetUser.isMuted = true;
+    targetUser.mutedAt = new Date().toISOString();
+    targetUser.mutedBy = req.user.userId;
+    targetUser.muteReason = reason;
+    targetUser.updatedAt = new Date().toISOString();
 
     const db = dbManager.getMainDb();
     db.adminLogs = db.adminLogs || [];
     db.adminLogs.push({
       id: uuidv4(),
       adminId: req.user.userId,
+      adminUsername: req.user.robloxUsername,
       action: 'mute_user',
       targetUserId: userId,
-      reason: req.body.reason || 'Muted by admin',
+      targetUsername: targetUser.robloxUsername,
+      reason,
       timestamp: new Date().toISOString()
     });
 
+    addNotification({
+      userId: targetUser.id,
+      type: 'moderation',
+      title: 'Chat access restricted',
+      message: reason
+    });
+    emitToUser(targetUser.id, 'moderationUpdate', {
+      userId: targetUser.id,
+      isMuted: true,
+      mutedAt: targetUser.mutedAt,
+      muteReason: targetUser.muteReason
+    });
     dbManager.saveUsersDb();
     dbManager.saveMainDb();
 
-    res.json({ message: 'User muted successfully', user: usersDb.users[userIndex] });
+    res.json({ message: 'User muted successfully', user: serializeMuteUser(targetUser) });
   } catch (error) {
     console.error('Error muting user:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-// Admin: Unmute a user
-router.put('/unmute/:userId', authenticateAdmin, (req, res) => {
+// Staff: Unmute a user from chat.
+router.put('/unmute/:userId', authenticateModerator, (req, res) => {
   try {
     const userId = req.params.userId;
     const usersDb = dbManager.getUsersDb();
@@ -325,24 +402,53 @@ router.put('/unmute/:userId', authenticateAdmin, (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    usersDb.users[userIndex].isMuted = false;
-    usersDb.users[userIndex].updatedAt = new Date().toISOString();
+    const targetUser = usersDb.users[userIndex];
+    if (!canModerateTarget(req.user, targetUser)) {
+      return res.status(403).json({ message: 'You cannot unmute this account' });
+    }
+    if (targetUser.isMuted !== true) {
+      return res.json({ message: 'User is already unmuted', user: serializeMuteUser(targetUser), unchanged: true });
+    }
+    if (isModerationRateLimited(req.user.userId, userId)) {
+      res.set('Retry-After', '1');
+      return res.status(429).json({ message: 'Please wait before changing moderation again.' });
+    }
+
+    targetUser.isMuted = false;
+    targetUser.mutedAt = null;
+    targetUser.mutedBy = null;
+    targetUser.muteReason = null;
+    targetUser.updatedAt = new Date().toISOString();
 
     const db = dbManager.getMainDb();
     db.adminLogs = db.adminLogs || [];
     db.adminLogs.push({
       id: uuidv4(),
       adminId: req.user.userId,
+      adminUsername: req.user.robloxUsername,
       action: 'unmute_user',
       targetUserId: userId,
-      reason: req.body.reason || 'Unmuted by admin',
+      targetUsername: targetUser.robloxUsername,
+      reason: 'Unmuted by staff',
       timestamp: new Date().toISOString()
     });
 
+    addNotification({
+      userId: targetUser.id,
+      type: 'moderation',
+      title: 'Chat access restored',
+      message: 'You can send messages in chat again.'
+    });
+    emitToUser(targetUser.id, 'moderationUpdate', {
+      userId: targetUser.id,
+      isMuted: false,
+      mutedAt: null,
+      muteReason: null
+    });
     dbManager.saveUsersDb();
     dbManager.saveMainDb();
 
-    res.json({ message: 'User unmuted successfully', user: usersDb.users[userIndex] });
+    res.json({ message: 'User unmuted successfully', user: serializeMuteUser(targetUser) });
   } catch (error) {
     console.error('Error unmuting user:', error);
     res.status(500).json({ message: 'Server error' });

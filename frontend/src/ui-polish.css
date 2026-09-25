@@ -443,6 +443,12 @@ textarea:focus-visible,
   background: rgba(240, 93, 87, 0.1) !important;
 }
 
+.admin-badge.moderator {
+  color: #d0bcff !important;
+  border-color: rgba(155, 124, 255, 0.35);
+  background: rgba(139, 92, 246, 0.13) !important;
+}
+
 .sidebar-footer .logout-btn,
 .logout-btn {
   display: inline-flex;
@@ -1335,6 +1341,19 @@ textarea:focus,
 .chat-load-error svg { color: #ff918a; }
 .chat-load-error strong { color: #d9a09c; }
 
+.chat-muted-notice {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 9px 8px;
+  padding: 8px 10px;
+  color: #ffd47d;
+  font-size: .7rem;
+  font-weight: 700;
+  border: 1px solid rgba(230, 173, 60, .3);
+  border-radius: 9px;
+  background: rgba(230, 173, 60, .08);
+}
 .chat-error {
   display: flex;
   align-items: center;

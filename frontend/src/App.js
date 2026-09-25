@@ -26,6 +26,8 @@ import { initializeTheme } from './theme';
 
 const BACKEND_URL = API_BASE;
 const socket = io(BACKEND_URL, {
+  autoConnect: false,
+  auth: (cb) => cb({ token: localStorage.getItem('token') || '' }),
   transports: ['websocket', 'polling'],
   withCredentials: true,
   reconnection: true,
@@ -70,6 +72,10 @@ function AppContent() {
 
   useEffect(() => installGlobalSoundEffects(), []);
   useEffect(() => { initializeTheme(); }, []);
+  useEffect(() => {
+    if (user?.id) socket.connect();
+    else socket.disconnect();
+  }, [user?.id]);
 
   // Global "Values" modal — opened from sidebar, top nav, or coinflip page
   useEffect(() => {
@@ -171,7 +177,7 @@ function AppContent() {
               <Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
               <Route path="/provably-fair" element={<ProtectedRoute><ProvablyFairPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-              <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminPanel /></ProtectedRoute>} />
+              <Route path="/admin" element={<ProtectedRoute staffOnly={true}><AdminPanel /></ProtectedRoute>} />
               <Route path="*" element={(
                 <div className="request-state">
                   <Icon name="search" size={26} />

@@ -241,7 +241,9 @@ const Header = ({ balance, socket }) => {
       case '/profile':
         return { title: 'Profile', subtitle: 'Account and player statistics', icon: 'target' };
       case '/admin':
-        return { title: 'Admin Panel', subtitle: 'Owner controls and site operations', icon: 'gear' };
+        return user?.isModerator && !user?.isAdmin
+          ? { title: 'Moderation', subtitle: 'Chat safety and user controls', icon: 'shield' }
+          : { title: 'Admin Panel', subtitle: 'Owner controls and site operations', icon: 'gear' };
       default:
         return { title: 'Dashboard', subtitle: 'AMPbet game server', icon: 'diamond' };
     }

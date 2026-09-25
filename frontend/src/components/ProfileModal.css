@@ -57,6 +57,9 @@
   font-size: .6rem; font-weight: 800; background: #da3633; color: #fff;
   padding: 3px 8px; border-radius: 6px; letter-spacing: .06em; text-transform: uppercase;
 }
+.profile-admin-badge.moderator {
+  background: #8250df;
+}
 .profile-idtag {
   display: inline-block; margin-top: 8px; font-family: ui-monospace,Menlo,monospace;
   font-size: .76rem; color: var(--mut);

@@ -231,6 +231,9 @@ body {
   white-space: nowrap;
   flex-shrink: 0;
 }
+.chat-admin-badge.moderator {
+  background: #8250df;
+}
 .sidebar-footer .logout-btn,
 .logout-btn {
   background: transparent !important;

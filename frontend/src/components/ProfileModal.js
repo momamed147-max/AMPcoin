@@ -172,6 +172,7 @@ const ProfileModal = ({ viewer, profileUser, isOwn, onClose }) => {
         <div className="profile-name" id="profile-modal-name">
           {displayName}
           {person.isAdmin && <span className="profile-admin-badge">ADMIN</span>}
+          {!person.isAdmin && person.isModerator && <span className="profile-admin-badge moderator">MOD</span>}
         </div>
         <div className="profile-idtag">{idTag}</div>
         <div className="profile-rank-row">

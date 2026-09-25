@@ -2,68 +2,91 @@ const jwt = require('jsonwebtoken');
 const dbManager = require('../db/dbHelper');
 const { jwtSecret } = require('../jwtSecret');
 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+const getBearerToken = (req) => {
+  const authHeader = req.headers.authorization;
+  return authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
+};
 
+const findTokenUser = (decoded) => {
+  const usersDb = dbManager.getUsersDb();
+  if (!usersDb || !Array.isArray(usersDb.users)) return null;
+  return usersDb.users.find((user) =>
+    (decoded.userId && user.id === decoded.userId) ||
+    (decoded.robloxUsername && user.robloxUsername === decoded.robloxUsername)
+  );
+};
+
+const attachUser = (user) => {
+  const isAdmin = user.isAdmin === true;
+  const isModerator = user.isModerator === true;
+  return {
+    userId: user.id,
+    robloxUsername: user.robloxUsername,
+    displayName: user.displayName,
+    isAdmin,
+    isModerator,
+    role: isAdmin ? 'admin' : isModerator ? 'moderator' : 'user'
+  };
+};
+
+const authenticateStaff = (req, res, next) => {
+  const token = getBearerToken(req);
   if (!token) {
     return res.status(401).json({ message: 'Access denied. No token provided.' });
   }
 
   try {
     const decoded = jwt.verify(token, jwtSecret());
-    const usersDb = dbManager.getUsersDb();
-    
-    // Find user in database
-    const user = usersDb.users.find(u => u.id === decoded.userId || u.robloxUsername === decoded.robloxUsername);
-    if (!user || !user.isActive || user.isFrozen || user.isBanned) {
+    const user = findTokenUser(decoded);
+    if (!user || user.isActive === false || user.isFrozen || user.isBanned || (user.isAdmin !== true && user.isModerator !== true)) {
+      return res.status(403).json({ message: 'Access denied. Staff access required.' });
+    }
+
+    req.user = attachUser(user);
+    return next();
+  } catch (error) {
+    console.error('Staff authentication error:', error);
+    return res.status(403).json({ message: 'Access denied. Invalid token.' });
+  }
+};
+
+const authenticateAdmin = (req, res, next) => {
+  return authenticateStaff(req, res, () => {
+    if (!req.user?.isAdmin) {
+      return res.status(403).json({ message: 'Access denied. Admin access required.' });
+    }
+    return next();
+  });
+};
+
+// Moderators and admins share the staff authentication boundary. Individual
+// routes decide which staff operations they expose.
+const authenticateModerator = authenticateStaff;
+
+const authenticateToken = (req, res, next) => {
+  const token = getBearerToken(req);
+  if (!token) {
+    return res.status(401).json({ message: 'Access denied. No token provided.' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, jwtSecret());
+    const user = findTokenUser(decoded);
+    if (!user || user.isActive === false || user.isFrozen || user.isBanned) {
       return res.status(403).json({ message: 'Access denied. Invalid, inactive, or banned user.' });
     }
 
-    req.user = {
-      userId: user.id,
-      robloxUsername: user.robloxUsername,
-      displayName: user.displayName,
-      isAdmin: !!user.isAdmin
-    };
-
-    next();
+    req.user = attachUser(user);
+    return next();
   } catch (error) {
     console.error('Authentication error:', error);
     return res.status(403).json({ message: 'Access denied. Invalid token.' });
   }
 };
 
-const authenticateAdmin = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (!token) {
-    return res.status(401).json({ message: 'Access denied. No token provided.' });
-  }
-
-  try {
-    const decoded = jwt.verify(token, jwtSecret());
-    const usersDb = dbManager.getUsersDb();
-    
-    // Find user in database
-    const user = usersDb.users.find(u => u.robloxUsername === decoded.robloxUsername || u.id === decoded.userId);
-    if (!user || !user.isActive || user.isFrozen || user.isBanned || !user.isAdmin) {
-      return res.status(403).json({ message: 'Access denied. Admin access required.' });
-    }
-
-    req.user = {
-      userId: user.id,
-      robloxUsername: user.robloxUsername,
-      displayName: user.displayName,
-      isAdmin: true
-    };
-
-    next();
-  } catch (error) {
-    console.error('Admin authentication error:', error);
-    return res.status(403).json({ message: 'Access denied. Invalid token.' });
-  }
+module.exports = {
+  authenticateToken,
+  authenticateAdmin,
+  authenticateModerator,
+  authenticateStaff
 };
-
-module.exports = { authenticateToken, authenticateAdmin };

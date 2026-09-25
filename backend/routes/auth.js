@@ -194,6 +194,7 @@ router.post('/register', async (req, res) => {
       gamesWon: 0,
       gamesLost: 0,
       isAdmin: false,
+      isModerator: false,
       isActive: true,
       isFrozen: false,
       isBanned: false,
@@ -215,7 +216,8 @@ router.post('/register', async (req, res) => {
       {
         userId: newUser.id,
         robloxUsername: newUser.robloxUsername,
-        isAdmin: !!newUser.isAdmin
+        isAdmin: !!newUser.isAdmin,
+        isModerator: !!newUser.isModerator
       },
       jwtSecret(),
       { expiresIn: '24h' }
@@ -283,7 +285,8 @@ router.post('/login', async (req, res) => {
       {
         userId: user.id,
         robloxUsername: user.robloxUsername,
-        isAdmin: !!user.isAdmin
+        isAdmin: !!user.isAdmin,
+        isModerator: !!user.isModerator
       },
       jwtSecret(),
       { expiresIn: '24h' }
@@ -504,7 +507,7 @@ router.post('/verify-and-register', async (req, res) => {
       setImmediate(async () => { try { await resolveAndCacheAvatar(existing.id); } catch (_) {} });
 
       const loginToken = jwt.sign(
-        { userId: existing.id, robloxUsername: existing.robloxUsername, isAdmin: !!existing.isAdmin },
+        { userId: existing.id, robloxUsername: existing.robloxUsername, isAdmin: !!existing.isAdmin, isModerator: !!existing.isModerator },
         jwtSecret(),
         { expiresIn: '24h' }
       );
@@ -530,6 +533,7 @@ router.post('/verify-and-register', async (req, res) => {
       gamesWon: 0,
       gamesLost: 0,
       isAdmin: false,
+      isModerator: false,
       isActive: true,
       isFrozen: false,
       isBanned: false,
@@ -548,7 +552,7 @@ router.post('/verify-and-register', async (req, res) => {
     setImmediate(async () => { try { await resolveAndCacheAvatar(newUser.id); } catch (_) {} });
 
     const token = jwt.sign(
-      { userId: newUser.id, robloxUsername: newUser.robloxUsername, isAdmin: !!newUser.isAdmin },
+      { userId: newUser.id, robloxUsername: newUser.robloxUsername, isAdmin: !!newUser.isAdmin, isModerator: !!newUser.isModerator },
       jwtSecret(),
       { expiresIn: '24h' }
     );
@@ -609,7 +613,10 @@ router.post('/verify-token', async (req, res) => {  try {
         customDisplayName: freshUser.customDisplayName || null,
         displayName: (freshUser.customDisplayName || freshUser.robloxDisplayName || freshUser.displayName || freshUser.robloxUsername || 'Anonymous'),
         balance: typeof freshUser.balance === 'number' ? freshUser.balance : 0,
-        isAdmin: !!freshUser.isAdmin,
+        isAdmin: freshUser.isAdmin === true,
+        isModerator: freshUser.isModerator === true,
+        isMuted: freshUser.isMuted === true,
+        muteReason: freshUser.muteReason || null,
         avatar: freshUser.avatar || '',
         robloxUserId: freshUser.robloxUserId || null,
         discordId: freshUser.discordId || null,

@@ -182,6 +182,10 @@ html[data-theme] .chat-admin-badge {
   background: var(--acc-soft) !important;
 }
 
+html[data-theme] .chat-admin-badge.moderator {
+  background: #8250df !important;
+}
+
 html[data-theme] .chat-message-row:hover {
   background: var(--theme-chat-accent) !important;
 }

@@ -29,7 +29,9 @@ async function resolveUserProfile(identifier, force = false) {
         avatar: data.avatar || '',
         displayName: data.displayName || '',
         robloxDisplayName: data.robloxDisplayName || '',
-        customDisplayName: data.customDisplayName || null
+        customDisplayName: data.customDisplayName || null,
+        isAdmin: !!data.isAdmin,
+        isModerator: !!data.isModerator
       };
       profileCache.set(key, result);
       return result;
@@ -235,7 +237,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
   const [joiningGw, setJoiningGw] = useState(false);
   const cooldownTimer = useRef(null);
   const winnerTimer = useRef(null);
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const formRef = useRef(null);
@@ -301,6 +303,14 @@ const ChatPanel = ({ socket, chatOpen }) => {
           return next;
         });
       };
+      const onModerationUpdate = (data) => {
+        if (!data || String(data.userId) !== String(user?.id)) return;
+        updateUser({
+          isMuted: !!data.isMuted,
+          mutedAt: data.mutedAt || null,
+          muteReason: data.muteReason || null
+        });
+      };
 
       const onGiveawayUpdate = (data) => {
         if (!data || !data.id) return;
@@ -333,6 +343,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
       socket.on('onlineCountUpdate', onOnline);
       socket.on('typingStart', onTypingStart);
       socket.on('typingStop', onTypingStop);
+      socket.on('moderationUpdate', onModerationUpdate);
       socket.on('giveawayUpdate', onGiveawayUpdate);
 
       fetchRecentMessages();
@@ -345,6 +356,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
         socket.off('onlineCountUpdate', onOnline);
         socket.off('typingStart', onTypingStart);
         socket.off('typingStop', onTypingStop);
+        socket.off('moderationUpdate', onModerationUpdate);
         socket.off('giveawayUpdate', onGiveawayUpdate);
       };
     }
@@ -453,7 +465,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     const trimmed = inputMessage.trim();
-    if (!trimmed || !user || sending || cooldownLeft > 0) return;
+    if (!trimmed || !user || user.isMuted || sending || cooldownLeft > 0) return;
 
     setSending(true);
     setChatError('');
@@ -500,6 +512,9 @@ const ChatPanel = ({ socket, chatOpen }) => {
         // Rejected (cooldown/mute/rate-limit): drop the ghost message, keep the text
         setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
         setInputMessage(trimmed);
+        if (response.status === 403 && /muted/i.test(data.message || '')) {
+          updateUser({ isMuted: true });
+        }
         showChatError(data.message || 'Message was not sent. Please try again.');
         if (response.status === 429) {
           startCooldown(data.retryAfter || 5);
@@ -614,6 +629,8 @@ const ChatPanel = ({ socket, chatOpen }) => {
       robloxUsername: msg.robloxUsername || '',
       customDisplayName: resolved?.customDisplayName || msg.customDisplayName || null,
       robloxDisplayName: resolved?.robloxDisplayName || msg.robloxDisplayName || '',
+      isAdmin: !!(resolved?.isAdmin || msg.isAdmin),
+      isModerator: !!(resolved?.isModerator || msg.isModerator),
       displayName: resolved?.displayName || msg.displayName || msg.username || msg.robloxUsername || 'Anonymous',
       avatar: resolved?.avatar || msg.avatar || '',
       robloxUserId: msg.robloxUserId || null
@@ -691,6 +708,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
               msg.robloxUsername ||
               'Anonymous';
             const msgIsAdmin = !!(msg.isAdmin || resolved?.isAdmin);
+            const msgIsModerator = !!(msg.isModerator || resolved?.isModerator);
             const isOwn = user && String(msg.userId) === String(user.id);
             return (
               <div
@@ -716,6 +734,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
                       {displayName}
                     </button>
                     {msgIsAdmin && <span className="chat-admin-badge">ADMIN</span>}
+                    {!msgIsAdmin && msgIsModerator && <span className="chat-admin-badge moderator">MOD</span>}
                     <span className="bubble-timestamp">{formatTime(msg.timestamp)}</span>
                   </div>
                   <div className="bubble-content">{msg.message}</div>
@@ -736,6 +755,13 @@ const ChatPanel = ({ socket, chatOpen }) => {
             <span />
           </span>
           <span className="typing-users-wrap">{getTypingUsers()} typing...</span>
+        </div>
+      )}
+
+      {user?.isMuted && (
+        <div className="chat-muted-notice" role="status">
+          <Icon name="volumeOff" size={14} />
+          <span>Chat is muted by staff. You can still read messages.</span>
         </div>
       )}
 
@@ -761,10 +787,10 @@ const ChatPanel = ({ socket, chatOpen }) => {
             value={inputMessage}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            placeholder="Type your message..."
+            placeholder={user?.isMuted ? 'Chat is muted by staff' : 'Type your message...'}
             className="chat-input"
             maxLength={500}
-            disabled={sending || !user}
+            disabled={sending || !user || user.isMuted}
             autoComplete="off"
           />
           <span className="chat-char-count">{inputMessage.length}/500</span>
@@ -772,8 +798,8 @@ const ChatPanel = ({ socket, chatOpen }) => {
         <button
           type="submit"
           className="send-button"
-          disabled={!inputMessage.trim() || sending || !user || cooldownLeft > 0}
-          title={cooldownLeft > 0 ? `Wait ${cooldownLeft}s before sending again` : 'Send'}
+          disabled={!inputMessage.trim() || sending || !user || user.isMuted || cooldownLeft > 0}
+          title={user?.isMuted ? 'Chat is muted by staff' : cooldownLeft > 0 ? `Wait ${cooldownLeft}s before sending again` : 'Send'}
         >
           {sending ? (
             <span className="send-spinner" />
