@@ -203,6 +203,9 @@ async function start() {
   try {
     await initDatabaseWithRetry();
     console.log('PostgreSQL connected and data loaded');
+    if (dbManager.usingBundledFallback && dbManager.usingBundledFallback()) {
+      console.warn('[startup] WARNING: running on the BUNDLED database fallback because DATABASE_URL is not set on this service.');
+    }
 
     // Auto-migrate: if no users exist, import from local JSON files if available
     const users = dbManager.getUsersDb();

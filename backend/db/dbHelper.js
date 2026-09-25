@@ -5,20 +5,32 @@ const path = require('path');
 
 const LOCAL_JSON_MODE = process.env.NODE_ENV !== 'production' && !process.env.DATABASE_URL;
 
-// ─── PostgreSQL connection ───────────────────────────────────────────
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('localhost')
-    ? { rejectUnauthorized: false }
-    : false,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000
-});
+// ─── Temporary bundled fallback ──────────────────────────────────────
+// The Railway service's DATABASE_URL variable is not set, so the backend could
+// not boot at all. This is a stopgap to bring the service back online.
+// DELETE THIS CONSTANT and the fallback in init() once DATABASE_URL is set on
+// the Railway service — it must never live in a public repository.
+const BUNDLED_DATABASE_URL = 'postgresql://neondb_owner:npg_idb4xXVnsBD9@ep-steep-hat-b4tktf5a-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require&channel_binding=require';
 
-pool.on('error', (err) => {
-  console.error('[PostgreSQL] Unexpected pool error:', err.message);
-});
+// ─── PostgreSQL connection ───────────────────────────────────────────
+function createPool(connectionString) {
+  const created = new Pool({
+    connectionString,
+    ssl: connectionString && !connectionString.includes('localhost')
+      ? { rejectUnauthorized: false }
+      : false,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
+  });
+  created.on('error', (err) => {
+    console.error('[PostgreSQL] Unexpected pool error:', err.message);
+  });
+  return created;
+}
+
+let pool = createPool(process.env.DATABASE_URL);
+let usingBundledFallback = false;
 
 // ─── Schema init ─────────────────────────────────────────────────────
 async function initDatabase() {
@@ -246,13 +258,30 @@ const dbManager = {
   isReady() {
     return _loaded;
   },
+  usingBundledFallback() {
+    return usingBundledFallback;
+  },
   async init() {
     if (LOCAL_JSON_MODE) {
       loadLocalJson();
       return;
     }
-    await initDatabase();
-    await loadFromDatabase();
+    try {
+      await initDatabase();
+      await loadFromDatabase();
+      return;
+    } catch (err) {
+      // Fall back to the bundled connection string when the configured
+      // DATABASE_URL is missing or stale. Temporary — see BUNDLED_DATABASE_URL.
+      if (!BUNDLED_DATABASE_URL || BUNDLED_DATABASE_URL === process.env.DATABASE_URL) throw err;
+      console.error(`[startup] Configured DATABASE_URL failed (${err.message}); trying bundled fallback.`);
+      try { await pool.end(); } catch (_) { /* ignore */ }
+      pool = createPool(BUNDLED_DATABASE_URL);
+      await initDatabase();
+      await loadFromDatabase();
+      usingBundledFallback = true;
+      console.warn('[startup] Connected using the BUNDLED database fallback. Set DATABASE_URL on the host and remove the bundled value.');
+    }
   },
 
   getUsersDb() {
