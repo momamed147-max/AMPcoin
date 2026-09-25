@@ -299,6 +299,10 @@ html[data-theme] .item-value {
   color: var(--acc-bright) !important;
 }
 
+html[data-theme] .cash-balance .balance-gem {
+  color: var(--gold) !important;
+}
+
 html[data-theme] .cf-row:hover,
 html[data-theme] .tr-card:hover,
 html[data-theme] .jp-player-card:hover,
