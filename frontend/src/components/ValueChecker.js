@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import Icon from './Icon';
+import { API_BASE } from '../apiConfig';
 import './ValueChecker.css';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const RARITY_COLORS = {
   legendary: '#ffaa00',

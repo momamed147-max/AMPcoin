@@ -4,6 +4,7 @@ import { CoinChip } from './CoinChip';
 import ModBadges from './ModBadges';
 import ModalPortal from './ModalPortal';
 import Icon from './Icon';
+import { API_BASE } from '../apiConfig';
 import './CoinChip.css';
 import './ModBadges.css';
 import '../pages/CoinflipPage.css';
@@ -84,7 +85,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
 
     setLoading(true);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/coinflip`, {
+      const response = await fetch(`${API_BASE}/api/coinflip`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

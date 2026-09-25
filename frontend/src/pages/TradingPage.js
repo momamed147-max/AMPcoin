@@ -4,10 +4,9 @@ import AnimatedPopup from '../components/AnimatedPopup';
 import ModBadges from '../components/ModBadges';
 import ModalPortal from '../components/ModalPortal';
 import Icon from '../components/Icon';
+import { API_BASE } from '../apiConfig';
 import '../components/ModBadges.css';
 import './TradingPage.css';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const authHeaders = (json) => ({
   ...(json ? { 'Content-Type': 'application/json' } : {}),

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import ProfileModal from './ProfileModal';
 import Icon from './Icon';
+import { API_BASE } from '../apiConfig';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const DEFAULT_AVATAR = '/default-avatar.png';
 
 const profileCache = new Map();

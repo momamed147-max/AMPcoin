@@ -5,11 +5,11 @@ import ProfileModal from './ProfileModal';
 import InventoryPickerModal from './InventoryPickerModal';
 import Icon from './Icon';
 import ModBadges from './ModBadges';
+import { API_BASE } from '../apiConfig';
 import './ModBadges.css';
 import './WalletModal.css';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 function getFallbackAvatar(user) {
   if (user?.robloxUserId) {

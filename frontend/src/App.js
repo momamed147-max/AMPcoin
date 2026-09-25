@@ -21,8 +21,9 @@ import AnimatedPopup from './components/AnimatedPopup';
 import AuthProvider, { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Icon from './components/Icon';
+import { API_BASE } from './apiConfig';
 
-const BACKEND_URL = process.env.REACT_APP_API_URL || 'https://ampcoin-50q9kxt9.b4a.run';
+const BACKEND_URL = API_BASE;
 const socket = io(BACKEND_URL, {
   transports: ['websocket', 'polling'],
   withCredentials: true,

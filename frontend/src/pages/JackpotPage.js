@@ -4,10 +4,9 @@ import { CoinLoader } from '../components/CoinChip';
 import '../components/CoinChip.css';
 import Icon from '../components/Icon';
 import ModBadges from '../components/ModBadges';
+import { API_BASE } from '../apiConfig';
 import '../components/ModBadges.css';
 import './JackpotPage.css';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const JackpotPage = ({ socket, setBalance }) => {
   const [jackpot, setJackpot] = useState(null);

@@ -3,9 +3,9 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import InventoryPickerModal from './InventoryPickerModal';
 import Icon from './Icon';
+import { API_BASE } from '../apiConfig';
 import './ProfileModal.css';
 
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 const DEFAULT_AVATAR = '/default-avatar.png';
 
 function formatCompact(n) {

@@ -8,11 +8,10 @@ import ModalPortal from '../components/ModalPortal';
 import { CoinChip, CoinFlipAnimation, CoinLoader } from '../components/CoinChip';
 import ModBadges from '../components/ModBadges';
 import Icon from '../components/Icon';
+import { API_BASE } from '../apiConfig';
 import '../components/CoinChip.css';
 import '../components/ModBadges.css';
 import './CoinflipPage.css';
-
-const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 /* ── Rarity badge color helper ── */
 const RARITY_COLORS = {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { API_BASE } from '../apiConfig';
 
 const StatsPage = () => {
   const { user } = useAuth();
@@ -11,8 +12,8 @@ const StatsPage = () => {
     const fetchStats = async () => {
       try {
         const [globalRes, userRes] = await Promise.all([
-          fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/stats/global`),
-          fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/stats/user/${user?.id}`)
+          fetch(`${API_BASE}/api/stats/global`),
+          fetch(`${API_BASE}/api/stats/user/${user?.id}`)
         ]);
 
         const globalData = await globalRes.json();

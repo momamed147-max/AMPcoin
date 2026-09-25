@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
 import Icon from '../components/Icon';
+import { API_BASE } from '../apiConfig';
 import './WalletPage.css';
 
 const WalletPage = () => {
@@ -23,7 +24,7 @@ const WalletPage = () => {
 
   const fetchBalance = useCallback(async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wallet/balance`, {
+      const response = await fetch(`${API_BASE}/api/wallet/balance`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -40,7 +41,7 @@ const WalletPage = () => {
   const fetchInventory = useCallback(async () => {
     if (!user) return;
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/users/inventory/${user.id}`, {
+      const response = await fetch(`${API_BASE}/api/users/inventory/${user.id}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
@@ -110,7 +111,7 @@ const WalletPage = () => {
         rarity: item.rarity || item.details?.rarity
       }));
       
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/wallet/withdraw-items`, {
+      const response = await fetch(`${API_BASE}/api/wallet/withdraw-items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
