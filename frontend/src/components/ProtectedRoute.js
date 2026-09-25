@@ -1,9 +1,11 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Icon from './Icon';
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuth();
+  const navigate = useNavigate();
 
   if (loading) {
     return (
@@ -20,9 +22,13 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 
   if (adminOnly && !user.isAdmin) {
     return (
-      <div className="loading-container">
-        <div className="loading-spinner"></div>
-        <p>Access Denied: Admin privileges required</p>
+      <div className="request-state" role="alert">
+        <Icon name="lock" size={26} />
+        <strong>Admin access required</strong>
+        <span>Your account does not have permission to open this area.</span>
+        <button type="button" className="btn btn-primary" onClick={() => navigate('/coinflip')}>
+          Return to Coinflip
+        </button>
       </div>
     );
   }

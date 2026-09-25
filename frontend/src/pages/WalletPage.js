@@ -119,7 +119,7 @@ const WalletPage = () => {
         },
         body: JSON.stringify({
           items: selectedItemsData,
-          address: address || 'Discord Server'
+          address: address || 'Manual review'
         })
       });
       

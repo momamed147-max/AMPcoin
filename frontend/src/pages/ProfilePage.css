@@ -1,0 +1,253 @@
+.profile-container {
+  width: min(1120px, 100%);
+  margin: 0 auto;
+  padding-bottom: 34px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.profile-header h1 {
+  margin: 0;
+  color: var(--txt);
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: clamp(1.45rem, 2vw, 1.9rem);
+  letter-spacing: -0.025em;
+}
+
+.profile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.profile-header-actions .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+}
+
+.profile-container > .message {
+  margin-bottom: 14px;
+  padding: 11px 14px;
+  color: #a9d5ff;
+  font-size: 0.82rem;
+  font-weight: 650;
+  border: 1px solid rgba(76, 141, 255, 0.25);
+  border-radius: 10px;
+  background: rgba(76, 141, 255, 0.09);
+}
+
+.profile-card {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background:
+    radial-gradient(500px 180px at 12% 0%, rgba(76, 141, 255, 0.09), transparent 72%),
+    var(--panel);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
+}
+
+.profile-image-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  min-width: 0;
+  padding: 26px 28px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent);
+}
+
+.profile-image-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 92px;
+  height: 92px;
+  padding: 4px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, rgba(96, 165, 250, 0.85), rgba(37, 99, 235, 0.3));
+  box-shadow: 0 0 0 1px rgba(96, 165, 250, 0.22), 0 12px 30px rgba(0, 0, 0, 0.32);
+}
+
+.profile-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border: 4px solid var(--panel);
+  border-radius: 50%;
+  background: var(--bg1);
+}
+
+.profile-names {
+  min-width: 0;
+}
+
+.profile-display-name {
+  margin: 0;
+  overflow: hidden;
+  color: var(--txt);
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: clamp(1.35rem, 2.4vw, 1.8rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-roblox-badge {
+  margin: 7px 0 0;
+  color: var(--mut);
+  font-size: 0.82rem;
+}
+
+.profile-details {
+  padding: 24px 28px 28px;
+}
+
+.profile-fields-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-field {
+  min-width: 0;
+  padding: 14px 15px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: rgba(8, 14, 24, 0.55);
+}
+
+.profile-field > label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--dim);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.profile-field-value {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--txt);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.profile-field-value.balance {
+  color: #8ab9ff;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.verified-roblox {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  color: #8ee5a1;
+  font-size: 0.65rem;
+  font-weight: 800;
+  border: 1px solid rgba(63, 185, 80, 0.25);
+  border-radius: 99px;
+  background: rgba(63, 185, 80, 0.08);
+}
+
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.profile-stats .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 15px 10px;
+  text-align: center;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent), var(--bg1);
+}
+
+.profile-stats .stat-value {
+  color: var(--txt);
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.profile-stats .stat-value.win { color: #63d47b; }
+.profile-stats .stat-value.loss { color: #ff7b72; }
+.profile-stats .stat-value.rate { color: #82b7ff; }
+
+.profile-stats .stat-label {
+  margin-top: 5px;
+  color: var(--mut);
+  font-size: 0.7rem;
+  font-weight: 650;
+}
+
+.profile-meta {
+  margin-top: 14px;
+  color: var(--dim);
+  text-align: right;
+}
+
+.edit-form {
+  max-width: 620px;
+}
+
+.edit-form .form-group label,
+.edit-form .form-label {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--mut);
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.edit-form .form-hint {
+  display: block;
+  margin-top: 6px;
+  color: var(--dim);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 760px) {
+  .profile-container { padding-bottom: 88px; }
+  .profile-header { align-items: stretch; flex-direction: column; }
+  .profile-header-actions { width: 100%; }
+  .profile-header-actions .btn { flex: 1; margin-right: 0 !important; padding-inline: 10px; }
+  .profile-image-section { padding: 20px; }
+  .profile-details { padding: 18px 20px 22px; }
+  .profile-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+  .profile-image-section { align-items: flex-start; gap: 14px; padding: 17px; }
+  .profile-image-wrap { width: 72px; height: 72px; }
+  .profile-display-name { font-size: 1.2rem; white-space: normal; }
+  .profile-roblox-badge { font-size: 0.75rem; }
+  .profile-details { padding: 14px; }
+  .profile-fields-grid { grid-template-columns: 1fr; }
+  .profile-header-actions { flex-direction: column; }
+  .profile-header-actions .btn { width: 100%; }
+}

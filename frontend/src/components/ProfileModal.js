@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useAuth } from '../context/AuthContext';
 import InventoryPickerModal from './InventoryPickerModal';
 import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
@@ -45,14 +44,12 @@ function getRank(wager) {
   return { ...current, next, progress, wager: w };
 }
 
-const ProfileModal = ({ viewer, profileUser, isOwn, socket, onClose }) => {
+const ProfileModal = ({ viewer, profileUser, isOwn, onClose }) => {
   const [stats, setStats] = useState({ wager: 0, profit: 0, won: 0, lost: 0 });
   const [tipModalOpen, setTipModalOpen] = useState(false);
   const [tipInventory, setTipInventory] = useState([]);
   const [tippingId, setTippingId] = useState(null);
   const [tipNote, setTipNote] = useState('');
-  const [discordBusy, setDiscordBusy] = useState(false);
-  const { refreshUser } = useAuth();
 
   const person = profileUser || viewer;
   const showTip = !isOwn && viewer && person && String(viewer.id) !== String(person.id);
@@ -85,29 +82,8 @@ const ProfileModal = ({ viewer, profileUser, isOwn, socket, onClose }) => {
     })();
   }, [person]);
 
-  const linkDiscord = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    window.location.href = `${API_BASE}/api/auth/discord?token=${encodeURIComponent(token)}`;
-  };
-
-  const unlinkDiscord = async () => {
-    if (discordBusy) return;
-    setDiscordBusy(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/users/unlink-discord`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (res.ok && refreshUser) await refreshUser();
-    } catch (e) {
-      console.error('Unlink discord failed:', e.message);
-    } finally {
-      setDiscordBusy(false);
-    }
-  };
-
-  const openTipPicker = async () => {    setTipNote('');
+  const openTipPicker = async () => {
+    setTipNote('');
     if (tipModalOpen) {
       setTipModalOpen(false);
       return;
@@ -179,9 +155,11 @@ const ProfileModal = ({ viewer, profileUser, isOwn, socket, onClose }) => {
 
   return createPortal(
     <div className="profile-modal-overlay" onClick={onClose}>
-      <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="profile-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="profile-modal-name">
         <div className="profile-banner">
-          <button className="profile-close" onClick={onClose}>×</button>
+          <button className="profile-close" onClick={onClose} aria-label="Close profile">
+            <Icon name="close" size={15} />
+          </button>
         </div>
         <div className="profile-avatar-wrap">
           <img
@@ -191,38 +169,11 @@ const ProfileModal = ({ viewer, profileUser, isOwn, socket, onClose }) => {
           />
           <span className="profile-lvl">LVL {rank.level}</span>
         </div>
-        <div className="profile-name">
+        <div className="profile-name" id="profile-modal-name">
           {displayName}
           {person.isAdmin && <span className="profile-admin-badge">ADMIN</span>}
         </div>
         <div className="profile-idtag">{idTag}</div>
-        <div className="profile-discord">
-          {person.discordId ? (
-            <>
-              {person.discordAvatar && (
-                <img
-                  src={person.discordAvatar}
-                  alt=""
-                  className="discord-avatar"
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              )}
-              <span className="discord-name">{person.discordUsername || 'Discord linked'}</span>
-              <span className="discord-check"><Icon name="check" size={12} /></span>
-              {isOwn && (
-                <button className="discord-unlink" onClick={unlinkDiscord} disabled={discordBusy} title="Unlink Discord">
-                  {discordBusy ? '...' : 'Unlink'}
-                </button>
-              )}
-            </>
-          ) : isOwn ? (
-            <button className="discord-link-btn" onClick={linkDiscord}>
-              <Icon name="chat" size={14} /> Link Discord
-            </button>
-          ) : (
-            <span className="discord-none">Discord not linked</span>
-          )}
-        </div>
         <div className="profile-rank-row">
           <span className="profile-rank-name">{rank.name}</span>
           <div className="profile-rank-bar">

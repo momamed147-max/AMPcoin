@@ -10,6 +10,7 @@ const LoginPage = () => {
   const [robloxUsername, setRobloxUsername] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  const [copyStatus, setCopyStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { requestVerifyCode, verifyAndRegister, loading: authLoading } = useAuth();
@@ -55,10 +56,14 @@ const LoginPage = () => {
     }
   };
 
-  const copyCode = () => {
+  const copyCode = async () => {
     try {
-      navigator.clipboard.writeText(code);
-    } catch (_) { /* ignore */ }
+      await navigator.clipboard.writeText(code);
+      setCopyStatus('Copied');
+      setTimeout(() => setCopyStatus(''), 1800);
+    } catch (_) {
+      setCopyStatus('Copy failed');
+    }
   };
 
   if (authLoading) {
@@ -82,7 +87,7 @@ const LoginPage = () => {
             <h2 className="auth-title">Sign In</h2>
             <p className="auth-sub">Enter your Roblox username to get a verification code.</p>
 
-            {error && <div className="auth-error">{error}</div>}
+            {error && <div className="auth-error" role="alert">{error}</div>}
 
             <label className="auth-label" htmlFor="robloxUsername">Roblox Username</label>
             <input
@@ -106,12 +111,15 @@ const LoginPage = () => {
               Put this code in your <strong>Roblox profile bio</strong>, then press Verify.
             </p>
 
-            {error && <div className="auth-error">{error}</div>}
+            {error && <div className="auth-error" role="alert">{error}</div>}
 
-            <div className="auth-code-box" onClick={copyCode} title="Click to copy">
+            <button type="button" className="auth-code-box" onClick={copyCode} title="Copy verification code">
               <span className="auth-code">{code}</span>
-              <span className="auth-copy"><Icon name="board" size={14} /></span>
-            </div>
+              <span className={`auth-copy ${copyStatus ? 'visible' : ''}`}>
+                <Icon name={copyStatus === 'Copied' ? 'check' : 'board'} size={14} />
+                {copyStatus && <small>{copyStatus}</small>}
+              </span>
+            </button>
 
             <ol className="auth-steps">
               <li>Go to <strong>roblox.com</strong> and open your profile</li>

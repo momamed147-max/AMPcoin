@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import ProfileModal from './ProfileModal';
 import InventoryPickerModal from './InventoryPickerModal';
+import ModalPortal from './ModalPortal';
 import Icon from './Icon';
 import ModBadges from './ModBadges';
 import { API_BASE } from '../apiConfig';
@@ -11,18 +11,10 @@ import './WalletModal.css';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
 
-function getFallbackAvatar(user) {
-  if (user?.robloxUserId) {
-    return `https://www.roblox.com/headshot-thumbnail/image?userId=${user.robloxUserId}&width=420&height=420&format=png`;
-  }
-  return DEFAULT_AVATAR;
-}
-
 const Header = ({ balance, socket }) => {
   const location = useLocation();
   const { user } = useAuth();
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false);
   const [inventory, setInventory] = useState([]);
   const [invLoading, setInvLoading] = useState(false);
   const [selectedUnits, setSelectedUnits] = useState([]);
@@ -38,6 +30,7 @@ const Header = ({ balance, socket }) => {
   // Notifications
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifList, setNotifList] = useState([]);
+  const notifRef = useRef(null);
 
   // Giveaway creation (GW button next to the bell)
   const [gwModalOpen, setGwModalOpen] = useState(false);
@@ -97,6 +90,22 @@ const Header = ({ balance, socket }) => {
       }
     }
   };
+
+  useEffect(() => {
+    if (!notifOpen) return undefined;
+    const handlePointerDown = (event) => {
+      if (notifRef.current && !notifRef.current.contains(event.target)) setNotifOpen(false);
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setNotifOpen(false);
+    };
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [notifOpen]);
 
   const notifIcon = (type) => {
     switch (type) {
@@ -165,28 +174,27 @@ const Header = ({ balance, socket }) => {
     return `${Math.floor(v)}`;
   };
 
-  const getPageTitle = () => {
-    switch(location.pathname) {
+  const getPageMeta = () => {
+    switch (location.pathname) {
       case '/jackpot':
-        return 'Jackpot';
-      case '/coinflip':
-        return 'Coinflip';
-      case '/trading':
-        return 'Trading';
       case '/blackjack':
-        return 'Jackpot';
+        return { title: 'Jackpot', subtitle: 'Winner takes the pot', icon: 'jackpot' };
+      case '/coinflip':
+        return { title: 'Coinflip', subtitle: 'Head-to-head item bets', icon: 'coin' };
+      case '/trading':
+        return { title: 'Trading', subtitle: 'Secure player-to-player trades', icon: 'wave' };
       case '/leaderboard':
-        return 'Leaderboard';
+        return { title: 'Leaderboard', subtitle: 'Top players and biggest stakes', icon: 'trophy' };
       case '/stats':
-        return 'Statistics';
+        return { title: 'Statistics', subtitle: 'Your performance at a glance', icon: 'chart' };
       case '/provably-fair':
-        return 'Provably Fair';
+        return { title: 'Provably Fair', subtitle: 'Transparent result verification', icon: 'shield' };
       case '/profile':
-        return 'Profile';
+        return { title: 'Profile', subtitle: 'Account and player statistics', icon: 'target' };
       case '/admin':
-        return 'Admin Panel';
+        return { title: 'Admin Panel', subtitle: 'Owner controls and site operations', icon: 'gear' };
       default:
-        return 'Dashboard';
+        return { title: 'Dashboard', subtitle: 'AMPbet game server', icon: 'diamond' };
     }
   };
 
@@ -278,10 +286,6 @@ const Header = ({ balance, socket }) => {
     }
   };
 
-  const handleProfileClick = () => {
-    setShowProfileModal(true);
-  };
-
   const totalInventoryValue = inventory.reduce(
     (sum, item) => sum + (num(item.value || item.details?.value) * (num(item.quantity) || 1)),
     0
@@ -333,7 +337,7 @@ const Header = ({ balance, socket }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify({ items, address: 'Discord Server' })
+        body: JSON.stringify({ items, address: 'Manual review' })
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -351,57 +355,67 @@ const Header = ({ balance, socket }) => {
     }
   };
 
-  const displayName = user?.robloxDisplayName || user?.displayName || user?.robloxUsername || 'Anonymous';
-  const avatarSrc = user?.avatar || getFallbackAvatar(user);
+  const pageMeta = getPageMeta();
 
   return (
     <header className="header header-new">
       <div className="header-left">
-        <span className="header-gem">◆</span>
-        <h2>{getPageTitle()}</h2>
+        <span className="header-page-icon"><Icon name={pageMeta.icon} size={17} /></span>
+        <div className="header-title-copy">
+          <h2>{pageMeta.title}</h2>
+          <span>{pageMeta.subtitle}</span>
+        </div>
       </div>
 
       <div className="header-center">
+        <div className="balance-pill cash-balance" title={`${Number(balance || 0).toLocaleString()} AMP available`}>
+          <span className="balance-gem"><Icon name="coin" size={15} /></span>
+          <span className="balance-copy">
+            <span className="balance-label">Balance</span>
+            <strong className="balance-total">{formatCompact(balance)}</strong>
+          </span>
+        </div>
         <div
           className="balance-pill"
           title={`Inventory value: ${totalInventoryValue.toLocaleString()} AMP`}
         >
           <span className="balance-gem"><Icon name="diamond" size={14} /></span>
-          <span className="balance-total">{formatCompact(totalInventoryValue)}</span>
+          <span className="balance-copy">
+            <span className="balance-label">Inventory</span>
+            <strong className="balance-total">{formatCompact(totalInventoryValue)}</strong>
+          </span>
         </div>
         <button className="header-wallet-btn" onClick={handleWalletClick} title="Open wallet">
-          <Icon name="wallet" size={14} /> Wallet
+          <Icon name="wallet" size={15} /> <span>Wallet</span>
         </button>
       </div>
 
       <div className="header-right">
-        <span className="username" onClick={handleProfileClick} style={{ cursor: 'pointer' }} title={user?.robloxUsername || ''}>
-          {displayName}
-        </span>
-
-        <img
-          src={avatarSrc || DEFAULT_AVATAR}
-          alt={`${displayName} avatar`}
-          className="user-avatar"
-          onClick={handleProfileClick}
-          style={{ cursor: 'pointer' }}
-          onError={(e) => {
-            const fb = getFallbackAvatar(user);
-            if (e.target.src !== fb) e.target.src = fb;
-            else if (e.target.src !== DEFAULT_AVATAR) e.target.src = DEFAULT_AVATAR;
-          }}
-        />
-
-        <div className="notifications" onClick={toggleNotifications}>
-          <span className="notification-icon"><Icon name="bell" size={16} /></span>
+        <div className="notifications" ref={notifRef}>
+          <button
+            type="button"
+            className="notification-icon"
+            onClick={toggleNotifications}
+            aria-label={`Notifications${unreadCount ? `, ${unreadCount} unread` : ''}`}
+            aria-expanded={notifOpen}
+          >
+            <Icon name="bell" size={17} />
+          </button>
           {unreadCount > 0 && (
-            <span className="notification-badge">{unreadCount}</span>
+            <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
           )}
           {notifOpen && (
             <div className="notification-dropdown" onClick={(e) => e.stopPropagation()}>
-              <div className="notification-dd-header">Notifications</div>
+              <div className="notification-dd-header">
+                <span>Notifications</span>
+                {unreadCount > 0 && <small>{unreadCount} new</small>}
+              </div>
               {notifList.length === 0 ? (
-                <div className="notification-empty">No notifications yet</div>
+                <div className="notification-empty">
+                  <Icon name="bell" size={22} />
+                  <strong>You&apos;re all caught up</strong>
+                  <span>New activity will appear here.</span>
+                </div>
               ) : (
                 <div className="notification-list">
                   {notifList.map((n) => (
@@ -437,7 +451,7 @@ const Header = ({ balance, socket }) => {
           disabled={!user}
           title="Create a giveaway — only members with a bet in the last 24h can join"
         >
-          <Icon name="gift" size={16} />
+          <Icon name="gift" size={16} /> <span>Giveaway</span>
         </button>
       </div>
 
@@ -455,16 +469,6 @@ const Header = ({ balance, socket }) => {
         onSelect={createGiveaway}
       />
 
-      {showProfileModal && (
-        <ProfileModal
-          viewer={user}
-          profileUser={user}
-          isOwn
-          socket={socket}
-          onClose={() => setShowProfileModal(false)}
-        />
-      )}
-
       {showWalletModal && (() => {
         const getVal = (u) => num(u.value || u.details?.value);
         const getName = (u) => u.name || u.details?.name || u.itemName || 'Unknown';
@@ -479,31 +483,28 @@ const Header = ({ balance, socket }) => {
         });
         visible = [...visible].sort((a, b) => wmSort === 'low-high' ? getVal(a) - getVal(b) : getVal(b) - getVal(a));
         return (
+        <ModalPortal>
         <div className="wm-overlay" onClick={() => setShowWalletModal(false)}>
-          <div className="wm-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="wm-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="wallet-title">
             <div className="wm-header">
-              <h2 className="wm-title">
-                <span className="wm-coins-icon">
-                  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <ellipse cx="12" cy="5" rx="9" ry="3" />
-                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                  </svg>
-                </span>
+              <h2 className="wm-title" id="wallet-title">
+                <span className="wm-coins-icon"><Icon name="bag" size={20} /></span>
                 Your Items
               </h2>
               <button
                 className="wm-add-btn"
                 onClick={() => setTradeModal({ kind: 'deposit' })}
                 title="Deposit items"
+                aria-label="Deposit items"
               >
-                +
+                <Icon name="plus" size={16} />
               </button>
               <button
                 className="wm-close"
                 onClick={() => setShowWalletModal(false)}
+                aria-label="Close wallet"
               >
-                ×
+                <Icon name="close" size={16} />
               </button>
             </div>
             <div className="wm-controls">
@@ -534,8 +535,8 @@ const Header = ({ balance, socket }) => {
               </select>
             </div>
             <div className="wm-stats">
-              <span>Selected: <span className="wm-gem">◆</span> <strong>{selectedValue.toLocaleString()}</strong></span>
-              <span>Inventory Value: <span className="wm-gem">◆</span> <strong>{totalInventoryValue.toLocaleString()}</strong></span>
+              <span>Selected <Icon name="diamond" size={13} /> <strong>{selectedValue.toLocaleString()}</strong></span>
+              <span>Inventory value <Icon name="diamond" size={13} /> <strong>{totalInventoryValue.toLocaleString()}</strong></span>
             </div>
             {modalMsg && <div className="wm-msg">{modalMsg}</div>}
             {invError && <div className="wm-msg-error">{invError}</div>}
@@ -552,9 +553,18 @@ const Header = ({ balance, socket }) => {
                       key={unit.unitKey}
                       className={`wm-card ${isSelected ? 'is-selected' : ''}`}
                       onClick={() => toggleUnit(unit.unitKey)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleUnit(unit.unitKey);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={isSelected}
                     >
                       {showBadge && (
-                        <span className="wm-badge">ⓘ Withdraw only</span>
+                        <span className="wm-badge"><Icon name="board" size={10} /> Withdraw only</span>
                       )}
                       <div className="wm-img-wrap">
                         {unit.image || unit.imageUrl || unit.details?.imageUrl ? (
@@ -569,7 +579,7 @@ const Header = ({ balance, socket }) => {
                       </div>
                       <h4 className="wm-name">{getName(unit)}</h4>
                       <ModBadges mods={unit.mods || unit.details?.mods} size={16} />
-                      <p className="wm-value"><span className="wm-gem">◆</span> {getVal(unit).toLocaleString()}</p>
+                      <p className="wm-value"><Icon name="diamond" size={12} /> {getVal(unit).toLocaleString()}</p>
                     </div>
                   );
                 })
@@ -593,19 +603,23 @@ const Header = ({ balance, socket }) => {
                 onClick={handleWithdraw}
                 disabled={selectedUnits.length === 0 || withdrawBusy}
               >
-                {withdrawBusy ? 'Sending...' : (<>Withdraw <span className="wm-gem">◆</span> {selectedValue.toLocaleString()}</>)}
+                {withdrawBusy ? 'Sending...' : (<>Withdraw <Icon name="diamond" size={12} /> {selectedValue.toLocaleString()}</>)}
               </button>
             </div>
           </div>
         </div>
+        </ModalPortal>
         );
       })()}
 
       {tradeModal && (
+        <ModalPortal>
         <div className="trade-modal-overlay" onClick={() => setTradeModal(null)}>
-          <div className="trade-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="modal-close-btn trade-close" onClick={() => setTradeModal(null)}>×</button>
-            <h2>{tradeModal.kind === 'withdraw' ? 'Withdraw Requested!' : 'Deposit Requested!'}</h2>
+          <div className="trade-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="trade-request-title">
+            <button className="modal-close-btn trade-close" onClick={() => setTradeModal(null)} aria-label="Close">
+              <Icon name="close" size={15} />
+            </button>
+            <h2 id="trade-request-title">{tradeModal.kind === 'withdraw' ? 'Withdraw Requested!' : 'Deposit Requested!'}</h2>
             <p className="trade-sub">
               {tradeModal.kind === 'withdraw'
                 ? 'Trade the bot in-game to receive your items.'
@@ -651,6 +665,7 @@ const Header = ({ balance, socket }) => {
             </button>
           </div>
         </div>
+        </ModalPortal>
       )}
     </header>
   );

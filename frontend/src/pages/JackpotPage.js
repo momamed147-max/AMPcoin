@@ -37,13 +37,15 @@ const JackpotPage = ({ socket, setBalance }) => {
     clearSpin();
     setSpinning(true);
     const order = entries.map((e) => e.userId);
-    let winIdx = order.indexOf(jp.winnerId);
-    if (winIdx < 0) winIdx = 0;
-    const cycles = 3;
-    const totalSteps = order.length * cycles + winIdx + 1;
+    // Keep the reveal readable even in a very large pot: sweep a representative
+    // slice for at most a few seconds, then settle on the server-selected winner.
+    const sweepOrder = order.slice(0, Math.min(order.length, 12));
+    if (!sweepOrder.includes(jp.winnerId)) sweepOrder[sweepOrder.length - 1] = jp.winnerId;
+    const cycles = sweepOrder.length <= 6 ? 2 : 1;
+    const totalSteps = sweepOrder.length * cycles + 1;
     let t = 0;
     for (let s = 0; s < totalSteps; s++) {
-      const uid = order[s % order.length];
+      const uid = sweepOrder[s % sweepOrder.length];
       const progress = s / totalSteps;
       // ease-out: 70ms -> 420ms
       t += 70 + Math.pow(progress, 2.2) * 350;
@@ -57,7 +59,6 @@ const JackpotPage = ({ socket, setBalance }) => {
 
   const showCustomPopup = (message, type = 'info') => {
     setPopup({ show: true, message, type });
-    setTimeout(() => setPopup({ show: false, message: '', type: 'info' }), 3000);
   };
 
   // Fetch active jackpot

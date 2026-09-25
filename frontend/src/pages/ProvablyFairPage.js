@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from '../components/Icon';
+import './ProvablyFairPage.css';
 
 const ProvablyFairPage = () => {
   const [activeTab, setActiveTab] = useState('coinflip');

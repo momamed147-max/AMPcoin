@@ -75,6 +75,7 @@ const tradesRoutes = require('./backend/routes/trades');
 realtime.setIo(io);
 
 // API routes
+app.get('/api/health', (req, res) => res.json({ ok: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);

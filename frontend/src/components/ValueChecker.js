@@ -19,11 +19,20 @@ const RARITY_LABELS = {
   common: 'Common'
 };
 
+const valueForField = (item, field) => {
+  const base = Number(item.baseValue ?? item.value ?? 0);
+  if (field === 'neon') return Math.round(base * 1.18);
+  if (field === 'mega') return Math.round(base * 1.30);
+  return base;
+};
+
 const ITEMS_PER_PAGE = 50;
 
 const ValueChecker = ({ isOpen, onClose }) => {
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [search, setSearch] = useState('');
   const [rarityFilter, setRarityFilter] = useState('all');
   const [sortField, setSortField] = useState('normal');
@@ -31,17 +40,25 @@ const ValueChecker = ({ isOpen, onClose }) => {
   const [page, setPage] = useState(1);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return undefined;
+    const controller = new AbortController();
     setLoading(true);
+    setLoadError('');
     // Public catalog endpoint (no admin rights needed)
-    fetch(`${API_BASE}/api/items`)
-      .then((r) => r.json())
-      .then((data) => {
-        setAllItems(Array.isArray(data) ? data : data.items || []);
+    fetch(`${API_BASE}/api/items`, { signal: controller.signal })
+      .then((r) => {
+        if (!r.ok) throw new Error(`Values unavailable (${r.status})`);
+        return r.json();
       })
-      .catch(() => setAllItems([]))
-      .finally(() => setLoading(false));
-  }, [isOpen]);
+      .then((data) => setAllItems(Array.isArray(data) ? data : data.items || []))
+      .catch((error) => {
+        if (error.name !== 'AbortError') setLoadError('Could not load item values. Check your connection and try again.');
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [isOpen, reloadKey]);
 
   const filtered = useMemo(() => {
     let list = [...allItems];
@@ -53,12 +70,12 @@ const ValueChecker = ({ isOpen, onClose }) => {
       list = list.filter((it) => (it.name || it.itemName || '').toLowerCase().includes(q));
     }
     list.sort((a, b) => {
-      const va = Number(a.value || 0);
-      const vb = Number(b.value || 0);
+      const va = valueForField(a, sortField);
+      const vb = valueForField(b, sortField);
       return sortDir === 'desc' ? vb - va : va - vb;
     });
     return list;
-  }, [allItems, search, rarityFilter, sortDir]);
+  }, [allItems, search, rarityFilter, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const pageItems = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
@@ -78,10 +95,12 @@ const ValueChecker = ({ isOpen, onClose }) => {
 
   return (
     <div className="modal-overlay vc-overlay" onClick={onClose}>
-      <div className="vc-modal" onClick={(e) => e.stopPropagation()}>
+      <div className="vc-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="value-checker-title">
         <div className="vc-header">
-          <h2>Pet Values</h2>
-          <button className="vc-close" onClick={onClose}>×</button>
+          <h2 id="value-checker-title">Pet Values</h2>
+          <button className="vc-close" onClick={onClose} aria-label="Close values">
+            <Icon name="close" size={16} />
+          </button>
         </div>
 
         <div className="vc-search-wrap">
@@ -122,6 +141,15 @@ const ValueChecker = ({ isOpen, onClose }) => {
             <div className="loading-spinner"></div>
             <p>Loading pet values...</p>
           </div>
+        ) : loadError ? (
+          <div className="vc-error-state" role="alert">
+            <Icon name="warn" size={24} />
+            <strong>Values unavailable</strong>
+            <span>{loadError}</span>
+            <button type="button" className="btn btn-primary" onClick={() => setReloadKey((key) => key + 1)}>
+              Try again
+            </button>
+          </div>
         ) : (
           <>
             <div className="vc-table-wrap">
@@ -129,26 +157,35 @@ const ValueChecker = ({ isOpen, onClose }) => {
                 <thead>
                   <tr>
                     <th className="vc-th-pet">PET</th>
-                    <th className="vc-th-val" onClick={() => handleSort('normal')}>
-                      NORMAL {sortField === 'normal' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
-                    </th>
-                    <th className="vc-th-val" onClick={() => handleSort('neon')}>
-                      NEON {sortField === 'neon' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
-                    </th>
-                    <th className="vc-th-val" onClick={() => handleSort('mega')}>
-                      MEGA {sortField === 'mega' ? (sortDir === 'desc' ? '▼' : '▲') : ''}
-                    </th>
+                    {[
+                      ['normal', 'NORMAL'],
+                      ['neon', 'NEON'],
+                      ['mega', 'MEGA']
+                    ].map(([field, label]) => (
+                      <th
+                        key={field}
+                        className="vc-th-val"
+                        aria-sort={sortField === field ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
+                      >
+                        <button type="button" onClick={() => handleSort(field)}>
+                          {label}
+                          <Icon
+                            name="chevron"
+                            size={12}
+                            className={sortField === field && sortDir === 'asc' ? 'sort-chevron asc' : 'sort-chevron'}
+                          />
+                        </button>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
                   {pageItems.map((item, idx) => {
                     const name = item.name || item.itemName || 'Unknown';
                     const rarity = (item.rarity || 'common').toLowerCase().replace(/\s+/g, '_');
-                    // Base catalog value; Neon (+8%) and Mega (+20%) match the N/M mod bonuses
-                    const baseVal = Number(item.baseValue ?? item.value ?? 0);
-                    const normalVal = baseVal;
-                    const neonVal = Math.round(baseVal * 1.08);
-                    const megaVal = Math.round(baseVal * 1.20);
+                    const normalVal = valueForField(item, 'normal');
+                    const neonVal = valueForField(item, 'neon');
+                    const megaVal = valueForField(item, 'mega');
                     return (
                       <tr key={item.id || item.itemId || idx} className="vc-row">
                         <td className="vc-pet-cell">
@@ -184,9 +221,13 @@ const ValueChecker = ({ isOpen, onClose }) => {
             </div>
 
             <div className="vc-pagination">
-              <button className="vc-page-btn" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>‹</button>
+              <button className="vc-page-btn" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} aria-label="Previous page">
+                <Icon name="chevron" size={16} style={{ transform: 'rotate(90deg)' }} />
+              </button>
               <span className="vc-page-info">Page {page} of {totalPages} · {filtered.length} pets</span>
-              <button className="vc-page-btn" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))}>›</button>
+              <button className="vc-page-btn" disabled={page >= totalPages} onClick={() => setPage((p) => Math.min(totalPages, p + 1))} aria-label="Next page">
+                <Icon name="chevron" size={16} style={{ transform: 'rotate(-90deg)' }} />
+              </button>
             </div>
           </>
         )}

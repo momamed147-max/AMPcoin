@@ -17,7 +17,6 @@ import ProfilePage from './pages/ProfilePage';
 import AdminPanel from './pages/AdminPanel';
 import ChatPanel from './components/ChatPanel';
 import ValueChecker from './components/ValueChecker';
-import AnimatedPopup from './components/AnimatedPopup';
 import AuthProvider, { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Icon from './components/Icon';
@@ -34,24 +33,25 @@ const socket = io(BACKEND_URL, {
 });
 
 function AppContent() {
-  const { user, loading, refreshUser } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
   const [balance, setBalance] = useState(0);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
-  const [discordPopup, setDiscordPopup] = useState(null);
   const [apiDown, setApiDown] = useState(false);
 
   // Backend reachability canary — shows a banner instead of silent failures
   const checkApi = async () => {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 10000);
     try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 10000);
-      await fetch(`${BACKEND_URL}/api/auth/discord/status`, { signal: ctrl.signal });
-      clearTimeout(t);
+      const response = await fetch(`${BACKEND_URL}/api/health`, { signal: ctrl.signal });
+      if (!response.ok) throw new Error(`API check failed (${response.status})`);
       setApiDown(false);
     } catch (_) {
       setApiDown(true);
+    } finally {
+      clearTimeout(timeout);
     }
   };
 
@@ -69,27 +69,29 @@ function AppContent() {
     return () => window.removeEventListener('ampcoin:open-values', open);
   }, []);
 
-  // Discord OAuth return flags (?discord=linked etc.)
   useEffect(() => {
-    const q = new URLSearchParams(window.location.search);
-    const flag = q.get('discord');
-    if (!flag) return;
-    const map = {
-      linked: ['Discord account linked!', 'success'],
-      error_taken: ['That Discord is already linked to another account.', 'error'],
-      error_expired: ['Link expired — try again.', 'error'],
-      error_token: ['Discord rejected the request — try again.', 'error'],
-      error_profile: ['Could not read your Discord profile.', 'error'],
-      error_nouser: ['Account not found — log in again.', 'error'],
-      error_server: ['Server error — try again later.', 'error']
+    if (!mobileChatOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setMobileChatOpen(false);
     };
-    const [msg, type] = map[flag] || ['Discord linking finished.', 'info'];
-    setDiscordPopup({ message: msg, type });
-    window.history.replaceState({}, '', window.location.pathname);
-    if (flag === 'linked' && refreshUser) {
-      setTimeout(() => { try { refreshUser(); } catch (_) {} }, 500);
-    }
-  }, [refreshUser]);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => document.removeEventListener('keydown', closeOnEscape);
+  }, [mobileChatOpen]);
+
+  useEffect(() => {
+    const closeTopDialogOnEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"]'));
+      const topDialog = dialogs[dialogs.length - 1];
+      if (!topDialog) return;
+      const closeButton = topDialog.querySelector(
+        'button[aria-label^="Close"], .close-modal, .ipm-close, .wm-close, .vc-close, .cf-modal-close, .profile-close, .modal-close-btn'
+      );
+      if (closeButton) closeButton.click();
+    };
+    document.addEventListener('keydown', closeTopDialogOnEscape);
+    return () => document.removeEventListener('keydown', closeTopDialogOnEscape);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -126,7 +128,8 @@ function AppContent() {
   return (
     <div className="app">
       {apiDown && (
-        <div className="api-down-banner">
+        <div className="api-down-banner" role="status">
+          <Icon name="warn" size={15} />
           <span>Cannot reach the game server — it may be offline or redeploying.</span>
           <button onClick={checkApi}>Retry</button>
         </div>
@@ -160,6 +163,16 @@ function AppContent() {
               <Route path="/provably-fair" element={<ProtectedRoute><ProvablyFairPage /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               <Route path="/admin" element={<ProtectedRoute adminOnly={true}><AdminPanel /></ProtectedRoute>} />
+              <Route path="*" element={(
+                <div className="request-state">
+                  <Icon name="search" size={26} />
+                  <strong>Page not found</strong>
+                  <span>The page you requested does not exist or has moved.</span>
+                  <button type="button" className="btn btn-primary" onClick={() => window.location.assign('/coinflip')}>
+                    Return to Coinflip
+                  </button>
+                </div>
+              )} />
             </Routes>
           </div>
         </div>
@@ -168,19 +181,13 @@ function AppContent() {
         <button
           className="mobile-chat-fab"
           onClick={() => setMobileChatOpen((v) => !v)}
-          aria-label="Toggle chat"
+          aria-label={mobileChatOpen ? 'Close chat' : 'Open live chat'}
+          aria-expanded={mobileChatOpen}
         >
-          {mobileChatOpen ? '✕' : <Icon name="chat" size={18} />}
+          <Icon name={mobileChatOpen ? 'close' : 'chat'} size={18} />
         </button>
       )}
       <ValueChecker isOpen={valuesOpen} onClose={() => setValuesOpen(false)} />
-      {discordPopup && (
-        <AnimatedPopup
-          message={discordPopup.message}
-          type={discordPopup.type}
-          onClose={() => setDiscordPopup(null)}
-        />
-      )}
     </div>
   );
 }

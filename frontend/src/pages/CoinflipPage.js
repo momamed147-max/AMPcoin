@@ -86,6 +86,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
   const [historyLoading, setHistoryLoading] = useState(false);
   const [sortBy, setSortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
+  const [lobbyError, setLobbyError] = useState('');
   const [userInventory, setUserInventory] = useState([]);
 
   // Join modal
@@ -132,7 +133,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
     setPopupMessage(message);
     setPopupType(type);
     setShowPopup(true);
-    setTimeout(() => setShowPopup(false), 3000);
   };
 
   const closePopup = () => setShowPopup(false);
@@ -146,6 +146,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
   // Fetch coinflips
   const fetchCoinflips = useCallback(async () => {
     try {
+      setLobbyError('');
       const response = await fetch(`${API_BASE}/api/coinflip?sort=${sortBy}`);
       if (response.ok) {
         const data = await response.json();
@@ -153,10 +154,14 @@ const CoinflipPage = ({ socket, setBalance }) => {
         setActiveCount(data.activeCount || 0);
         setTotalInGames(data.totalInGames || 0);
       } else if (response.status === 429) {
+        setLobbyError('The lobby is refreshing too quickly. Wait a moment and try again.');
         showCustomPopup('Server is rate-limiting requests — wait a few seconds and refresh.', 'error');
+      } else {
+        setLobbyError('The lobby could not be loaded right now.');
       }
     } catch (error) {
       console.error('Error fetching coinflips:', error);
+      setLobbyError('Could not reach the game server. Check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -612,9 +617,17 @@ const CoinflipPage = ({ socket, setBalance }) => {
           </button>
         </div>
         <div className="cf-topbar-right">
-          <div className="cf-sort-wrap" onClick={() => setSortDropdown(!sortDropdown)}>
-            <span className="cf-sort-label">⇅ Value sort {sortBy === 'value_low' ? 'low to high' : sortBy === 'newest' ? 'newest' : sortBy === 'oldest' ? 'oldest' : 'high to low'}</span>
-            <span className="cf-sort-arrow">▾</span>
+          <div className="cf-sort-wrap">
+            <button
+              type="button"
+              className="cf-sort-label"
+              onClick={() => setSortDropdown((open) => !open)}
+              aria-expanded={sortDropdown}
+            >
+              <Icon name="sort" size={13} />
+              Value sort: {sortBy === 'value_low' ? 'low to high' : sortBy === 'newest' ? 'newest' : sortBy === 'oldest' ? 'oldest' : 'high to low'}
+              <Icon name="chevron" size={12} className={sortDropdown ? 'sort-chevron asc' : 'sort-chevron'} />
+            </button>
             {sortDropdown && (
               <div className="cf-sort-dropdown" onClick={(e) => e.stopPropagation()}>
                 {['newest', 'oldest', 'value_high', 'value_low'].map((s) => (
@@ -634,7 +647,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
             <span>{formatCompact(totalInGames)}</span>
           </div>
           <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={handleCreateBet}>
-            + Bet Items
+            <Icon name="plus" size={13} /> Bet Items
           </button>
           <button className="cf-topbar-btn" onClick={openValueChecker}>
             Values
@@ -651,11 +664,20 @@ const CoinflipPage = ({ socket, setBalance }) => {
       {/* ─── LOBBY LIST ─── */}
       <div className="cf-lobby">
         {visibleGames.length === 0 ? (
+          lobbyError ? (
+            <div className="request-state" role="alert">
+              <Icon name="warn" size={26} />
+              <strong>Lobby unavailable</strong>
+              <span>{lobbyError}</span>
+              <button type="button" className="btn btn-primary" onClick={fetchCoinflips}>Try again</button>
+            </div>
+          ) : (
           <div className="cf-empty">
-            <div className="cf-empty-icon"><Icon name="coin" size={12} /></div>
+            <div className="cf-empty-icon"><Icon name="coin" size={34} /></div>
             <p>No active coinflips</p>
             <p className="cf-empty-sub">Create a bet to get started!</p>
           </div>
+          )
         ) : (
           visibleGames.map((coinflip) => {
             const meta = getBetMeta(coinflip);
@@ -793,8 +815,10 @@ const CoinflipPage = ({ socket, setBalance }) => {
         return (
           <ModalPortal>
           <div className="cf-modal-overlay" onClick={() => setViewBet(null)}>
-            <div className="cf-modal cf-view-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="cf-modal-close" onClick={() => setViewBet(null)}>×</button>
+            <div className="cf-modal cf-view-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Coinflip details">
+              <button className="cf-modal-close" onClick={() => setViewBet(null)} aria-label="Close bet">
+                <Icon name="close" size={15} />
+              </button>
 
               {/* Top: Players + Vs / Coin */}
               <div className="cf-view-top">
@@ -916,8 +940,10 @@ const CoinflipPage = ({ socket, setBalance }) => {
         return (
           <ModalPortal>
           <div className="cf-modal-overlay" onClick={() => setShowJoinModal(false)}>
-            <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="cf-modal-close" onClick={() => setShowJoinModal(false)}>×</button>
+            <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Join coinflip">
+              <button className="cf-modal-close" onClick={() => setShowJoinModal(false)} aria-label="Close join bet">
+                <Icon name="close" size={15} />
+              </button>
 
               <div className="cf-join-content">
                 {/* Left: who you're joining + what's in the bet */}
@@ -1053,9 +1079,11 @@ const CoinflipPage = ({ socket, setBalance }) => {
                 </div>
                 <div className="cf-join-bottom-right">
                   <div className="cf-join-selected-info">
-                    <span className={rangeOk ? 'cf-range-ok' : 'cf-range-bad'}>
-                      {rangeOk ? `✓ ${totalVal.toLocaleString()} AMP` : `${totalVal.toLocaleString()} AMP — need ${Math.max(0, lo - totalVal).toLocaleString()} more`}
-                    </span>
+                    {rangeOk
+                      ? <span className="cf-range-ok"><Icon name="check" size={13} /> {totalVal.toLocaleString()} AMP</span>
+                      : totalVal > hi
+                        ? <span className="cf-range-bad">{totalVal.toLocaleString()} AMP — {Math.max(0, totalVal - hi).toLocaleString()} over the limit</span>
+                        : <span className="cf-range-bad">{totalVal.toLocaleString()} AMP — {Math.max(0, lo - totalVal).toLocaleString()} more needed</span>}
                   </div>
                   <button className="cf-confirm-btn" disabled={joining || !rangeOk} onClick={handleConfirmJoinBet}>
                     {joining ? 'Joining...' : `Confirm Bet (${totalVal.toLocaleString()} AMP)`}
@@ -1090,8 +1118,10 @@ const CoinflipPage = ({ socket, setBalance }) => {
       {showHistory && (
         <ModalPortal>
         <div className="cf-modal-overlay" onClick={() => setShowHistory(false)}>
-          <div className="cf-modal cf-history-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="cf-modal-close" onClick={() => setShowHistory(false)}>×</button>
+          <div className="cf-modal cf-history-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Coinflip history">
+            <button className="cf-modal-close" onClick={() => setShowHistory(false)} aria-label="Close history">
+              <Icon name="close" size={15} />
+            </button>
             <h2 className="cf-history-title">Coinflip History</h2>
             <div className="cf-history-body">
               {historyLoading ? (

@@ -173,27 +173,6 @@ body {
 .sidebar .nav-link .nav-icon { font-size: 0.95rem !important; line-height: 1; }
 .nav-label { white-space: nowrap; }
 
-.nav-discord {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  gap: 6px !important;
-  padding: 7px 12px !important;
-  border-radius: var(--r-sm) !important;
-  background: #5865F2 !important;
-  color: #fff !important;
-  text-decoration: none !important;
-  font-size: 0.8rem !important;
-  font-weight: 700 !important;
-  cursor: pointer !important;
-  transition: background 0.15s !important;
-  white-space: nowrap !important;
-  border: 1px solid rgba(255,255,255,.08) !important;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.12) !important;
-  margin-left: 6px !important;
-}
-.nav-discord:hover { background: #4752c4 !important; }
-
 .sidebar-footer {
   margin-left: auto !important;
   display: flex !important;

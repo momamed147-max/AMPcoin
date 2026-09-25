@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../apiConfig';
+import Icon from './Icon';
+import ModalPortal from './ModalPortal';
+import './LeaderboardModal.css';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
 
@@ -33,6 +36,8 @@ async function resolvePlayerProfile(identifier) {
 const LeaderboardModal = ({ isOpen, onClose }) => {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
   const [activeTab, setActiveTab] = useState('topPlayers');
   const [resolvedProfiles, setResolvedProfiles] = useState({});
   const [avatarErrs, setAvatarErrs] = useState({});
@@ -40,9 +45,13 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       const fetchLeaderboard = async () => {
+        setLoading(true);
+        setLoadError('');
+        setLeaderboardData([]);
         try {
           const sortBy = activeTab === 'mostWins' ? 'gamesWon' : activeTab === 'highestStreak' ? 'highestStreak' : 'balance';
           const response = await fetch(`${API_BASE}/api/stats/leaderboard?limit=20&sortBy=${sortBy}`);
+          if (!response.ok) throw new Error(`Leaderboard unavailable (${response.status})`);
           const data = await response.json();
 
           let arr = [];
@@ -73,14 +82,14 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
           setLoading(false);
         } catch (error) {
           console.error('Error fetching leaderboard:', error);
-          setLeaderboardData([]);
+          setLoadError('The leaderboard could not be loaded. Please try again.');
           setLoading(false);
         }
       };
 
       fetchLeaderboard();
     }
-  }, [isOpen, activeTab]);
+  }, [isOpen, activeTab, reloadKey]);
 
   if (!isOpen) return null;
 
@@ -115,6 +124,19 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
         <div className="loading-container" style={{ minHeight: '300px' }}>
           <div className="loading-spinner"></div>
           <p>Loading leaderboard...</p>
+        </div>
+      );
+    }
+
+    if (loadError) {
+      return (
+        <div className="request-state" role="alert">
+          <Icon name="warn" size={26} />
+          <strong>Leaderboard unavailable</strong>
+          <span>{loadError}</span>
+          <button type="button" className="btn btn-primary" onClick={() => setReloadKey((key) => key + 1)}>
+            Try again
+          </button>
         </div>
       );
     }
@@ -181,8 +203,12 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
               })
             ) : (
               <tr>
-                <td colSpan={activeTab !== 'highestStreak' ? 5 : 3} style={{ textAlign: 'center' }}>
-                  No data available
+                <td colSpan={activeTab !== 'highestStreak' ? 5 : 3}>
+                  <div className="leaderboard-empty">
+                    <Icon name="trophy" size={20} />
+                    <strong>No players found</strong>
+                    <span>Completed games will appear here.</span>
+                  </div>
                 </td>
               </tr>
             )}
@@ -193,11 +219,14 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content leaderboard-modal" onClick={(e) => e.stopPropagation()}>
+    <ModalPortal>
+    <div className="modal-overlay leaderboard-overlay" onClick={onClose}>
+      <div className="modal-content leaderboard-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="leaderboard-title">
         <div className="modal-header">
-          <h3>Leaderboard</h3>
-          <button className="modal-close" onClick={onClose}>×</button>
+          <h3 id="leaderboard-title"><Icon name="trophy" size={18} /> Leaderboard</h3>
+          <button className="modal-close" onClick={onClose} aria-label="Close leaderboard">
+            <Icon name="close" size={16} />
+          </button>
         </div>
 
         <div className="modal-body">
@@ -226,6 +255,7 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
         </div>
       </div>
     </div>
+    </ModalPortal>
   );
 };
 

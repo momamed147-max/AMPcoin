@@ -20,3 +20,9 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   line-height: 1;
 }
+
+.mod-badge-circle.mod-R,
+.mod-badge-circle.mod-N {
+  color: #241a05;
+  text-shadow: none;
+}

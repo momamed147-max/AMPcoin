@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
+import './ProfilePage.css';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
 
@@ -13,48 +14,13 @@ function getFallbackAvatar(user) {
 }
 
 const ProfilePage = () => {
-  const { user, loading: authLoading, updateUser, refreshUser } = useAuth();
+  const { user, loading: authLoading, updateUser } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const [message, setMessage] = useState('');
   const [refreshing, setRefreshing] = useState(false);
-  const [discordBusy, setDiscordBusy] = useState(false);
-
-  const linkDiscord = () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    window.location.href = `${API_BASE}/api/auth/discord?token=${encodeURIComponent(token)}`;
-  };
-
-  const unlinkDiscord = async () => {
-    if (discordBusy) return;
-    setDiscordBusy(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/users/unlink-discord`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (res.ok) {
-        const data = await res.json().catch(() => ({}));
-        if (data.user) {
-          setProfile((prev) => ({ ...prev, ...data.user }));
-          updateUser(data.user);
-        } else if (refreshUser) {
-          await refreshUser();
-        }
-        setMessage('Discord unlinked.');
-      } else {
-        setMessage('Failed to unlink Discord.');
-      }
-    } catch (err) {
-      setMessage('Error unlinking Discord.');
-    } finally {
-      setDiscordBusy(false);
-      setTimeout(() => setMessage(''), 3000);
-    }
-  };
 
   useEffect(() => {
     if (user) {
@@ -260,7 +226,7 @@ const ProfilePage = () => {
                   <p className="profile-field-value roblox-display">
                     {profile.robloxDisplayName || displayName}{' '}
                     {profile.robloxDisplayName && (
-                      <span className="verified-roblox">✓ Roblox</span>
+                      <span className="verified-roblox"><Icon name="check" size={11} /> Roblox</span>
                     )}
                   </p>
                 </div>
@@ -284,35 +250,6 @@ const ProfilePage = () => {
                   </p>
                 </div>
 
-                <div className="profile-field">
-                  <label>Discord</label>
-                  {profile.discordId ? (
-                    <p className="profile-field-value discord-linked">
-                      {profile.discordAvatar && (
-                        <img
-                          src={profile.discordAvatar}
-                          alt=""
-                          className="discord-avatar-sm"
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                      )}
-                      {profile.discordUsername || 'Linked'}
-                      <button
-                        className="btn btn-secondary btn-sm discord-unlink-btn"
-                        onClick={unlinkDiscord}
-                        disabled={discordBusy}
-                      >
-                        {discordBusy ? '...' : 'Unlink'}
-                      </button>
-                    </p>
-                  ) : (
-                    <p className="profile-field-value">
-                      <button className="discord-link-btn" onClick={linkDiscord}>
-                        Link Discord
-                      </button>
-                    </p>
-                  )}
-                </div>
               </div>
 
               <div className="profile-stats">

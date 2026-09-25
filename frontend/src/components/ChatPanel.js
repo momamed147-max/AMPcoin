@@ -124,7 +124,7 @@ const GiveawayCard = ({ msg, user, onJoin, joining }) => {
         <div className="gw-item-meta">
           <div className="gw-item-name">{itemName}{(gw.item?.quantity || 1) > 1 ? ` ×${gw.item.quantity}` : ''}</div>
           <div className="gw-item-sub">
-            <span className="gw-item-val">◈ {Number(gw.item?.value || 0).toLocaleString()}</span>
+            <span className="gw-item-val"><Icon name="diamond" size={11} /> {Number(gw.item?.value || 0).toLocaleString()}</span>
             <span className="gw-entries-count">{(gw.entries || []).length} entries</span>
           </div>
         </div>
@@ -214,7 +214,9 @@ const ChatPanel = ({ socket, chatOpen }) => {
   const [onlineUsers, setOnlineUsers] = useState(0);
   const [isTyping, setIsTyping] = useState({});
   const [resolvedProfiles, setResolvedProfiles] = useState({});
+  const [chatLoadError, setChatLoadError] = useState('');
   const [sending, setSending] = useState(false);
+  const [chatError, setChatError] = useState('');
   const [cooldownLeft, setCooldownLeft] = useState(0); // seconds left on 5s chat cooldown
   const [viewProfile, setViewProfile] = useState(null); // chat user profile modal
   const [activeGiveaway, setActiveGiveaway] = useState(null); // persistent top banner
@@ -363,6 +365,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
 
   const fetchRecentMessages = async () => {
     try {
+      setChatLoadError('');
       const response = await fetch(`${API_BASE}/api/chat/messages`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
       });
@@ -373,9 +376,12 @@ const ChatPanel = ({ socket, chatOpen }) => {
           (m) => m.type !== 'giveaway' && m.type !== 'giveaway_win'
         );
         setMessages(regularMessages);
+      } else {
+        setChatLoadError('Recent messages could not be loaded.');
       }
     } catch (error) {
       console.error('Error fetching chat messages:', error);
+      setChatLoadError('Could not reach chat. New messages may be delayed.');
     }
   };
 
@@ -440,6 +446,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
     if (!trimmed || !user || sending || cooldownLeft > 0) return;
 
     setSending(true);
+    setChatError('');
     const displayName =
       user.robloxDisplayName || user.displayName || user.robloxUsername || 'Anonymous';
     const optimisticMsg = {
@@ -483,12 +490,16 @@ const ChatPanel = ({ socket, chatOpen }) => {
         // Rejected (cooldown/mute/rate-limit): drop the ghost message, keep the text
         setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
         setInputMessage(trimmed);
+        setChatError(data.message || 'Message was not sent. Please try again.');
         if (response.status === 429) {
           startCooldown(data.retryAfter || 5);
         }
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
+      setInputMessage(trimmed);
+      setChatError('Connection lost. Your message was not sent.');
     } finally {
       setSending(false);
       if (inputRef.current) inputRef.current.focus();
@@ -608,7 +619,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
         </div>
       </div>
 
-      <div className="chat-messages">
+      <div className="chat-messages" role="log" aria-live="polite" aria-relevant="additions">
         {/* Persistent giveaway banner at top of chat */}
         {activeGiveaway && activeGiveaway.status === 'open' && (
           <GiveawayBanner
@@ -628,7 +639,15 @@ const ChatPanel = ({ socket, chatOpen }) => {
         )}
 
         {messages.length === 0 && !activeGiveaway ? (
-          <div className="chat-empty">No messages yet. Say hello! <Icon name="wave" size={16} /></div>
+          chatLoadError ? (
+            <div className="chat-empty chat-load-error" role="status">
+              <Icon name="warn" size={20} />
+              <strong>Chat is reconnecting</strong>
+              <span>{chatLoadError}</span>
+            </div>
+          ) : (
+            <div className="chat-empty"><Icon name="wave" size={18} /><strong>No messages yet</strong><span>Say hello to start the conversation.</span></div>
+          )
         ) : (
           messages.map((msg, idx) => {
             if (msg.type === 'giveaway') {
@@ -661,24 +680,35 @@ const ChatPanel = ({ socket, chatOpen }) => {
               msg.robloxUsername ||
               'Anonymous';
             const msgIsAdmin = !!(msg.isAdmin || resolved?.isAdmin);
+            const isOwn = user && String(msg.userId) === String(user.id);
             return (
-              <div key={msg.id || idx} className="chat-message-row">
-                <span onClick={() => openUserProfile(msg)} style={{ cursor: 'pointer' }}>
+              <div
+                key={msg.id || idx}
+                className={`chat-message-row ${isOwn ? 'own-row' : 'other-row'} ${msg.optimistic ? 'is-optimistic' : ''}`}
+              >
+                <button
+                  type="button"
+                  className="chat-profile-trigger"
+                  onClick={() => openUserProfile(msg)}
+                  aria-label={`View ${displayName}'s profile`}
+                >
                   <ChatAvatar msg={msg} resolved={resolved} />
-                </span>
+                </button>
                 <div className="chat-bubble">
                   <div className="bubble-header">
-                    <span
+                    <button
+                      type="button"
                       className="bubble-username bubble-username-clickable"
                       title={msg.robloxUsername || ''}
                       onClick={() => openUserProfile(msg)}
                     >
                       {displayName}
-                    </span>
+                    </button>
                     {msgIsAdmin && <span className="chat-admin-badge">ADMIN</span>}
                     <span className="bubble-timestamp">{formatTime(msg.timestamp)}</span>
                   </div>
                   <div className="bubble-content">{msg.message}</div>
+                  {msg.optimistic && <span className="message-sending">Sending…</span>}
                 </div>
               </div>
             );
@@ -695,6 +725,16 @@ const ChatPanel = ({ socket, chatOpen }) => {
             <span />
           </span>
           <span className="typing-users-wrap">{getTypingUsers()} typing...</span>
+        </div>
+      )}
+
+      {chatError && (
+        <div className="chat-error" role="alert">
+          <Icon name="warn" size={14} />
+          <span>{chatError}</span>
+          <button type="button" onClick={() => setChatError('')} aria-label="Dismiss chat error">
+            <Icon name="close" size={13} />
+          </button>
         </div>
       )}
 
@@ -744,7 +784,6 @@ const ChatPanel = ({ socket, chatOpen }) => {
           viewer={user}
           profileUser={viewProfile}
           isOwn={user && String(user.id) === String(viewProfile.id)}
-          socket={socket}
           onClose={() => setViewProfile(null)}
         />
       )}

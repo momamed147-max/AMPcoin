@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ProfileModal from './ProfileModal';
 import Logo from './Logo';
 import Icon from './Icon';
 
@@ -16,82 +17,104 @@ function getFallbackAvatar(user) {
 function Sidebar() {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   if (!user) return null;
 
   const navItems = [
-    { path: '/coinflip', label: 'Coinflip' },
-    { path: '/jackpot', label: 'Jackpot' },
-    { path: '/trading', label: 'Trading' },
-    { action: 'values', label: 'Values' },
+    { path: '/coinflip', label: 'Coinflip', icon: 'coin' },
+    { path: '/jackpot', label: 'Jackpot', icon: 'jackpot' },
+    { path: '/trading', label: 'Trading', icon: 'wave' },
+    { path: '/stats', label: 'Stats', icon: 'chart' },
+    { path: '/provably-fair', label: 'Fair', icon: 'shield' },
+    { action: 'values', label: 'Values', icon: 'search' }
   ];
 
   return (
-    <nav className="sidebar">
-      <div className="sidebar-header">
-        <Link to="/coinflip" className="sidebar-logo">
-          <Logo size={30} />
-        </Link>
-      </div>
+    <nav className="sidebar" aria-label="Main navigation">
+      <Link to="/coinflip" className="sidebar-brand" aria-label="AMPbet home">
+        <Logo size={31} />
+        <span className="brand-live" aria-label="Servers online">
+          <span /> LIVE
+        </span>
+      </Link>
 
-      <div className="nav-section">
-        {navItems.map((item) =>
-          item.action === 'values' ? (
-            <span
-              key="values"
-              className="nav-link"
-              onClick={() => window.dispatchEvent(new CustomEvent('ampcoin:open-values'))}
-            >
-              <span className="nav-label">{item.label}</span>
-            </span>
-          ) : (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
-            >
-              <span className="nav-label">{item.label}</span>
-            </Link>
-          )
-        )}
-        <a
-          className="nav-discord"
-          href="https://discord.gg/EfMgJa9qxa"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Join our Discord"
-        >
-          <Icon name="discord" size={15} />
-          <span className="nav-label">Discord</span>
-        </a>
-      </div>
-
-      {user.isAdmin && (
+      <div className="sidebar-nav-scroll">
         <div className="nav-section">
-          <Link
-            to="/admin"
-            className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}
-          >
-            <span className="nav-label">Admin</span>
-          </Link>
+          {navItems.map((item) =>
+            item.action === 'values' ? (
+              <button
+                type="button"
+                key="values"
+                className="nav-link"
+                onClick={() => window.dispatchEvent(new CustomEvent('ampcoin:open-values'))}
+                aria-label="Open item values"
+              >
+                <Icon name={item.icon} size={15} />
+                <span className="nav-label">{item.label}</span>
+              </button>
+            ) : (
+              <Link
+                key={item.path}
+                to={item.path}
+                className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
+                aria-label={item.label}
+                aria-current={location.pathname === item.path ? 'page' : undefined}
+              >
+                <Icon name={item.icon} size={15} />
+                <span className="nav-label">{item.label}</span>
+              </Link>
+            )
+          )}
         </div>
-      )}
+
+        {user.isAdmin && (
+          <div className="nav-section nav-section-admin">
+            <span className="nav-section-rule" />
+            <Link
+              to="/admin"
+              className={`nav-link ${location.pathname === '/admin' ? 'active' : ''}`}
+              aria-label="Admin panel"
+              aria-current={location.pathname === '/admin' ? 'page' : undefined}
+            >
+              <Icon name="gear" size={15} />
+              <span className="nav-label">Admin</span>
+            </Link>
+          </div>
+        )}
+      </div>
 
       <div className="sidebar-footer">
-        <div className="user-info">
-          <img
-            src={user.avatar || getFallbackAvatar(user)}
-            alt={user.displayName || user.robloxUsername}
-            className="user-avatar"
-            onError={(e) => { e.target.src = getFallbackAvatar(user); }}
-          />
+        <button className="user-info" onClick={() => setProfileOpen(true)} aria-label="Open your profile">
+          <span className="user-avatar-wrap">
+            <img
+              src={user.avatar || getFallbackAvatar(user)}
+              alt={user.displayName || user.robloxUsername}
+              className="user-avatar"
+              onError={(e) => { e.currentTarget.src = getFallbackAvatar(user); }}
+            />
+            <span className="user-online-dot" />
+          </span>
           <div className="user-details">
             <span className="user-name">{user.displayName || user.robloxUsername}</span>
-            {user.isAdmin && <span className="admin-badge">Admin</span>}
+            <span className="user-handle">@{user.robloxUsername || 'player'}</span>
           </div>
-        </div>
-        <button className="logout-btn" onClick={logout} title="Log out">Log out</button>
+          {user.isAdmin && <span className="admin-badge">Admin</span>}
+        </button>
+        <button className="logout-btn" onClick={logout} title="Log out" aria-label="Log out">
+          <Icon name="door" size={16} />
+          <span className="logout-label">Log out</span>
+        </button>
       </div>
+
+      {profileOpen && (
+        <ProfileModal
+          viewer={user}
+          profileUser={user}
+          isOwn
+          onClose={() => setProfileOpen(false)}
+        />
+      )}
     </nav>
   );
 }

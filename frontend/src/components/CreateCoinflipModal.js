@@ -173,10 +173,12 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
     return (
       <ModalPortal>
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Create coinflip">
           <div className="modal-header">
             <h2>Create Coinflip Game</h2>
-            <button className="close-modal" onClick={onClose}>×</button>
+            <button className="close-modal" onClick={onClose} aria-label="Close create bet">
+              <Icon name="close" size={18} />
+            </button>
           </div>
           <div className="loading-container">
             <div className="loading-spinner"></div>
@@ -198,8 +200,10 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
           onClose={() => setNotice(null)}
         />
       )}
-      <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="cf-modal-close" onClick={onClose}>×</button>
+      <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Create coinflip">
+        <button className="cf-modal-close" onClick={onClose} aria-label="Close">
+          <Icon name="close" size={15} />
+        </button>
 
         <div className="cf-join-content">
           {/* Left: your side + limits + select controls */}
@@ -313,7 +317,9 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
                       />
                       <span className="cf-join-bet-item-name">{item.details?.name || item.name}{qty > 1 ? ` ×${qty}` : ''}</span>
                       <span className="cf-join-bet-item-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {((item.value || item.details?.value || 0) * qty).toLocaleString()}</span>
-                      <button className="cf-bet-item-x" onClick={() => clearStack(stackKeyOf(item))} title="Remove">×</button>
+                      <button className="cf-bet-item-x" onClick={() => clearStack(stackKeyOf(item))} title="Remove" aria-label={`Remove ${item.details?.name || item.name || 'item'}`}>
+                        <Icon name="close" size={12} />
+                      </button>
                     </div>
                   ))
                 ) : (

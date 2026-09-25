@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
+import ModalPortal from '../components/ModalPortal';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
 import './AdminPanel.css';
@@ -53,7 +54,6 @@ function AdminPanel() {
   const [pendingTransactions, setPendingTransactions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [, setSuccessMessage] = useState('');
   const [botSettings, setBotSettings] = useState({});
   const [recentActivity, setRecentActivity] = useState([]);
   const [transactionStatus, setTransactionStatus] = useState({});
@@ -281,11 +281,6 @@ function AdminPanel() {
     setPopupMessage(message);
     setPopupType(type);
     setShowPopup(true);
-    setSuccessMessage(message);
-    setTimeout(() => {
-      setSuccessMessage('');
-      setShowPopup(false);
-    }, 3000);
   }, []);
 
   const loadAvatarsForUsers = useCallback(async (userList) => {
@@ -1316,7 +1311,7 @@ function AdminPanel() {
                           <td>@{usr.robloxUsername || '—'}</td>
                           <td title={usr.robloxDisplayName ? 'Roblox Display Name' : ''}>
                             {displayName}
-                            {usr.robloxDisplayName && <span className="rbx-badge">✓</span>}
+                            {usr.robloxDisplayName && <span className="rbx-badge"><Icon name="check" size={10} /></span>}
                           </td>
                           <td>
                             <span className={`status-badge status-${userStatus}`}>
@@ -1796,11 +1791,14 @@ function AdminPanel() {
               </div>
 
               {viewTxItems && (
+                <ModalPortal>
                 <div className="modal-overlay" onClick={() => setViewTxItems(null)}>
-                  <div className="tx-items-modal" onClick={(e) => e.stopPropagation()}>
+                  <div className="tx-items-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="withdrawn-items-title">
                     <div className="modal-header">
-                      <h3>Withdrawn Pets ({viewTxItems.reduce((s, it) => s + Math.max(1, parseInt(it.quantity || 1, 10) || 1), 0)})</h3>
-                      <button className="modal-close-btn" onClick={() => setViewTxItems(null)}>×</button>
+                      <h3 id="withdrawn-items-title">Withdrawn Pets ({viewTxItems.reduce((s, it) => s + Math.max(1, parseInt(it.quantity || 1, 10) || 1), 0)})</h3>
+                      <button className="modal-close-btn" onClick={() => setViewTxItems(null)} aria-label="Close withdrawn items">
+                        <Icon name="close" size={15} />
+                      </button>
                     </div>
                     <div className="inventory-grid wallet-inventory-grid">
                       {viewTxItems.flatMap((it, si) => {
@@ -1825,6 +1823,7 @@ function AdminPanel() {
                     </div>
                   </div>
                 </div>
+                </ModalPortal>
               )}
             </div>
           )}
@@ -1944,7 +1943,7 @@ function AdminPanel() {
                               {record.taxRate}% tax
                             </span>
                             <span className="tax-history-pill value">
-                              ◆ {record.taxValue.toLocaleString()} AMP
+                              <Icon name="diamond" size={12} /> {record.taxValue.toLocaleString()} AMP
                             </span>
                           </div>
                           <div className="tax-history-recipient">
@@ -2037,7 +2036,7 @@ function AdminPanel() {
                     onClick={() => setAuditWinsOnly((v) => !v)}
                     title="Toggle between favorable outcomes and all open bets"
                   >
-                    {auditWinsOnly ? 'Wins only ✓' : 'Show all'}
+                    {auditWinsOnly ? 'Wins only' : 'Show all'}
                   </button>
                   <button className="btn btn-secondary" onClick={fetchAudits} disabled={auditLoading}>
                     {auditLoading ? 'Checking...' : '↻ Refresh'}

@@ -1,43 +1,64 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { API_BASE } from '../apiConfig';
+import Icon from '../components/Icon';
+import './StatsPage.css';
 
 const StatsPage = () => {
   const { user } = useAuth();
   const [globalStats, setGlobalStats] = useState(null);
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
+    if (!user) return undefined;
+    const controller = new AbortController();
     const fetchStats = async () => {
+      setLoading(true);
+      setLoadError('');
       try {
         const [globalRes, userRes] = await Promise.all([
-          fetch(`${API_BASE}/api/stats/global`),
-          fetch(`${API_BASE}/api/stats/user/${user?.id}`)
+          fetch(`${API_BASE}/api/stats/global`, { signal: controller.signal }),
+          fetch(`${API_BASE}/api/stats/user/${user.id}`, { signal: controller.signal })
         ]);
+        if (!globalRes.ok || !userRes.ok) throw new Error('Statistics request failed');
 
-        const globalData = await globalRes.json();
-        const userData = await userRes.json();
-
-        setGlobalStats(globalData);
-        setUserStats(userData);
-        setLoading(false);
+        setGlobalStats(await globalRes.json());
+        setUserStats(await userRes.json());
       } catch (error) {
-        console.error('Error fetching stats:', error);
-        setLoading(false);
+        if (error.name !== 'AbortError') {
+          console.error('Error fetching stats:', error);
+          setLoadError('Statistics could not be loaded right now.');
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
-    if (user) {
-      fetchStats();
-    }
-  }, [user]);
+    fetchStats();
+    return () => controller.abort();
+  }, [user, reloadKey]);
 
   if (loading) {
     return (
       <div className="loading-container">
         <div className="loading-spinner"></div>
         <p>Loading statistics...</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="request-state" role="alert">
+        <Icon name="warn" size={26} />
+        <strong>Statistics unavailable</strong>
+        <span>{loadError}</span>
+        <button type="button" className="btn btn-primary" onClick={() => setReloadKey((key) => key + 1)}>
+          Try again
+        </button>
       </div>
     );
   }

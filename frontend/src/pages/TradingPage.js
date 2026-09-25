@@ -27,7 +27,9 @@ function ItemThumb({ item, onRemove }) {
       <ModBadges mods={item.mods} size={13} />
       <span className="tr-thumb-val"><Icon name="diamond" size={10} /> {itemVal(item).toLocaleString()}</span>
       {onRemove && (
-        <button className="tr-thumb-x" onClick={(e) => { e.stopPropagation(); onRemove(); }} title="Remove">×</button>
+        <button className="tr-thumb-x" onClick={(e) => { e.stopPropagation(); onRemove(); }} title="Remove" aria-label={`Remove ${item.name || item.itemName || 'item'}`}>
+          <Icon name="close" size={11} />
+        </button>
       )}
     </div>
   );
@@ -461,7 +463,7 @@ const TradingPage = ({ socket }) => {
                       Make Offer
                     </button>
                   )}
-                  {!isMine && myOffer && <span className="tr-your-offer">Offer sent ✓</span>}
+                  {!isMine && myOffer && <span className="tr-your-offer"><Icon name="check" size={12} /> Offer sent</span>}
                 </div>
 
                 {isOpen && (
@@ -510,8 +512,10 @@ const TradingPage = ({ socket }) => {
       {offerTrade && (
         <ModalPortal>
         <div className="cf-modal-overlay" onClick={() => setOfferTrade(null)}>
-          <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="cf-modal-close" onClick={() => setOfferTrade(null)}>×</button>
+          <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Make trade offer">
+            <button className="cf-modal-close" onClick={() => setOfferTrade(null)} aria-label="Close offer">
+              <Icon name="close" size={15} />
+            </button>
             <div className="cf-join-content">
               <div className="cf-join-left">
                 <div className="cf-join-vs-head">
@@ -561,7 +565,9 @@ const TradingPage = ({ socket }) => {
                           />
                           <span className="cf-join-bet-item-name">{it.name || it.itemName}</span>
                           <span className="cf-join-bet-item-val"><Icon name="diamond" size={11} /> {Number(it.value || 0).toLocaleString()}</span>
-                          <button className="cf-bet-item-x" onClick={() => toggleOffer({ itemId: s.itemId })}>×</button>
+                          <button className="cf-bet-item-x" onClick={() => toggleOffer({ itemId: s.itemId })} aria-label={`Remove ${s.name || s.itemName || 'item'}`}>
+                            <Icon name="close" size={12} />
+                          </button>
                         </div>
                       );
                     })}

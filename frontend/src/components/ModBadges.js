@@ -11,13 +11,13 @@ const MOD_COLORS = {
 const MOD_TITLES = {
   F: 'Fly (+5%)',
   R: 'Ride (+5%)',
-  M: 'Mega (+20%)',
-  N: 'Neon (+8%)'
+  M: 'Mega Forged (+30%)',
+  N: 'Neon Forged (+18%)'
 };
 
 /**
  * Little circle badges for pet modifiers.
- * Mega implies fly+ride (displays M F R), Neon implies fly+ride (N F R).
+ * Mega and Neon each display their effective F/R expansion badge set.
  * Usage: <ModBadges mods={item.mods} />
  */
 const expandMods = (mods) => {
@@ -38,7 +38,7 @@ const ModBadges = ({ mods, size = 18 }) => {
       {clean.map((m) => (
         <span
           key={m}
-          className="mod-badge-circle"
+          className={`mod-badge-circle mod-${m}`}
           style={{ background: MOD_COLORS[m] }}
           title={MOD_TITLES[m]}
         >
