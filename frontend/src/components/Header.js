@@ -689,7 +689,7 @@ const Header = ({ balance, socket }) => {
                 <div className="wm-empty">No items in your inventory</div>
               )}
             </div>
-            {visible.length > 0 && !invLoading && (
+            {totalPages > 1 && !invLoading && (
               <div className="wm-pager">
                 <span className="wm-pager-count">
                   Showing {((currentPage - 1) * WM_PAGE_SIZE) + 1}–{Math.min(currentPage * WM_PAGE_SIZE, visible.length)} of {visible.length} items ({WM_PAGE_SIZE} per page)
