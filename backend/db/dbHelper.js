@@ -254,6 +254,11 @@ function normalizeUser(user) {
 
 // ─── dbManager — same API as the old JSON version ────────────────────
 const dbManager = {
+  // True only for the opt-in JSON sandbox. Anything that talks to a real
+  // database must report false, so dev-only routes can never open up.
+  isSandbox() {
+    return LOCAL_JSON_MODE;
+  },
   // Init: connect + load everything into memory
   isReady() {
     return _loaded;

@@ -15,6 +15,11 @@ const { jwtSecret } = require('./backend/jwtSecret');
 const app = express();
 const server = http.createServer(app);
 
+// Behind Railway's edge, X-Forwarded-For carries the real client IP. Without
+// this, express-rate-limit cannot identify clients and logs
+// ERR_ERL_UNEXPECTED_X_FORWARDED_FOR.
+app.set('trust proxy', 1);
+
 const allowedOrigins = [
   process.env.CLIENT_URL,
   'https://ampcoin.co.uk',

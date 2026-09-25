@@ -11,9 +11,10 @@ const router = express.Router();
 const ROBLOX_THUMBNAIL_CACHE_TTL = 1000 * 60 * 60;
 
 // Development-only account shortcut for local RPS testing. It is unavailable
-// whenever a real database or production mode is configured.
+// outside the opt-in JSON sandbox, so a local .env that happens to contain
+// DATABASE_URL can never switch it on against a real database.
 router.post('/dev-login', (req, res) => {
-  if (process.env.NODE_ENV === 'production' || process.env.DATABASE_URL) {
+  if (process.env.NODE_ENV === 'production' || !dbManager.isSandbox()) {
     return res.status(404).json({ message: 'Not found' });
   }
   try {
