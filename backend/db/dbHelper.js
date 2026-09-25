@@ -243,6 +243,9 @@ function normalizeUser(user) {
 // ─── dbManager — same API as the old JSON version ────────────────────
 const dbManager = {
   // Init: connect + load everything into memory
+  isReady() {
+    return _loaded;
+  },
   async init() {
     if (LOCAL_JSON_MODE) {
       loadLocalJson();

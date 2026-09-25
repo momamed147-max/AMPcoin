@@ -82,6 +82,15 @@ app.use('/api/', apiLimiter);
 app.use(generalLimiter);
 
 app.use(express.json({ limit: '10mb' }));
+
+// Never serve API traffic before the in-memory store is loaded — an empty
+// cache would look like "no users / no items" and could overwrite real data.
+app.use('/api/', (req, res, next) => {
+  if (dbManager.isReady && !dbManager.isReady()) {
+    return res.status(503).json({ message: 'Database is still connecting, please retry shortly' });
+  }
+  return next();
+});
 app.use(express.urlencoded({ extended: true }));
 
 // Import routes
@@ -161,10 +170,38 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 8080;
 const HOST = process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1';
 
+// A cold or briefly unreachable database should not take the whole service
+// down. Retry with backoff so the container stays alive and self-heals, instead
+// of exiting instantly and burning the platform's restart budget (which leaves
+// every endpoint returning 502).
+async function initDatabaseWithRetry(attempts = 12, baseDelayMs = 5000) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await dbManager.init();
+      if (attempt > 1) console.log(`Database connected on attempt ${attempt}`);
+      return;
+    } catch (err) {
+      lastError = err;
+      const target = (() => {
+        try {
+          const url = new URL(process.env.DATABASE_URL);
+          return `${url.hostname}:${url.port || 5432}/${(url.pathname || '/').slice(1)}`;
+        } catch (_) { return 'not set'; }
+      })();
+      console.error(`[startup] Database connect attempt ${attempt}/${attempts} failed (${target}): ${err.message}`);
+      if (attempt < attempts) {
+        await new Promise((resolve) => setTimeout(resolve, baseDelayMs * attempt));
+      }
+    }
+  }
+  throw lastError;
+}
+
 // Initialize PostgreSQL then start server
 async function start() {
   try {
-    await dbManager.init();
+    await initDatabaseWithRetry();
     console.log('PostgreSQL connected and data loaded');
 
     // Auto-migrate: if no users exist, import from local JSON files if available
@@ -216,8 +253,8 @@ async function start() {
       }
     }
   } catch (err) {
-    console.error('FATAL: Could not connect to PostgreSQL:', err.message);
-    console.error('Set DATABASE_URL to your Supabase PostgreSQL connection string');
+    console.error('FATAL: Could not connect to PostgreSQL after all retries:', err.message);
+    console.error('Check the DATABASE_URL variable on this service and that the database is reachable.');
     process.exit(1);
   }
 
