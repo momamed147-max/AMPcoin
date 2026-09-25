@@ -172,14 +172,19 @@ function emitMatch(match) {
   if (match.playerTwo) emitToUser(match.playerTwo.id, 'rpsMatchUpdate', publicMatch(match, match.playerTwo.id));
 }
 
+// A player may only hold one live RPS bet at a time. Scan every active match
+// instead of trusting userMatches, which only remembers the most recent one.
 function activeMatchFor(userId) {
-  const match = matches.get(userMatches.get(userId));
-  if (!match) return null;
-  if (match.status !== 'waiting' && match.status !== 'playing') {
-    userMatches.delete(userId);
-    return null;
+  if (!userId) return null;
+  for (const match of matches.values()) {
+    if (match.status !== 'waiting' && match.status !== 'playing') continue;
+    if (match.playerOne?.id === userId || match.playerTwo?.id === userId) {
+      userMatches.set(userId, match.id);
+      return match;
+    }
   }
-  return match;
+  userMatches.delete(userId);
+  return null;
 }
 
 function takeInventoryItems(userId, selectedItems) {
@@ -433,7 +438,9 @@ router.post('/', authenticateToken, (req, res) => {
     if (isActionRateLimited(user.id, 'create')) {
       return res.status(429).json({ message: 'Slow down — wait a moment before posting another bet.' });
     }
-    if (activeMatchFor(user.id)) return res.status(409).json({ message: 'You already have an active RPS bet' });
+    if (activeMatchFor(user.id)) {
+      return res.status(409).json({ message: 'You already have an active RPS bet — finish or cancel it first' });
+    }
     const items = takeInventoryItems(user.id, req.body?.selectedItems);
     const match = createWaitingMatch(user, items, req.body?.rounds);
     emitToUser(user.id, 'inventoryUpdate', { userId: user.id });
@@ -452,6 +459,9 @@ router.post('/matches/:id/join', authenticateToken, (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (match.status !== 'waiting') return res.status(409).json({ message: 'That RPS bet is no longer open' });
     if (match.playerOne.id === user.id) return res.status(400).json({ message: 'You cannot join your own bet' });
+    if (activeMatchFor(user.id)) {
+      return res.status(409).json({ message: 'You already have an active RPS bet — finish or leave that one first' });
+    }
     if (isActionRateLimited(user.id, 'join')) {
       return res.status(429).json({ message: 'Slow down — wait a moment before joining another bet.' });
     }

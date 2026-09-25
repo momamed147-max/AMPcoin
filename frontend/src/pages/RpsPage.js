@@ -88,7 +88,7 @@ function ItemThumbs({ items = [], limit = 8 }) {
 }
 
 /* ─── Lobby row: same skeleton as a Coinflip lobby row ─── */
-function RpsLobbyRow({ match, onJoin, onView, isSelf }) {
+function RpsLobbyRow({ match, onJoin, onView, isSelf, hasActive }) {
   const completed = match.status === 'completed';
   const waiting = match.status === 'waiting';
   const one = match.playerOne;
@@ -146,7 +146,7 @@ function RpsLobbyRow({ match, onJoin, onView, isSelf }) {
       </div>
 
       <div className="cf-row-action">
-        {waiting && !isSelf && <button className="cf-join-btn" onClick={() => onJoin(match)}>Join</button>}
+        {waiting && !isSelf && !hasActive && <button className="cf-join-btn" onClick={() => onJoin(match)}>Join</button>}
         {waiting && isSelf && <span className="cf-row-cap">Yours</span>}
         <button className="cf-view-btn" onClick={() => onView(match)}>View</button>
       </div>
@@ -405,7 +405,12 @@ const RpsPage = ({ socket }) => {
               <Icon name="target" size={13} /> Your match
             </button>
           )}
-          <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreateModal} disabled={inventoryLoading}>
+          <button
+            className="cf-topbar-btn cf-topbar-btn-gold"
+            onClick={openCreateModal}
+            disabled={inventoryLoading || !!myMatch}
+            title={myMatch ? 'You can only have one RPS bet at a time' : 'Post a new RPS bet'}
+          >
             <Icon name="plus" size={13} /> Bet Items
           </button>
         </div>
@@ -413,12 +418,23 @@ const RpsPage = ({ socket }) => {
 
       {error && <div className="rps-error" role="alert"><Icon name="warn" size={15} /><span>{error}</span><button type="button" onClick={refresh}>Retry</button></div>}
 
+      {myMatch && (
+        <div className="rps-active-note">
+          <Icon name="target" size={14} />
+          <span>
+            You have an active RPS bet. Finish it or leave it before starting another — one bet at a time.
+          </span>
+          <button type="button" onClick={() => setViewId(myMatch.id)}>Open</button>
+        </div>
+      )}
+
       <div className="cf-lobby">
         {lobby.matches.length > 0 ? lobby.matches.map((match) => (
           <RpsLobbyRow
             key={match.id}
             match={match}
             isSelf={match.playerOne?.id === user?.id || match.playerTwo?.id === user?.id}
+            hasActive={!!myMatch}
             onJoin={openJoinModal}
             onView={(target) => setViewId(target.id)}
           />
@@ -427,7 +443,9 @@ const RpsPage = ({ socket }) => {
             <div className="cf-empty-icon"><Icon name="rpsScissors" size={34} /></div>
             <p>No active RPS bets</p>
             <p className="cf-empty-sub">Post an item wager to get started!</p>
-            <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreateModal}><Icon name="plus" size={13} /> Create RPS Bet</button>
+            <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreateModal} disabled={!!myMatch}>
+              <Icon name="plus" size={13} /> Create RPS Bet
+            </button>
           </div>
         )}
       </div>
@@ -448,7 +466,6 @@ const RpsPage = ({ socket }) => {
         const waiting = viewMatch.status === 'waiting';
         const completed = viewMatch.status === 'completed';
         const myChoice = viewerSide === 'one' ? one?.choice : viewerSide === 'two' ? two?.choice : null;
-        const opponentPicked = viewerSide === 'one' ? two?.picked : one?.picked;
         const viewer = viewerSide === 'one' ? one : two;
         const lastRound = viewMatch.lastRound;
         const potValue = viewMatch.potValue || 0;
@@ -543,11 +560,7 @@ const RpsPage = ({ socket }) => {
                 {!completed && !waiting && isParticipant && (
                   <div className="rps-move-area">
                     <div className="rps-move-title">
-                      {myChoice
-                        ? 'Side locked in — waiting for your opponent'
-                        : opponentPicked
-                          ? 'Your opponent has locked in — pick your side'
-                          : 'Pick your side'}
+                      {myChoice ? 'Side locked in — waiting for your opponent' : 'Pick your side'}
                     </div>
                     <div className="rps-move-row">
                       {MOVES.map((move) => (

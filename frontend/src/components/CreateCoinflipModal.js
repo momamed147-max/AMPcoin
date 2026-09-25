@@ -439,7 +439,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
 
             <div className="cf-create-opt-group">
               <div className="cf-join-bet-items-title">SELECT</div>
-              <div className="cf-create-side-row">
+              <div className="cf-create-side-row cf-rps-select-row">
                 <button type="button" className="cf-join-action-btn" onClick={selectAll}>
                   Select All
                 </button>
