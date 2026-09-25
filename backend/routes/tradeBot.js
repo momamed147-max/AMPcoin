@@ -248,7 +248,11 @@ router.post('/deposits', (req, res) => {
       data: {
         depositId: deposit.id,
         totalValue,
+        // Deposits credit site inventory (what withdraw-items consumes), so
+        // the "balance" a player can withdraw is their inventory value.
+        newBalance: Number(inventory?.totalValue || 0),
         newInventoryValue: Number(inventory?.totalValue || 0),
+        cashBalance: Number(user.balance || 0),
         items: priced.map((s) => ({ id: s.itemId, name: s.name, unitValue: s.value, quantity: s.quantity }))
       },
       message: 'Deposit recorded successfully'

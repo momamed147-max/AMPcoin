@@ -62,6 +62,8 @@ async function initDatabase() {
         notifications: [],
         adminLogs: [],
         rpsMatches: [],
+        tradeBotHeld: [],
+        tradeBotUpdatedAt: null,
         settings: []
       },
       settings: {}
@@ -97,6 +99,8 @@ let db = {
   notifications: [],
   adminLogs: [],
   rpsMatches: [],
+  tradeBotHeld: [],
+  tradeBotUpdatedAt: null,
   settings: []
 };
 let settingsCache = {};
@@ -137,6 +141,8 @@ function loadLocalJson() {
     notifications: localMain.notifications || [],
     adminLogs: localMain.adminLogs || [],
     rpsMatches: localMain.rpsMatches || [],
+    tradeBotHeld: localMain.tradeBotHeld || [],
+    tradeBotUpdatedAt: localMain.tradeBotUpdatedAt || null,
     settings: localMain.settings || {}
   };
   settingsCache = readLocalJson('settings.json', {});
@@ -172,6 +178,8 @@ async function loadFromDatabase() {
             notifications: data?.notifications || [],
             adminLogs: data?.adminLogs || [],
             rpsMatches: data?.rpsMatches || [],
+            tradeBotHeld: data?.tradeBotHeld || [],
+            tradeBotUpdatedAt: data?.tradeBotUpdatedAt || null,
             settings: data?.settings || {}
           };
           break;
