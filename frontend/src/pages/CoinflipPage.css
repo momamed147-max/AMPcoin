@@ -1046,6 +1046,37 @@ a.cf-tab { text-decoration: none; }
 .cf-rps-wager-note svg { flex: 0 0 auto; margin-top: 1px; }
 .cf-rps-wager-note span { color: var(--mut); }
 
+/* RPS turns picker (sits where Coinflip shows "pick side") */
+.cf-rps-turn-row { display: flex; gap: 6px; }
+.cf-rps-turn-btn {
+  flex: 1;
+  padding: 8px 0;
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--mut);
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.cf-rps-turn-btn:hover:not(:disabled) { background: var(--panel2); color: var(--txt); border-color: rgba(148,163,184,.28); }
+.cf-rps-turn-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.cf-rps-turn-btn.active {
+  background: var(--acc-soft);
+  border-color: var(--acc);
+  color: var(--acc);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+}
+.cf-rps-turn-note {
+  margin-top: 8px;
+  color: var(--mut);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+.cf-rps-side-badge { display: inline-flex; align-items: center; gap: 5px; }
+
 .cf-join-left {
   width: 300px;
   min-width: 300px;

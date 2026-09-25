@@ -14,11 +14,19 @@ const MOVES = new Set(['rock', 'paper', 'scissors']);
 const MATCH_TTL_MS = 30 * 60 * 1000;
 const HISTORY_TTL_MS = 10 * 60 * 1000;
 const VALUE_TOLERANCE = 0.05;
+const MIN_ROUNDS = 1;
+const MAX_ROUNDS = 5;
 const matches = new Map();
 const userMatches = new Map();
 const choiceRate = new Map();
 const actionRate = new Map();
 let hydrated = false;
+
+function clampRounds(value) {
+  const parsed = parseInt(value, 10);
+  if (Number.isNaN(parsed)) return MIN_ROUNDS;
+  return Math.min(MAX_ROUNDS, Math.max(MIN_ROUNDS, parsed));
+}
 
 // Load any matches that were active before a restart so escrow is never lost.
 function ensureHydrated() {
@@ -40,8 +48,7 @@ function persistMatches() {
   const snapshot = [...matches.values()].filter((match) => {
     if (match.status === 'waiting' || match.status === 'playing') return true;
     return now - new Date(match.completedAt || match.updatedAt || match.createdAt).getTime() < HISTORY_TTL_MS;
-  });
-  const db = dbManager.getMainDb();
+  });  const db = dbManager.getMainDb();
   db.rpsMatches = snapshot;
   dbManager.saveMainDb();
 }
@@ -86,15 +93,23 @@ function getPlayer(match, userId) {
 function publicMatch(match, viewerId = null) {
   if (!match) return null;
   const viewerSide = viewerId ? getPlayer(match, viewerId) : null;
-  const playerOneCurrentChoice = viewerSide === 'one' ? match.choices?.[match.playerOne.id] || null : null;
-  const playerTwoCurrentChoice = viewerSide === 'two' ? match.choices?.[match.playerTwo.id] || null : null;
+  // Whether a side is locked in is public (so the other side and any spectators
+  // see "Picked side" live), but the move itself is only ever sent to its owner.
+  const pickedOne = !!match.choices?.[match.playerOne.id];
+  const pickedTwo = !!match.choices?.[match.playerTwo?.id];
+  const ownChoice = viewerSide === 'one'
+    ? (match.choices?.[match.playerOne.id] || null)
+    : viewerSide === 'two'
+      ? (match.choices?.[match.playerTwo.id] || null)
+      : null;
   const lastRound = match.lastRound || null;
+  const taxConfig = getTaxConfig();
 
   return {
     id: match.id,
     status: match.status,
     round: match.round,
-    winsNeeded: match.winsNeeded,
+    rounds: match.rounds || MIN_ROUNDS,
     creatorValue: match.creatorValue,
     minJoinValue: match.minJoinValue,
     maxJoinValue: match.maxJoinValue,
@@ -102,34 +117,47 @@ function publicMatch(match, viewerId = null) {
     playerOne: {
       ...match.playerOne,
       wins: match.playerOne.wins || 0,
-      picked: !!playerOneCurrentChoice,
-      choice: playerOneCurrentChoice
+      picked: pickedOne,
+      choice: viewerSide === 'one' ? ownChoice : null
     },
     playerTwo: match.playerTwo ? {
       ...match.playerTwo,
       wins: match.playerTwo.wins || 0,
-      picked: !!playerTwoCurrentChoice,
-      choice: playerTwoCurrentChoice
+      picked: pickedTwo,
+      choice: viewerSide === 'two' ? ownChoice : null
     } : null,
     lastRound,
     winnerId: match.winnerId || null,
     taxAmount: match.taxAmount || 0,
+    taxPercent: taxConfig.rate > 0 ? taxConfig.percent : 0,
     taxRecipientUsername: match.taxRecipientUsername || null,
     viewerSide,
+    isParticipant: !!viewerSide,
     createdAt: match.createdAt,
     completedAt: match.completedAt || null
   };
 }
 
 function publicLobby() {
+  // Waiting + live matches are listed so anyone can spectate through the same
+  // View modal the players use, and recent finishes stay visible briefly so
+  // the result can still be read after the page refreshes.
+  const now = Date.now();
   const openMatches = [...matches.values()]
-    .filter((match) => match.status === 'waiting' && Date.now() - new Date(match.createdAt).getTime() < MATCH_TTL_MS)
+    .filter((match) => {
+      if (match.status === 'waiting' || match.status === 'playing') {
+        return now - new Date(match.createdAt).getTime() < MATCH_TTL_MS;
+      }
+      return match.status === 'completed'
+        && now - new Date(match.completedAt || match.updatedAt || match.createdAt).getTime() < HISTORY_TTL_MS;
+    })
     .map((match) => publicMatch(match))
     .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
   return {
     matches: openMatches,
+    openCount: openMatches.filter((match) => match.status === 'waiting').length,
+    activeCount: openMatches.filter((match) => match.status === 'playing').length,
     queueCount: openMatches.length,
-    activeCount: [...matches.values()].filter((match) => match.status === 'playing').length,
     updatedAt: new Date().toISOString()
   };
 }
@@ -225,14 +253,14 @@ function isActionRateLimited(userId, action, windowMs = 1500) {
   return false;
 }
 
-function createWaitingMatch(user, items) {
+function createWaitingMatch(user, items, rounds) {
   const value = totalValue(items);
   const now = new Date().toISOString();
   const match = {
     id: uuidv4(),
     status: 'waiting',
     round: 1,
-    winsNeeded: 2,
+    rounds: clampRounds(rounds),
     creatorValue: value,
     minJoinValue: Math.floor(value * (1 - VALUE_TOLERANCE)),
     maxJoinValue: Math.ceil(value * (1 + VALUE_TOLERANCE)),
@@ -407,7 +435,7 @@ router.post('/', authenticateToken, (req, res) => {
     }
     if (activeMatchFor(user.id)) return res.status(409).json({ message: 'You already have an active RPS bet' });
     const items = takeInventoryItems(user.id, req.body?.selectedItems);
-    const match = createWaitingMatch(user, items);
+    const match = createWaitingMatch(user, items, req.body?.rounds);
     emitToUser(user.id, 'inventoryUpdate', { userId: user.id });
     emitLobby();
     res.status(201).json({ match: publicMatch(match, user.id) });
@@ -466,6 +494,9 @@ router.post('/matches/:id/choice', authenticateToken, (req, res) => {
     if (!oneChosen || !twoChosen) {
       match.updatedAt = new Date().toISOString();
       emitMatch(match);
+      // Broadcast the lock-in so the other player and any spectators see
+      // "Picked side" immediately instead of waiting for a refresh.
+      emitLobby();
       return res.json({ match: publicMatch(match, userId), waitingForOpponent: true });
     }
 
@@ -484,14 +515,21 @@ router.post('/matches/:id/choice', authenticateToken, (req, res) => {
     };
     match.choices = {};
 
-    if (roundWinnerId && ((roundWinnerId === match.playerOne.id && match.playerOne.wins >= match.winsNeeded) ||
-      (roundWinnerId === match.playerTwo.id && match.playerTwo.wins >= match.winsNeeded))) {
-      finishMatch(match, roundWinnerId, 'best-of-three');
+    // Every turn is played out. Whoever holds the most round wins when the last
+    // turn is done takes the pot; an even split returns both wagers.
+    const totalRounds = match.rounds || MIN_ROUNDS;
+    if (match.round >= totalRounds) {
+      const oneWins = match.playerOne.wins || 0;
+      const twoWins = match.playerTwo.wins || 0;
+      if (oneWins > twoWins) finishMatch(match, match.playerOne.id, 'turns-complete');
+      else if (twoWins > oneWins) finishMatch(match, match.playerTwo.id, 'turns-complete');
+      else finishMatch(match, null, 'tied');
     } else {
       match.round += 1;
       match.updatedAt = new Date().toISOString();
       persistMatches();
       emitMatch(match);
+      emitLobby();
     }
     res.json({ match: publicMatch(match, userId) });
   } catch (error) {

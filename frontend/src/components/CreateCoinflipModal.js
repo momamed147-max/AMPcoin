@@ -23,6 +23,15 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
   const [limitationsOn, setLimitationsOn] = useState(false);
   const [maxJoinPets, setMaxJoinPets] = useState(5);
   const [limitMenuOpen, setLimitMenuOpen] = useState(false);
+  // RPS turns: switch off = single turn, switch on = pick 1-5 turns.
+  const [turnsOn, setTurnsOn] = useState(false);
+  const [turnCount, setTurnCount] = useState(3);
+
+  const activeTurns = isRps && turnsOn ? turnCount : 1;
+  // RPS join must land inside the creator's accepted value band.
+  const joinLo = isRpsJoin ? Number(match?.minJoinValue || 0) : 0;
+  const joinHi = isRpsJoin ? Number(match?.maxJoinValue || Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+  const joinTarget = isRpsJoin ? Number(match?.creatorValue || 0) : 0;
 
   const showNotice = (message, type = 'info') => {
     setNotice({ message, type });
@@ -79,10 +88,74 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
     return selectedEntries.reduce((sum, e) => sum + ((e.item.value || e.item.details?.value || 0) * e.qty), 0);
   };
 
+  // Auto select: fill the wager with the highest-value items that still fit
+  // inside the accepted range, then top up with a closer-fitting stack.
+  const autoSelect = () => {
+    if (!isRps || !isRpsJoin || inventory.length === 0) return;
+    const lo = Math.max(1, joinLo);
+    const hi = joinHi;
+    if (hi < lo) {
+      showNotice('This bet no longer accepts wagers.', 'error');
+      return;
+    }
+    const maxByKey = {};
+    const units = [];
+    inventory.forEach((item) => {
+      const value = item.value || item.details?.value || 0;
+      if (value <= 0) return;
+      const key = stackKeyOf(item);
+      const qty = stackQtyOf(item);
+      maxByKey[key] = qty;
+      for (let i = 0; i < qty; i += 1) units.push({ key, value });
+    });
+    units.sort((a, b) => b.value - a.value);
+    const picked = {};
+    let total = 0;
+    for (const unit of units) {
+      if (total >= lo) break;
+      if ((picked[unit.key] || 0) >= (maxByKey[unit.key] || 1)) continue;
+      if (total + unit.value <= hi) {
+        picked[unit.key] = (picked[unit.key] || 0) + 1;
+        total += unit.value;
+      }
+    }
+    if (total < lo) {
+      const seen = new Set();
+      const rest = units
+        .filter((unit) => {
+          if (seen.has(unit.key)) return false;
+          seen.add(unit.key);
+          return (picked[unit.key] || 0) < (maxByKey[unit.key] || 1);
+        })
+        .sort((a, b) => a.value - b.value);
+      const fit = rest.find((unit) => total + unit.value >= lo && total + unit.value <= hi)
+        || rest.find((unit) => total + unit.value <= hi);
+      if (fit) {
+        picked[fit.key] = (picked[fit.key] || 0) + 1;
+        total += fit.value;
+      }
+    }
+    if (Object.keys(picked).length === 0) {
+      showNotice('No combination of your items fits that value range.', 'warning');
+      return;
+    }
+    setSelectedQty(picked);
+    if (total < lo) {
+      showNotice(`Closest match is ${total.toLocaleString()} AMP — you need at least ${lo.toLocaleString()}.`, 'warning');
+    }
+  };
+
   const handleCreateCoinflip = async () => {
     if (selectedCount === 0) {
       showNotice('Please select at least one item to bet', 'warning');
       return;
+    }
+    if (isRpsJoin) {
+      const total = getTotalValue();
+      if (total < joinLo || total > joinHi) {
+        showNotice(`Your wager must be between ${joinLo.toLocaleString()} and ${joinHi.toLocaleString()} AMP.`, 'warning');
+        return;
+      }
     }
 
     setLoading(true);
@@ -95,6 +168,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify(isRps ? {
+          rounds: activeTurns,
           selectedItems: selectedEntries.map(({ item, qty }) => ({
             itemId: item.itemId || item.id,
             name: item.details?.name || item.name,
@@ -219,17 +293,71 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
           {/* Left: your side + limits + select controls */}
           <div className="cf-join-left">
             <div className="cf-join-vs-head">
-              <span className="cf-join-vs-label">{isRps ? (isRpsJoin ? 'JOIN RPS BET' : 'POST RPS BET') : 'CREATE BET'}</span>
+              <span className="cf-join-vs-label">{isRps ? (isRpsJoin ? 'JOINING' : 'POST RPS BET') : 'CREATE BET'}</span>
+              {isRpsJoin && (
+                <div className="cf-join-vs-user">
+                  <img
+                    className="cf-join-vs-avatar"
+                    src={match?.playerOne?.avatar || '/default-avatar.png'}
+                    alt={match?.playerOne?.displayName || 'Player'}
+                    onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                  />
+                  <div className="cf-join-vs-meta">
+                    <span className="cf-join-vs-name">{match?.playerOne?.displayName || match?.playerOne?.username || 'Player'}</span>
+                    <span className="cf-join-vs-side cf-rps-side-badge">
+                      <Icon name="rpsScissors" size={11} /> {joinTarget.toLocaleString()} AMP
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="cf-join-vs-total">
                 <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {getTotalValue().toLocaleString()}
-                <span className="cf-join-vs-sub">{selectedCount} items selected</span>
+                <span className="cf-join-vs-sub">
+                  {isRpsJoin
+                    ? `Join ${joinLo.toLocaleString()}–${joinHi.toLocaleString()}`
+                    : `${selectedCount} items selected`}
+                </span>
               </div>
             </div>
 
             {isRps && (
-              <div className="cf-rps-wager-note">
-                <Icon name="info" size={14} />
-                <span>{isRpsJoin ? `Join with ${Number(match?.minJoinValue || 0).toLocaleString()}–${Number(match?.maxJoinValue || 0).toLocaleString()} AMP. Your side is chosen after joining.` : 'Your items are escrowed while you wait for a challenger. No side is picked yet.'}</span>
+              <div className="cf-create-opt-group">
+                <div className="cf-join-bet-items-title">TURNS</div>
+                <div className={`cf-limitations ${turnsOn ? 'on' : ''}`}>
+                  <div className="cf-limit-switch-row">
+                    <span className="cf-limit-label">Multiple Turns</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={turnsOn}
+                      className={`cf-limit-switch ${turnsOn ? 'on' : ''}`}
+                      onClick={() => setTurnsOn((on) => !on)}
+                    >
+                      <span className="cf-limit-knob" />
+                    </button>
+                  </div>
+                  <div className={`cf-limit-dropdown ${turnsOn ? 'open enabled' : ''}`}>
+                    <div className="cf-rps-turn-row" role="group" aria-label="Number of turns">
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <button
+                          key={n}
+                          type="button"
+                          className={`cf-rps-turn-btn ${activeTurns === n ? 'active' : ''}`}
+                          disabled={!turnsOn}
+                          aria-pressed={activeTurns === n}
+                          onClick={() => setTurnCount(n)}
+                        >
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="cf-rps-turn-note">
+                      {turnsOn
+                        ? `${activeTurns} turn${activeTurns === 1 ? '' : 's'} — most round wins takes the pot.`
+                        : 'Single throw. Winner takes the pot.'}
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -425,18 +553,40 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
         {/* Bottom bar */}
         <div className="cf-join-bottom">
           <div className="cf-join-bottom-left">
-            <span className="cf-join-selected-info">
-              {selectedCount} items · <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {getTotalValue().toLocaleString()} AMP
-            </span>
+            <button className="cf-join-action-btn" onClick={selectAll} disabled={loading}>Select All</button>
+            {isRpsJoin && (
+              <button className="cf-join-action-btn" onClick={autoSelect} disabled={loading || inventory.length === 0}>Auto Select</button>
+            )}
+            {isRps && !isRpsJoin && (
+              <button className="cf-join-action-btn" onClick={clearAll} disabled={loading || selectedCount === 0}>Clear</button>
+            )}
           </div>
           <div className="cf-join-bottom-right">
+            <div className="cf-join-selected-info">
+              {isRpsJoin ? (() => {
+                const total = getTotalValue();
+                const inRange = total >= joinLo && total <= joinHi;
+                if (selectedCount === 0) {
+                  return <span className="cf-range-bad">Pick items to match {joinTarget.toLocaleString()} AMP</span>;
+                }
+                return inRange
+                  ? <span className="cf-range-ok"><Icon name="check" size={13} /> {total.toLocaleString()} AMP</span>
+                  : total > joinHi
+                    ? <span className="cf-range-bad">{total.toLocaleString()} AMP — {Math.max(0, total - joinHi).toLocaleString()} over the limit</span>
+                    : <span className="cf-range-bad">{total.toLocaleString()} AMP — {Math.max(0, joinLo - total).toLocaleString()} more needed</span>;
+              })() : (
+                <span>
+                  {selectedCount} items · <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {getTotalValue().toLocaleString()} AMP
+                </span>
+              )}
+            </div>
             <button className="cf-join-action-btn" onClick={onClose} disabled={loading}>
               Cancel
             </button>
             <button
               className="cf-confirm-btn"
               onClick={handleCreateCoinflip}
-              disabled={selectedCount === 0 || loading}
+              disabled={selectedCount === 0 || loading || (isRpsJoin && (getTotalValue() < joinLo || getTotalValue() > joinHi))}
             >
               {loading ? (isRps ? 'Posting...' : 'Creating...') : isRps ? `${isRpsJoin ? 'Join' : 'Post'} RPS Bet (${getTotalValue().toLocaleString()} AMP)` : `Create Game (${getTotalValue().toLocaleString()} AMP)`}
             </button>
