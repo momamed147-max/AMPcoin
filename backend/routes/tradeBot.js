@@ -1,5 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 
 const dbManager = require('../db/dbHelper');
@@ -142,14 +143,28 @@ router.post('/deposits', (req, res) => {
     if (!Array.isArray(items) || items.length === 0) {
       return fail(res, 400, 'ITEMS_REQUIRED', 'items must be a non-empty array of { id, quantity }.');
     }
-    if (!tradeId || String(tradeId).length < 4) {
-      return fail(res, 400, 'TRADE_ID_REQUIRED', 'tradeId is required so deposits can be de-duplicated.');
+
+    // Idempotency key. An explicit tradeId is preferred; when a client omits it
+    // we derive a stable fingerprint from the payload, so a retried or replayed
+    // request still can never be credited twice.
+    const hasExplicitTradeId = tradeId && String(tradeId).length >= 4;
+    const idempotencyKey = hasExplicitTradeId
+      ? String(tradeId)
+      : `auto_${crypto.createHash('sha256').update(JSON.stringify({
+        u: String(robloxUserId || ''),
+        n: String(robloxUsername || '').toLowerCase(),
+        t: Number(timestamp) || 0,
+        i: items.map((i) => `${i?.id}:${i?.quantity || 1}`).sort().join(',')
+      })).digest('hex').slice(0, 32)}`;
+
+    if (!hasExplicitTradeId) {
+      console.warn('[trade-bot] deposit arrived without a tradeId - using a derived fingerprint for de-duplication');
     }
 
     // Idempotency: the same trade must never be credited twice.
-    const existing = findTransactionByTradeId(String(tradeId));
+    const existing = findTransactionByTradeId(idempotencyKey);
     if (existing) {
-      console.log(`[trade-bot] duplicate deposit ignored tradeId=${tradeId}`);
+      console.log(`[trade-bot] duplicate deposit ignored key=${idempotencyKey}`);
       return ok(res, {
         depositId: existing.id,
         totalValue: existing.totalValue,
@@ -196,7 +211,7 @@ router.post('/deposits', (req, res) => {
       userId: user.id,
       robloxUserId: user.robloxUserId,
       robloxUsername: user.robloxUsername,
-      tradeId: String(tradeId),
+      tradeId: idempotencyKey,
       items: priced,
       totalValue,
       status: 'completed',
@@ -245,11 +260,17 @@ router.post('/deposits', (req, res) => {
 });
 
 // ── GET /pending-withdrawal ────────────────────────────────────────────────
+// Also mounted at /withdrawals/check/:robloxUserId so older clients that
+// address the check by path still work.
 
-router.get('/pending-withdrawal', (req, res) => {
+router.get(['/pending-withdrawal', '/withdrawals/check/:robloxUserId'], (req, res) => {
   try {
-    const { robloxUsername, robloxUserId } = req.query || {};
-    const user = findUser(robloxUserId, robloxUsername);
+    const { robloxUsername } = req.query || {};
+    const robloxUserId = req.params.robloxUserId || req.query.robloxUserId;
+    // The path param is normally a Roblox user id, but fall back to a username
+    // match so a client that only knows the name can still address the check.
+    const user = findUser(robloxUserId, robloxUsername)
+      || findUser(null, decodeURIComponent(String(robloxUserId || '')));
     if (!user) return fail(res, 404, 'USER_NOT_FOUND', 'No account matches that Roblox user.');
 
     const db = dbManager.getMainDb();
@@ -259,15 +280,20 @@ router.get('/pending-withdrawal', (req, res) => {
       .filter((w) => w.userId === user.id && w.status === 'pending')
       .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))[0];
 
-    if (!pending) return ok(res, { hasPendingWithdrawal: false });
+    // Fields are exposed at the top level as well as under `data` so simple
+    // clients can read response.hasPendingWithdrawal directly.
+    if (!pending) {
+      return res.json({ success: true, hasPendingWithdrawal: false, data: { hasPendingWithdrawal: false } });
+    }
 
-    return ok(res, {
+    const payload = {
       hasPendingWithdrawal: true,
       withdrawalId: pending.id,
       items: (pending.items || []).map((i) => ({ id: i.itemId, name: i.name, quantity: i.quantity || 1 })),
       totalValue: pending.totalValue || 0,
       requestedAt: Math.floor(new Date(pending.createdAt).getTime() / 1000)
-    });
+    };
+    return res.json({ success: true, ...payload, data: payload });
   } catch (error) {
     console.error('[trade-bot] pending-withdrawal failed:', error);
     return fail(res, 500, 'PENDING_CHECK_FAILED', 'Could not read pending withdrawals.');
@@ -358,8 +384,9 @@ router.post('/withdrawals/confirm', (req, res) => {
 });
 
 // ── GET /inventory ─────────────────────────────────────────────────────────
+// Also mounted at /inventory/bot for clients that use that path.
 
-router.get('/inventory', (req, res) => {
+router.get(['/inventory', '/inventory/bot'], (req, res) => {
   try {
     const db = botLedger();
     const items = catalog();
@@ -372,9 +399,13 @@ router.get('/inventory', (req, res) => {
         value: catalogItem ? priceOf(catalogItem) : 0
       };
     });
-    return ok(res, {
+    // `inventory` is exposed at the top level too so a client can assign the
+    // response straight into its own inventory table.
+    return res.json({
+      success: true,
       inventory,
-      lastUpdated: db.tradeBotUpdatedAt || null
+      lastUpdated: db.tradeBotUpdatedAt || null,
+      data: { inventory, lastUpdated: db.tradeBotUpdatedAt || null }
     });
   } catch (error) {
     console.error('[trade-bot] inventory failed:', error);
