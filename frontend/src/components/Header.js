@@ -704,7 +704,7 @@ const Header = ({ balance, socket }) => {
               </div>
             )}
             <div className="wm-footer">
-              <button className="wm-btn" onClick={togglePageSelectAll(pageItems, pageAllSelected)}>
+              <button className="wm-btn" onClick={() => togglePageSelectAll(pageItems, pageAllSelected)}>
                 {pageAllSelected ? 'Deselect Page' : 'Select Page'}
               </button>
               <button
