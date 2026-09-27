@@ -170,6 +170,14 @@ router.put('/:id', authenticateAdmin, (req, res) => {
       value: moddedValue(nextBase, nextMods),
       tradable: updates.tradable !== undefined ? !!updates.tradable : current.tradable !== false,
       isEnabled: updates.isEnabled !== undefined ? !!updates.isEnabled : current.isEnabled !== false,
+      // Real per-pet neon / mega values from the source feed. Null means the
+      // feed has no tier data and the UI falls back to a percentage estimate.
+      neonValue: updates.neonValue !== undefined
+        ? (Number.isFinite(Number(updates.neonValue)) && Number(updates.neonValue) > 0 ? Math.round(Number(updates.neonValue)) : null)
+        : (current.neonValue ?? null),
+      megaValue: updates.megaValue !== undefined
+        ? (Number.isFinite(Number(updates.megaValue)) && Number(updates.megaValue) > 0 ? Math.round(Number(updates.megaValue)) : null)
+        : (current.megaValue ?? null),
       updatedAt: new Date().toISOString()
     };
     itemsDb.items[itemIndex] = { ...current, ...allowed };
