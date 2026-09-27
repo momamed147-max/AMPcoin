@@ -22,6 +22,13 @@ const RARITY_LABELS = {
 };
 
 const valueForField = (item, field) => {
+  // The catalog carries the real per-pet neon and mega values from the source
+  // feed. A flat percentage bonus is badly wrong for them - a mega ranges from
+  // about 1.3x to 7x its normal value depending on the pet.
+  if (field === 'neon' || field === 'mega') {
+    const stored = Number(item[field === 'neon' ? 'neonValue' : 'megaValue']);
+    if (Number.isFinite(stored) && stored > 0) return stored;
+  }
   const base = baseValueOf(item);
   if (field === 'neon') return moddedValue(base, ['N']);
   if (field === 'mega') return moddedValue(base, ['M']);

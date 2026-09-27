@@ -97,6 +97,16 @@ function buildItems(list, existingByName) {
     const rvalue = parseFloat(entry['rvalue - nopotion'] ?? entry.rvalue ?? entry.value);
     if (isNaN(rvalue)) { skippedNoValue++; continue; }
 
+    // The feed also carries real per-pet neon and mega values. They vary a lot
+    // per pet (a mega is anywhere from 1.3x to 7x its normal value), so they
+    // cannot be faked with a flat percentage bonus.
+    const num = (v) => {
+      const n = parseFloat(v);
+      return isNaN(n) ? null : Math.max(1, Math.round(n * VALUE_MULTIPLIER));
+    };
+    const neonValue = num(entry['nvalue - nopotion'] ?? entry.nvalue);
+    const megaValue = num(entry['mvalue - nopotion'] ?? entry.mvalue);
+
     const key = name.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
@@ -110,6 +120,7 @@ function buildItems(list, existingByName) {
     const prior = existingByName.get(key);
     const id = prior?.itemId || prior?.id || `amvgg-${String(entry.id || '').trim() || uuidv4()}`;
 
+    const base = Math.max(1, Math.round(rvalue * VALUE_MULTIPLIER));
     items.push({
       id,
       itemId: id,
@@ -119,8 +130,12 @@ function buildItems(list, existingByName) {
       imageUrl: image,
       image,
       rarity,
-      baseValue: prior?.baseValue ?? Math.max(1, Math.round(rvalue * VALUE_MULTIPLIER)),
-      value: Math.max(1, Math.round(rvalue * VALUE_MULTIPLIER)),
+      baseValue: base,
+      value: base,
+      // Present only when the feed supplies them; the UI falls back to a
+      // percentage estimate when null.
+      neonValue: neonValue ?? prior?.neonValue ?? null,
+      megaValue: megaValue ?? prior?.megaValue ?? null,
       tradable: true,
       isEnabled: true,
       source: 'elvebredd',
@@ -130,7 +145,9 @@ function buildItems(list, existingByName) {
   }
 
   items.sort((a, b) => b.value - a.value);
-  return { items, skippedLow, skippedNoImage, skippedNoValue };
+  const withNeon = items.filter((i) => i.neonValue).length;
+  const withMega = items.filter((i) => i.megaValue).length;
+  return { items, skippedLow, skippedNoImage, skippedNoValue, withNeon, withMega };
 }
 
 // Anyone still holding a pet that the feed no longer lists.
@@ -173,8 +190,9 @@ async function main() {
   const itemsDb = dbManager.getItemsDb();
   const existing = itemsDb.items || [];
   const existingByName = new Map(existing.map((i) => [String(i.name || i.itemName || '').toLowerCase(), i]));
-  const { items, skippedLow, skippedNoImage, skippedNoValue } = buildItems(list, existingByName);
+  const { items, skippedLow, skippedNoImage, skippedNoValue, withNeon, withMega } = buildItems(list, existingByName);
   console.log(`  after filters: ${items.length} pets (skipped ${skippedLow} common/uncommon, ${skippedNoImage} without an image, ${skippedNoValue} without a value)`);
+  console.log(`  real values from the feed: ${withNeon} neon, ${withMega} mega`);
 
   const newByName = new Map(items.map((i) => [i.name.toLowerCase(), i]));
   const added = items.filter((i) => !existingByName.has(i.name.toLowerCase()));
