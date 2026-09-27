@@ -181,6 +181,23 @@ router.put('/:id', authenticateAdmin, (req, res) => {
       updatedAt: new Date().toISOString()
     };
     itemsDb.items[itemIndex] = { ...current, ...allowed };
+
+    // Keep the stored variant grid honest when the base value is edited by
+    // hand, otherwise the NORMAL column would disagree with the value field.
+    const merged = itemsDb.items[itemIndex];
+    if (merged.variants?.normal && Number(current.baseValue ?? current.value) !== nextBase) {
+      const scale = current.baseValue ? nextBase / Number(current.baseValue) : 1;
+      const n = merged.variants.normal;
+      merged.variants = {
+        ...merged.variants,
+        normal: {
+          base: nextBase,
+          fly: Math.max(1, Math.round((n.fly || nextBase) * scale)),
+          ride: Math.max(1, Math.round((n.ride || nextBase) * scale)),
+          flyRide: Math.max(1, Math.round((n.flyRide || nextBase) * scale))
+        }
+      };
+    }
     dbManager.saveItemsDb();
     res.json(itemsDb.items[itemIndex]);
   } catch (error) {

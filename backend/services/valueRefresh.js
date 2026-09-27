@@ -88,11 +88,31 @@ function buildItems(list, existingByName) {
     const prior = existingByName.get(key);
     const id = prior?.itemId || prior?.id || `amvgg-${String(entry.id || '').trim() || uuidv4()}`;
 
-    const tier = (v) => {
+    const scaled = (v) => {
       const n = parseFloat(v);
       return isNaN(n) ? null : Math.max(1, Math.round(n * VALUE_MULTIPLIER));
     };
+
+    // The feed prices every combination, and the ratios are not constant:
+    // fly and ride usually make a pet worth LESS, a mega can be 1.5x to 7x,
+    // and a mega+fly can be half a plain mega. A flat percentage bonus cannot
+    // represent this, so the whole grid is stored.
+    const buildTier = (prefix, fallbackBase) => {
+      const b = scaled(entry[`${prefix}value - nopotion`]) ?? fallbackBase;
+      const fly = scaled(entry[`${prefix}value - fly`]) ?? b;
+      const ride = scaled(entry[`${prefix}value - ride`]) ?? b;
+      const flyRide = scaled(entry[`${prefix}value - fly&ride`]) ?? Math.min(fly, ride);
+      return { base: b, fly, ride, flyRide };
+    };
+
     const base = Math.max(1, Math.round(rvalue * VALUE_MULTIPLIER));
+    const normal = buildTier('r', base);
+    const neon = buildTier('n', null);
+    const mega = buildTier('m', null);
+    // normalizeMods turns ['N'] into ['N','F','R'], so the NEON and MEGA columns
+    // have always meant "tier + fly + ride". Keep that meaning.
+    const neonValue = neon ? neon.flyRide : (prior?.neonValue ?? null);
+    const megaValue = mega ? mega.flyRide : (prior?.megaValue ?? null);
 
     items.push({
       id,
@@ -105,10 +125,9 @@ function buildItems(list, existingByName) {
       rarity,
       baseValue: base,
       value: base,
-      // Real per-pet tier values. They vary wildly (a mega is anywhere from
-      // 1.3x to 7x its normal value) so they cannot be faked with a flat bonus.
-      neonValue: tier(entry['nvalue - nopotion'] ?? entry.nvalue) ?? prior?.neonValue ?? null,
-      megaValue: tier(entry['mvalue - nopotion'] ?? entry.mvalue) ?? prior?.megaValue ?? null,
+      variants: { normal, neon, mega },
+      neonValue,
+      megaValue,
       tradable: true,
       isEnabled: true,
       source: 'elvebredd',
@@ -124,7 +143,8 @@ function buildItems(list, existingByName) {
     skippedNoImage,
     skippedNoValue,
     withNeon: items.filter((i) => i.neonValue).length,
-    withMega: items.filter((i) => i.megaValue).length
+    withMega: items.filter((i) => i.megaValue).length,
+    withFlyRide: items.filter((i) => i.variants?.normal?.flyRide).length
   };
 }
 

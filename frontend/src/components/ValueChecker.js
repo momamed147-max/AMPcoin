@@ -21,15 +21,30 @@ const RARITY_LABELS = {
   common: 'Common'
 };
 
+// Which stored cell backs each column. normalizeMods turns ['N'] into
+// ['N','F','R'], so the NEON and MEGA columns have always meant "tier + fly +
+// ride" - the grid keeps that meaning.
+const FIELD_CELL = {
+  normal: ['normal', 'base'],
+  fly: ['normal', 'fly'],
+  ride: ['normal', 'ride'],
+  neon: ['neon', 'flyRide'],
+  mega: ['mega', 'flyRide']
+};
+
 const valueForField = (item, field) => {
-  // The catalog carries the real per-pet neon and mega values from the source
-  // feed. A flat percentage bonus is badly wrong for them - a mega ranges from
-  // about 1.3x to 7x its normal value depending on the pet.
+  const cell = FIELD_CELL[field];
+  if (cell) {
+    const v = Number(item?.variants?.[cell[0]]?.[cell[1]]);
+    if (Number.isFinite(v) && v > 0) return v;
+  }
   if (field === 'neon' || field === 'mega') {
     const stored = Number(item[field === 'neon' ? 'neonValue' : 'megaValue']);
     if (Number.isFinite(stored) && stored > 0) return stored;
   }
   const base = baseValueOf(item);
+  if (field === 'fly') return moddedValue(base, ['F']);
+  if (field === 'ride') return moddedValue(base, ['R']);
   if (field === 'neon') return moddedValue(base, ['N']);
   if (field === 'mega') return moddedValue(base, ['M']);
   return base;
@@ -171,6 +186,8 @@ const ValueChecker = ({ isOpen, onClose }) => {
                     <th className="vc-th-pet">PET</th>
                     {[
                       ['normal', 'NORMAL'],
+                      ['fly', 'FLY'],
+                      ['ride', 'RIDE'],
                       ['neon', 'NEON'],
                       ['mega', 'MEGA']
                     ].map(([field, label]) => (
@@ -196,6 +213,8 @@ const ValueChecker = ({ isOpen, onClose }) => {
                     const name = item.name || item.itemName || 'Unknown';
                     const rarity = (item.rarity || 'common').toLowerCase().replace(/\s+/g, '_');
                     const normalVal = valueForField(item, 'normal');
+                    const flyVal = valueForField(item, 'fly');
+                    const rideVal = valueForField(item, 'ride');
                     const neonVal = valueForField(item, 'neon');
                     const megaVal = valueForField(item, 'mega');
                     return (
@@ -218,6 +237,12 @@ const ValueChecker = ({ isOpen, onClose }) => {
                         </td>
                         <td className="vc-val-cell">
                           <span className="vc-diamond"><Icon name="diamond" size={12} /></span> {normalVal.toLocaleString()}
+                        </td>
+                        <td className="vc-val-cell">
+                          <span className="vc-diamond"><Icon name="diamond" size={12} /></span> {flyVal.toLocaleString()}
+                        </td>
+                        <td className="vc-val-cell">
+                          <span className="vc-diamond"><Icon name="diamond" size={12} /></span> {rideVal.toLocaleString()}
                         </td>
                         <td className="vc-val-cell">
                           <span className="vc-diamond"><Icon name="diamond" size={12} /></span> {neonVal.toLocaleString()}
