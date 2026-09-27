@@ -86,6 +86,7 @@ const AuthProvider = ({ children }) => {
 
       // Verify token to get the latest server-side data (includes avatar if cached)
       let freshUser = null;
+      let tokenRejected = false;
       try {
         const res = await fetch(`${API_BASE}/api/auth/verify-token`, {
           method: 'POST',
@@ -99,9 +100,21 @@ const AuthProvider = ({ children }) => {
           if (data.valid && data.user) {
             freshUser = data.user;
           }
+        } else if (res.status === 401) {
+          // Server rejected the signature (expired, or JWT_SECRET was rotated).
+          // Falling through to the cached user here would leave the session
+          // looking logged in while every authenticated call 401s.
+          tokenRejected = true;
         }
       } catch (err) {
         console.warn('Verify token failed:', err.message);
+      }
+
+      if (tokenRejected) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        setUser(null);
+        return;
       }
 
       // Fall back to stored user
