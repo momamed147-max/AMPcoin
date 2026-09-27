@@ -5,6 +5,12 @@ const { authenticateToken, authenticateAdmin, authenticateModerator } = require(
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
 const { emitToUser } = require('../realtime');
+const {
+  scanChatMessage,
+  applyProgressiveMute,
+  clearExpiredMute,
+  formatMuteDuration
+} = require('../chatFilter');
 
 const ROBLOX_PROFILE_CACHE_TTL = 1000 * 60 * 60;
 const OWNER_USERNAME = 'pooppantspro';
@@ -185,8 +191,8 @@ router.get('/messages', (req, res) => {
   }
 });
 
-// Per-user message cooldown (5s) — in-memory, resets on restart
-const chatCooldownMs = 5000;
+// Per-user message cooldown (2s) — in-memory, resets on restart
+const chatCooldownMs = 2000;
 const lastChatAt = new Map();
 
 // Messages auto-delete 30 minutes after being sent
@@ -243,8 +249,78 @@ router.post('/send', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    if (clearExpiredMute(user)) {
+      dbManager.saveUsersDb();
+    }
+
     if (user.isMuted) {
-      return res.status(403).json({ message: 'You are muted and cannot send messages' });
+      if (!user.mutedUntil) {
+        return res.status(403).json({ message: 'You are permanently muted and cannot send messages' });
+      }
+      const msLeft = new Date(user.mutedUntil).getTime() - Date.now();
+      return res.status(403).json({
+        message: `You are muted for another ${formatMuteDuration(msLeft)}`,
+        mutedUntil: user.mutedUntil
+      });
+    }
+
+    // Staff are exempt so a moderator can never be silenced by the filter.
+    const isStaff = user.isAdmin === true || user.isModerator === true;
+    if (!isStaff) {
+      const verdict = scanChatMessage(message);
+
+      if (verdict.bypass.length) {
+        const penalty = applyProgressiveMute(user, verdict.bypass);
+        const dbLog = dbManager.getMainDb();
+        dbLog.adminLogs = dbLog.adminLogs || [];
+        dbLog.adminLogs.push({
+          id: uuidv4(),
+          adminId: 'chat_filter',
+          adminUsername: 'Chat filter',
+          action: 'filter_bypass_mute',
+          targetUserId: user.id,
+          targetUsername: user.robloxUsername,
+          reason: `Bypass attempt (${verdict.bypass.join(', ')}) - offence ${penalty.offences}`,
+          timestamp: new Date().toISOString()
+        });
+        dbManager.saveUsersDb();
+        dbManager.saveMainDb();
+
+        addNotification({
+          userId: user.id,
+          type: 'moderation',
+          title: penalty.permanent ? 'Chat permanently muted' : 'Chat muted',
+          message: penalty.permanent
+            ? 'Your chat access has been permanently revoked after repeated filter bypasses.'
+            : `Your chat access is muted for ${formatMuteDuration(penalty.duration)} after a filter bypass attempt.`
+        });
+        emitToUser(user.id, 'moderationUpdate', {
+          userId: user.id,
+          isMuted: true,
+          mutedUntil: penalty.until,
+          mutedAt: user.mutedAt,
+          muteReason: user.muteReason
+        });
+
+        console.warn(`[chat] ${user.robloxUsername} bypassed the filter (${verdict.bypass.join(', ')}) - offence ${penalty.offences}${penalty.permanent ? ' PERMANENT' : `, muted ${formatMuteDuration(penalty.duration)}`}`);
+
+        return res.status(403).json({
+          message: penalty.permanent
+            ? 'Permanently muted for repeatedly bypassing the chat filter.'
+            : `Muted for ${formatMuteDuration(penalty.duration)} - the chat filter is not something to work around.`,
+          muted: true,
+          permanent: penalty.permanent,
+          mutedUntil: penalty.until,
+          offences: penalty.offences
+        });
+      }
+
+      if (verdict.plain.length) {
+        return res.status(400).json({
+          message: 'That word is not allowed in chat.',
+          filtered: true
+        });
+      }
     }
 
     // Ensure user has Roblox profile (display name + avatar) cached

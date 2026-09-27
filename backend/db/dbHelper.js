@@ -246,8 +246,12 @@ function normalizeUser(user) {
     isFrozen: user.isFrozen === true,
     isMuted: user.isMuted === true,
     mutedAt: user.mutedAt || null,
+    mutedUntil: user.mutedUntil || null,
     mutedBy: user.mutedBy || null,
     muteReason: user.muteReason || null,
+    // Escalating chat-filter strikes. Survives normalisation so the mute
+    // ladder keeps climbing instead of resetting to the first offence.
+    chatOffenses: typeof user.chatOffenses === 'number' ? user.chatOffenses : 0,
     status: user.status || (user.isBanned ? 'banned' : 'active'),
     lastLogin: user.lastLogin || now,
     createdAt: user.createdAt || now,

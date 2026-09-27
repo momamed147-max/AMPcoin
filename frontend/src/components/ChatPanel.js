@@ -222,7 +222,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
   const [chatLoadError, setChatLoadError] = useState('');
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState('');
-  const [cooldownLeft, setCooldownLeft] = useState(0); // seconds left on 5s chat cooldown
+  const [cooldownLeft, setCooldownLeft] = useState(0); // seconds left on the 2s chat cooldown
   const [viewProfile, setViewProfile] = useState(null); // chat user profile modal
   const [activeGiveaway, setActiveGiveaway] = useState(null); // persistent top banner
   const [winnerBanner, setWinnerBanner] = useState(null); // winner announcement
@@ -506,18 +506,20 @@ const ChatPanel = ({ socket, chatOpen }) => {
         setMessages((prev) =>
           prev.filter((m) => m.id !== saved.id && m.id !== optimisticMsg.id).concat(saved)
         );
-        startCooldown(5);
+        startCooldown(2);
       } else {
         const data = await response.json().catch(() => ({}));
         // Rejected (cooldown/mute/rate-limit): drop the ghost message, keep the text
         setMessages((prev) => prev.filter((m) => m.id !== optimisticMsg.id));
         setInputMessage(trimmed);
         if (response.status === 403 && /muted/i.test(data.message || '')) {
-          updateUser({ isMuted: true });
+          // Filter bypass mutes arrive with the exact expiry so the UI can
+          // tell the user when they get their chat back.
+          updateUser({ isMuted: true, mutedUntil: data.mutedUntil || null });
         }
         showChatError(data.message || 'Message was not sent. Please try again.');
         if (response.status === 429) {
-          startCooldown(data.retryAfter || 5);
+          startCooldown(data.retryAfter || 2);
         }
       }
     } catch (error) {
