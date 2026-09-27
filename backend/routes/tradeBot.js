@@ -4,7 +4,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 
 const dbManager = require('../db/dbHelper');
-const { baseValueOf, moddedValue, normalizeMods } = require('../lib/petMods');
+const { baseValueOf, moddedValue, normalizeMods, valueForMods } = require('../lib/petMods');
 const { authenticateBot } = require('../middleware/botAuth');
 const { addNotification } = require('../notificationService');
 const { emitToAll } = require('../realtime');
@@ -45,7 +45,9 @@ const fail = (res, status, code, message, extra = {}) =>
 
 /** Canonical, server-side unit price for a catalog item. */
 function priceOf(catalogItem) {
-  return moddedValue(baseValueOf(catalogItem), normalizeMods(catalogItem?.mods));
+  // Read the pet's real variant grid where the catalog has one, so a mega is
+  // priced what it is actually worth instead of a flat +30%.
+  return valueForMods(catalogItem, normalizeMods(catalogItem?.mods));
 }
 
 function catalog() {

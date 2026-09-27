@@ -3,7 +3,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken, authenticateAdmin } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
-const { normalizeMods, moddedValue } = require('../lib/petMods');
+const { normalizeMods, moddedValue, valueForMods } = require('../lib/petMods');
 
 // Get all items
 router.get('/', (req, res) => {
@@ -167,7 +167,12 @@ router.put('/:id', authenticateAdmin, (req, res) => {
       rarity: nextRarity,
       baseValue: nextBase,
       mods: nextMods,
-      value: moddedValue(nextBase, nextMods),
+      // Prefer the pet's real grid so a modded pet is stored at what it is
+      // actually worth; fall back to the percentage estimate when it has none.
+      value: valueForMods(
+        { baseValue: nextBase, variants: current.variants },
+        nextMods
+      ) || moddedValue(nextBase, nextMods),
       tradable: updates.tradable !== undefined ? !!updates.tradable : current.tradable !== false,
       isEnabled: updates.isEnabled !== undefined ? !!updates.isEnabled : current.isEnabled !== false,
       // Real per-pet neon / mega values from the source feed. Null means the

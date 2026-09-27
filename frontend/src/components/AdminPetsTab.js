@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import Icon from './Icon';
 import ModBadges from './ModBadges';
-import { MOD_LABELS, normalizeMods, baseValueOf, moddedValue } from '../lib/petMods';
+import { MOD_LABELS, normalizeMods, baseValueOf, moddedValue, valueForMods, hasRealVariant } from '../lib/petMods';
 import './AdminPetsTab.css';
 
 const RARITIES = ['all', 'common', 'uncommon', 'rare', 'ultra_rare', 'epic', 'legendary', 'mythic'];
@@ -61,7 +61,13 @@ const AdminPetsTab = ({
   const update = (key, value) => setNewPet((current) => ({ ...current, [key]: value }));
   const base = Number(newPet.baseValue !== undefined && newPet.baseValue !== '' ? newPet.baseValue : (newPet.value ?? 0));
   const previewMods = normalizeMods(newPet.mods);
-  const previewValue = moddedValue(base, previewMods);
+  // Existing pets carry a real per-pet grid, so the preview must read that
+  // rather than re-applying the flat percentage bonus. A brand new pet has no
+  // grid, so it falls back to the estimate.
+  const editingPet = items?.find((p) => (p.id || p.itemId) === (newPet.id || newPet.itemId));
+  const previewSource = editingPet || (newPet.variants ? newPet : null);
+  const previewValue = previewSource ? valueForMods(previewSource, previewMods) : moddedValue(base, previewMods);
+  const previewIsReal = hasRealVariant(previewSource, previewMods);
 
   return (
     <div className="pet-manager">
@@ -108,11 +114,23 @@ const AdminPetsTab = ({
             </div>
 
             <div className="pet-mod-section">
-              <div className="pet-mod-heading"><div><strong>Modifier bundle</strong><span>Choose one clean preset or stack F/R.</span></div><span className="pet-preview-value">{previewValue.toLocaleString()} AMP</span></div>
+              <div className="pet-mod-heading"><div><strong>Modifier bundle</strong><span>{previewIsReal ? 'Priced from this pet\u2019s real values.' : 'Choose one clean preset or stack F/R.'}</span></div><span className="pet-preview-value">{previewValue.toLocaleString()} AMP</span></div>
               <div className="pet-mod-grid">
                 {['F', 'R', 'M', 'N'].map((mod) => {
                   const active = previewMods.includes(mod);
-                  return <button type="button" key={mod} className={`pet-mod-option ${active ? 'active' : ''}`} onClick={() => onToggleNewMod(mod)}><strong>{mod}</strong><span>{MOD_LABELS[mod]}</span></button>;
+                  // What this pet is actually worth with that mod switched on.
+                  // Tiers are mutually exclusive, so picking one drops the other.
+                  const without = previewMods.filter((x) => x !== mod);
+                  const candidate = (mod === 'M' || mod === 'N')
+                    ? [...without.filter((x) => x !== 'M' && x !== 'N'), mod]
+                    : [...without, mod];
+                  const withMod = valueForMods(previewSource || newPet, candidate);
+                  return (
+                    <button type="button" key={mod} className={`pet-mod-option ${active ? 'active' : ''}`} onClick={() => onToggleNewMod(mod)}>
+                      <strong>{mod}</strong><span>{MOD_LABELS[mod]}</span>
+                      {withMod > 0 && <em>{withMod.toLocaleString()}</em>}
+                    </button>
+                  );
                 })}
               </div>
             </div>
@@ -146,10 +164,13 @@ const AdminPetsTab = ({
             {filteredItems.length > 0 ? filteredItems.map((pet) => {
               const mods = normalizeMods(pet.mods);
               const baseValue = baseValueOf(pet);
+              // With mods applied, show what the pet is really worth rather than
+              // re-applying the flat percentage bonus.
+              const shownValue = valueForMods(pet, mods);
               const petId = pet.id || pet.itemId;
               return <article className={`pet-catalog-item ${pet.isEnabled === false ? 'disabled' : ''}`} key={petId}>
                 <div className="pet-catalog-image"><img src={itemImage(pet)} alt={itemName(pet)} onError={(event) => { event.currentTarget.src = '/default-item.png'; }} /><span className={`pet-rarity-dot ${pet.rarity || 'common'}`} /></div>
-                <div className="pet-catalog-copy"><strong title={itemName(pet)}>{itemName(pet)}</strong><span>{Number(pet.value || 0).toLocaleString()} AMP</span><small>{pet.description || `${pet.rarity || 'common'} pet`}</small></div>
+                <div className="pet-catalog-copy"><strong title={itemName(pet)}>{itemName(pet)}</strong><span>{shownValue.toLocaleString()} AMP</span><small>{pet.description || `${pet.rarity || 'common'} pet`}</small></div>
                 <div className="pet-catalog-mods"><ModBadges mods={mods} size={15} /><span>base {baseValue.toLocaleString()}</span></div>
                 <div className="pet-catalog-mod-buttons">{['F', 'R', 'M', 'N'].map((mod) => <button type="button" key={mod} className={mods.includes(mod) ? 'active' : ''} disabled={modBusyId === petId} onClick={() => onTogglePetMod(pet, mod)} title={MOD_LABELS[mod]}>{mod}</button>)}</div>
                 <button type="button" className="pet-remove-button" onClick={() => { if (window.confirm(`Remove ${itemName(pet)} from the catalog?`)) onRemovePet(petId); }} aria-label={`Remove ${itemName(pet)}`}><Icon name="close" size={13} /></button>

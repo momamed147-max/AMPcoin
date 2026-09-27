@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateAdmin, authenticateStaff } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
-const { normalizeMods, baseValueOf, moddedValue } = require('../lib/petMods');
+const { normalizeMods, baseValueOf, moddedValue, valueForMods } = require('../lib/petMods');
 const { planRefresh, applyRefresh } = require('../services/valueRefresh');
 
 // Refresh the item catalog from the Elvebredd feed. Dry run by default; pass
@@ -572,7 +572,10 @@ router.post('/user/:userId/add-items', authenticateAdmin, (req, res) => {
             itemName: `${item.itemName || item.name} (${mods.join('')})`,
             baseValue: baseValueOf(item),
             mods,
-            value: moddedValue(baseValueOf(item), mods)
+            // Read the pet's real grid so a granted mega is worth what it is
+            // actually worth, not base + 30%.
+            variants: item.variants,
+            value: valueForMods(item, mods)
           }
         : item;
       dbManager.addItemToUserInventory(userId, itemToGive, quantity);
