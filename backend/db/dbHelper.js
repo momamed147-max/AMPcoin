@@ -22,7 +22,10 @@ function createPool(connectionString) {
       : false,
     max: 10,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 10000
+    // 10s is plenty from Railway, which sits next to Neon. Maintenance scripts
+    // run from a laptop on a slow link need longer, so allow an override
+    // without changing the default.
+    connectionTimeoutMillis: Number(process.env.PG_CONNECT_TIMEOUT_MS) || 10000
   });
   created.on('error', (err) => {
     console.error('[PostgreSQL] Unexpected pool error:', err.message);
