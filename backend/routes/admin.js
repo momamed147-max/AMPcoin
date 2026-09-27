@@ -5,6 +5,64 @@ const { authenticateAdmin, authenticateStaff } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
 const { normalizeMods, baseValueOf, moddedValue } = require('../lib/petMods');
+const { planRefresh, applyRefresh } = require('../services/valueRefresh');
+
+// Refresh the item catalog from the Elvebredd feed. Dry run by default; pass
+// { apply: true } to write. Admin only - it rewrites the whole catalog.
+router.post('/refresh-values', authenticateAdmin, async (req, res) => {
+  try {
+    const apply = req.body?.apply === true;
+    const force = req.body?.force === true;
+    const plan = await planRefresh();
+    const { diff, outstanding, heldByPlayers, built } = plan;
+
+    const payload = {
+      applied: false,
+      multiplier: 10,
+      feed: {
+        pets: built.items.length,
+        skippedLow: built.skippedLow,
+        withNeon: built.withNeon,
+        withMega: built.withMega
+      },
+      diff,
+      outstandingWithdrawals: outstanding,
+      heldByPlayers
+    };
+
+    if (!apply) {
+      return res.json({ ...payload, message: 'Dry run - nothing written. Send apply:true to write.' });
+    }
+
+    // Re-pricing changes what an outstanding request is worth.
+    if (outstanding.total > 0 && !force) {
+      return res.status(409).json({
+        ...payload,
+        message: 'Refusing to apply: withdrawals are outstanding. Settle or cancel them first, or resend with force:true.'
+      });
+    }
+
+    const written = await applyRefresh();
+    const db = dbManager.getMainDb();
+    db.adminLogs = db.adminLogs || [];
+    db.adminLogs.push({
+      id: uuidv4(),
+      adminId: req.user.userId,
+      adminUsername: req.user.robloxUsername,
+      action: 'refresh_values',
+      targetUserId: null,
+      targetUsername: null,
+      reason: `Elvebredd refresh: ${written} pets at x10 (${diff.added} added, ${diff.removed} removed, ${diff.repriced} re-priced, ${diff.tierAdded} gained tier values)`,
+      timestamp: new Date().toISOString()
+    });
+    dbManager.saveMainDb();
+
+    return res.json({ ...payload, applied: true, written, message: `Catalog refreshed: ${written} pets at x10.` });
+  } catch (error) {
+    console.error('Value refresh failed:', error);
+    res.status(500).json({ message: `Value refresh failed: ${error.message}` });
+  }
+});
 
 function serializeStaffUser(user, includePrivateFields = false) {
   const { password, ...safeUser } = user;

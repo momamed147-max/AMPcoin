@@ -27,6 +27,10 @@ const AdminPetsTab = ({
   purgeBusy,
   purgeArmed,
   onPurge,
+  valuesBusy,
+  valuesArmed,
+  valuesPreview,
+  onRefreshValues,
   wipeName,
   setWipeName,
   wipeBusy,
@@ -136,7 +140,7 @@ const AdminPetsTab = ({
             <select value={sort} onChange={(event) => setSort(event.target.value)} aria-label="Sort pet catalog"><option value="name">Name</option><option value="value-high">Value: high</option><option value="value-low">Value: low</option><option value="newest">Newest</option></select>
           </div>
 
-          {isOwner && <details className="pet-owner-tools"><summary><span><Icon name="shield" size={14} /> Owner tools</span><small>Bulk catalog controls</small></summary><div className="pet-owner-tools-body"><button type="button" className={`btn ${purgeArmed ? 'btn-warning' : 'btn-danger'}`} onClick={onPurge} disabled={purgeBusy}>{purgeBusy ? 'Deleting...' : purgeArmed ? 'Click again to delete commons' : 'Delete common + uncommon'}</button><div className="pet-wipe-row"><input value={wipeName} onChange={(event) => setWipeName(event.target.value)} placeholder="Exact pet name to wipe everywhere" /><button type="button" className={`btn ${wipeArmed ? 'btn-warning' : 'btn-danger'}`} onClick={onWipe} disabled={wipeBusy}>{wipeBusy ? 'Wiping...' : wipeArmed ? 'Click again to confirm' : 'Wipe everywhere'}</button></div></div></details>}
+          {isOwner && <details className="pet-owner-tools"><summary><span><Icon name="shield" size={14} /> Owner tools</span><small>Bulk catalog controls</small></summary><div className="pet-owner-tools-body"><div className="pet-refresh-row"><button type="button" className={`btn ${valuesArmed ? 'btn-warning' : 'btn-secondary'}`} onClick={onRefreshValues} disabled={valuesBusy}>{valuesBusy ? 'Refreshing...' : valuesArmed ? 'Click again to write these values' : 'Refresh values from Elvebredd'}</button>{valuesPreview && !valuesPreview.error && <div className="pet-refresh-preview"><strong>{valuesPreview.diff.incoming} pets at x{valuesPreview.multiplier}</strong><span>{valuesPreview.diff.added} added &middot; {valuesPreview.diff.removed} removed &middot; {valuesPreview.diff.repriced} re-priced &middot; {valuesPreview.diff.tierAdded} gained neon/mega</span>{valuesPreview.outstandingWithdrawals?.total > 0 && <span className="pet-refresh-warn">{valuesPreview.outstandingWithdrawals.total} withdrawal(s) pending - writing will be refused</span>}{valuesPreview.applied && <span className="pet-refresh-ok">Written.</span>}</div>}</div>{valuesPreview?.error && <div className="pet-refresh-preview"><span className="pet-refresh-warn">{valuesPreview.error}</span></div>}<button type="button" className={`btn ${purgeArmed ? 'btn-warning' : 'btn-danger'}`} onClick={onPurge} disabled={purgeBusy}>{purgeBusy ? 'Deleting...' : purgeArmed ? 'Click again to delete commons' : 'Delete common + uncommon'}</button><div className="pet-wipe-row"><input value={wipeName} onChange={(event) => setWipeName(event.target.value)} placeholder="Exact pet name to wipe everywhere" /><button type="button" className={`btn ${wipeArmed ? 'btn-warning' : 'btn-danger'}`} onClick={onWipe} disabled={wipeBusy}>{wipeBusy ? 'Wiping...' : wipeArmed ? 'Click again to confirm' : 'Wipe everywhere'}</button></div></div></details>}
 
           <div className="pet-catalog-grid">
             {filteredItems.length > 0 ? filteredItems.map((pet) => {

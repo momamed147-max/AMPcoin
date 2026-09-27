@@ -92,6 +92,9 @@ function FullAdminPanel() {
   const [modBusyId, setModBusyId] = useState(null);
   const [purgeBusy, setPurgeBusy] = useState(false);
   const [purgeArmed, setPurgeArmed] = useState(false);
+  const [valuesBusy, setValuesBusy] = useState(false);
+  const [valuesArmed, setValuesArmed] = useState(false);
+  const [valuesPreview, setValuesPreview] = useState(null);
   const [wipeName, setWipeName] = useState('');
   const [wipeArmed, setWipeArmed] = useState(false);
   const [wipeBusy, setWipeBusy] = useState(false);
@@ -142,6 +145,71 @@ function FullAdminPanel() {
       setError(`Purge failed: ${err.message}`);
     } finally {
       setPurgeBusy(false);
+    }
+  };
+
+  // Refresh the catalog from the Elvebredd feed. First click previews the diff,
+  // second click writes - same two-step guard as the purge.
+  const handleRefreshValues = async () => {
+    if (valuesBusy) return;
+    if (!valuesArmed) {
+      setValuesArmed(true);
+      setValuesPreview(null);
+      setTimeout(() => setValuesArmed(false), 8000);
+      try {
+        const response = await retryRequest(() =>
+          fetch(`${API_BASE}/api/admin/refresh-values`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${localStorage.getItem('token')}`
+            },
+            body: JSON.stringify({})
+          })
+        );
+        const data = await response.json().catch(() => ({}));
+        if (response.ok) {
+          setValuesPreview(data);
+        } else {
+          setValuesPreview({ error: data.message || 'Could not read the feed.' });
+        }
+      } catch (err) {
+        setValuesPreview({ error: err.message });
+      }
+      return;
+    }
+
+    setValuesArmed(false);
+    setValuesBusy(true);
+    try {
+      const response = await retryRequest(() =>
+        fetch(`${API_BASE}/api/admin/refresh-values`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ apply: true })
+        })
+      );
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        showCustomPopup(data.message || 'Values refreshed.', 'success');
+        setValuesPreview(data);
+        try {
+          const r = await fetch(`${API_BASE}/api/items`);
+          if (r.ok) {
+            const d = await r.json();
+            setItems(Array.isArray(d) ? d : d.items || []);
+          }
+        } catch (_) { /* ignore */ }
+      } else {
+        setValuesPreview({ ...(valuesPreview || {}), error: data.message || 'Refresh refused.' });
+      }
+    } catch (err) {
+      setError(`Refresh failed: ${err.message}`);
+    } finally {
+      setValuesBusy(false);
     }
   };
 
@@ -1545,6 +1613,10 @@ function FullAdminPanel() {
               purgeBusy={purgeBusy}
               purgeArmed={purgeArmed}
               onPurge={handlePurgeCommons}
+              valuesBusy={valuesBusy}
+              valuesArmed={valuesArmed}
+              valuesPreview={valuesPreview}
+              onRefreshValues={handleRefreshValues}
               wipeName={wipeName}
               setWipeName={setWipeName}
               wipeBusy={wipeBusy}

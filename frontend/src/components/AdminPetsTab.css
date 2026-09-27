@@ -64,6 +64,18 @@
 .pet-owner-tools summary::-webkit-details-marker { display: none; }
 .pet-owner-tools summary span { display: inline-flex; align-items: center; gap: 6px; }
 .pet-owner-tools summary small { color: var(--dim); font-size: .61rem; font-weight: 600; }
+.pet-refresh-row { display: flex; flex-direction: column; gap: 8px; }
+.pet-refresh-preview {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 9px 11px; border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-soft);
+  font-size: 0.78rem; color: var(--mut);
+}
+.pet-refresh-preview strong { color: var(--text); font-size: 0.85rem; }
+.pet-refresh-warn { color: #f0a35e; }
+.pet-refresh-ok { color: #6fd08c; }
+
 .pet-owner-tools-body { display: flex; flex-direction: column; gap: 7px; padding: 0 10px 10px; }
 .pet-owner-tools-body .btn { justify-self: start; font-size: .68rem; }
 .pet-wipe-row { display: flex; gap: 6px; }
