@@ -109,6 +109,9 @@ function buildItems(list, existingByName) {
     const normal = buildTier('r', base);
     const neon = buildTier('n', null);
     const mega = buildTier('m', null);
+    // The untouched figure from the source feed, kept so the x10 is auditable
+    // rather than having to be taken on trust.
+    const sourceValue = Math.round(rvalue * 100) / 100;
     // normalizeMods turns ['N'] into ['N','F','R'], so the NEON and MEGA columns
     // have always meant "tier + fly + ride". Keep that meaning.
     const neonValue = neon ? neon.flyRide : (prior?.neonValue ?? null);
@@ -125,6 +128,8 @@ function buildItems(list, existingByName) {
       rarity,
       baseValue: base,
       value: base,
+      sourceValue,
+      sourceMultiplier: VALUE_MULTIPLIER,
       variants: { normal, neon, mega },
       neonValue,
       megaValue,

@@ -235,7 +235,12 @@ const ValueChecker = ({ isOpen, onClose }) => {
                             </div>
                           </div>
                         </td>
-                        <td className="vc-val-cell">
+                        <td
+                          className="vc-val-cell"
+                          title={item.sourceValue != null
+                            ? `Elvebredd: ${Number(item.sourceValue).toLocaleString()} -> ${normalVal.toLocaleString()} AMP (x${item.sourceMultiplier || 10})`
+                            : undefined}
+                        >
                           <span className="vc-diamond"><Icon name="diamond" size={12} /></span> {normalVal.toLocaleString()}
                         </td>
                         <td className="vc-val-cell">
