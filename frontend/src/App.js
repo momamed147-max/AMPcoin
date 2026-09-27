@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import io from 'socket.io-client';
 
@@ -7,15 +7,6 @@ import './giveaways-notifications.css';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Logo from './components/Logo';
-import CoinflipPage from './pages/CoinflipPage';
-import JackpotPage from './pages/JackpotPage';
-import RpsPage from './pages/RpsPage';
-import TradingPage from './pages/TradingPage';
-import StatsPage from './pages/StatsPage';
-import ProvablyFairPage from './pages/ProvablyFairPage';
-import LoginPage from './pages/LoginPage';
-import ProfilePage from './pages/ProfilePage';
-import AdminPanel from './pages/AdminPanel';
 import ChatPanel from './components/ChatPanel';
 import ValueChecker from './components/ValueChecker';
 import AuthProvider, { useAuth } from './context/AuthContext';
@@ -24,6 +15,28 @@ import Icon from './components/Icon';
 import { API_BASE } from './apiConfig';
 import { installGlobalSoundEffects, playError } from './sound';
 import { initializeTheme } from './theme';
+
+// Route-level code splitting: each page (and its CSS) is fetched on demand, so
+// opening Coinflip no longer downloads the Admin Panel, Trading, Profile, etc.
+const CoinflipPage = lazy(() => import('./pages/CoinflipPage'));
+const JackpotPage = lazy(() => import('./pages/JackpotPage'));
+const RpsPage = lazy(() => import('./pages/RpsPage'));
+const TradingPage = lazy(() => import('./pages/TradingPage'));
+const StatsPage = lazy(() => import('./pages/StatsPage'));
+const ProvablyFairPage = lazy(() => import('./pages/ProvablyFairPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const ProfilePage = lazy(() => import('./pages/ProfilePage'));
+const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+
+function RouteFallback() {
+  return (
+    <div className="route-loading">
+      <div className="cf-loading" aria-label="Loading page">
+        <span className="cf-loading-dots"><i /><i /><i /></span>
+      </div>
+    </div>
+  );
+}
 
 const BACKEND_URL = API_BASE;
 const socket = io(BACKEND_URL, {
@@ -166,6 +179,7 @@ function AppContent() {
         <div className="main-content">
           {user && <Header balance={balance} setBalance={setBalance} socket={socket} />}
           <div className="page-content" key={location.pathname}>
+            <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/coinflip" />} />
               <Route path="/register" element={<Navigate to="/login" replace />} />
@@ -191,6 +205,7 @@ function AppContent() {
                 </div>
               )} />
             </Routes>
+            </Suspense>
           </div>
         </div>
       </div>

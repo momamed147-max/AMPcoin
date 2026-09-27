@@ -90,6 +90,32 @@ body {
   animation: app-page-in 0.3s ease backwards;
 }
 
+/* Fallback while a lazily-loaded route chunk downloads. Styles live here (not in
+   a page stylesheet) because page CSS is now part of the lazy chunk. */
+.route-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+}
+.route-loading .cf-loading-dots {
+  display: inline-flex;
+  gap: 6px;
+}
+.route-loading .cf-loading-dots i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--acc);
+  animation: route-dot 0.9s ease-in-out infinite;
+}
+.route-loading .cf-loading-dots i:nth-child(2) { animation-delay: 0.15s; }
+.route-loading .cf-loading-dots i:nth-child(3) { animation-delay: 0.3s; }
+@keyframes route-dot {
+  0%, 100% { opacity: 0.25; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
 /* ─── Sidebar = fixed 56px horizontal top navbar ─── */
 .sidebar {
   position: fixed !important;

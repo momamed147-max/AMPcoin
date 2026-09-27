@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CreateCoinflipModal from '../components/CreateCoinflipModal';
-import LeaderboardModal from '../components/LeaderboardModal';
 import AnimatedPopup from '../components/AnimatedPopup';
 import ModalPortal from '../components/ModalPortal';
 import { CoinChip, CoinFlipAnimation, CoinLoader } from '../components/CoinChip';
@@ -55,7 +54,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
   const [jackpotCount, setJackpotCount] = useState(0);
   const [rpsCount, setRpsCount] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [historyItems, setHistoryItems] = useState([]);
   const [historyPage, setHistoryPage] = useState(1);
@@ -115,9 +113,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
 
   // Sort filter state
   const [sortDropdown, setSortDropdown] = useState(false);
-
-  // Values open in the global modal (App level)
-  const openValueChecker = () => window.dispatchEvent(new CustomEvent('ampcoin:open-values'));
 
   // Fetch coinflips
   const fetchCoinflips = useCallback(async () => {
@@ -648,12 +643,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
           <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={handleCreateBet}>
             <Icon name="plus" size={13} /> Bet Items
           </button>
-          <button className="cf-topbar-btn" onClick={openValueChecker}>
-            Values
-          </button>
-          <button className="cf-topbar-btn" onClick={() => setShowLeaderboard(true)}>
-            Leaderboard
-          </button>
           <button className="cf-topbar-btn" onClick={openHistory}>
             History
           </button>
@@ -1109,7 +1098,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
         />
       )}
 
-      {/* Values open in the global modal (App level) — see openValueChecker */}
+      {/* Values are opened from the main nav, via the global modal in App */}
 
       {/* ═══════════════════════════════════════════════════════════════════
           HISTORY MODAL
@@ -1213,13 +1202,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
           </div>
         </div>
         </ModalPortal>
-      )}
-
-      {/* Leaderboard */}
-
-      {/* Leaderboard */}
-      {showLeaderboard && (
-        <LeaderboardModal isOpen={showLeaderboard} onClose={() => setShowLeaderboard(false)} />
       )}
 
       {/* Popup */}

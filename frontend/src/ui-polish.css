@@ -184,7 +184,8 @@ textarea:focus-visible,
   border-bottom: 1px solid rgba(137, 166, 204, 0.14) !important;
   background: rgba(8, 13, 22, 0.9) !important;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.24), inset 0 -1px 0 rgba(255, 255, 255, 0.018) !important;
-  backdrop-filter: blur(18px) saturate(125%);
+  /* backdrop-filter removed: full-height blur, repainted every frame. */
+  background: rgba(8, 13, 22, 0.95) !important;
 }
 
 .sidebar::after {
@@ -489,7 +490,8 @@ textarea:focus-visible,
   border-bottom: 1px solid var(--line-soft);
   background: rgba(9, 14, 24, 0.82) !important;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.13);
-  backdrop-filter: blur(16px) saturate(120%);
+  /* backdrop-filter removed: full-width blur across the sticky header. */
+  background: rgba(9, 14, 24, 0.93) !important;
 }
 
 .header-left {
@@ -878,7 +880,8 @@ textarea:focus-visible,
   min-height: 58px;
   padding: 8px 10px !important;
   border-radius: 14px !important;
-  backdrop-filter: blur(14px);
+  /* No backdrop-filter: this bar sits on an opaque --panel background, so the
+     blur was invisible while forcing a full-width backdrop re-blur every frame. */
 }
 
 .cf-topbar-btn {
@@ -1238,7 +1241,9 @@ textarea:focus,
   top: var(--nav-h) !important;
   border-right-color: var(--line-soft) !important;
   background: rgba(9, 14, 24, 0.82) !important;
-  backdrop-filter: blur(16px);
+  /* backdrop-filter removed: a full-height blur here re-rasterised the whole
+     column every frame. Alpha raised to keep the same frosted read. */
+  background: rgba(9, 14, 24, 0.93) !important;
 }
 
 .chat-header {
