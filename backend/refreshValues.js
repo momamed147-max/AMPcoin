@@ -27,7 +27,9 @@ async function main() {
 
   const plan = await planRefresh();
   const { diff, outstanding, heldByPlayers, built } = plan;
+  const snap = require('./db/elvebredd-values.json');
 
+  console.log(`  source: elvebredd.com snapshot from ${snap.generatedAt}`);
   console.log(`  feed: ${built.items.length} pets (skipped ${built.skippedLow} common/uncommon)`);
   console.log(`  real tier values from the feed: ${built.withNeon} neon, ${built.withMega} mega`);
   console.log(`\n  diff vs current catalog (${diff.current} items):`);

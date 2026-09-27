@@ -9,7 +9,58 @@ const FALLBACK_NONCE = '9135f81534';
 const VALUE_MULTIPLIER = 10;
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
+const SNAPSHOT_PATH = require('path').join(__dirname, '..', 'db', 'elvebredd-values.json');
+
 const EXCLUDED_RARITIES = new Set(['common', 'uncommon']);
+
+/**
+ * Elvebredd's own figures, captured from their calculator page into
+ * backend/db/elvebredd-values.json. This is the preferred source: the amvgg
+ * feed is a third-party mirror and has drifted (359 of 577 base values and
+ * over 540 tier values disagreed with Elvebredd's own site).
+ *
+ * Their site rejects automated clients (Cloudflare) and their robots.txt
+ * disallows the paths the data lives on, so a live fetch is not something to
+ * build against. The snapshot is therefore a point-in-time copy - refresh it by
+ * re-capturing, or ask Elvebredd for an API key. The amvgg feed remains as a
+ * fallback so the tool still works if the snapshot is missing.
+ */
+function readSnapshot() {
+  try {
+    const fs = require('fs');
+    const raw = JSON.parse(fs.readFileSync(SNAPSHOT_PATH, 'utf8'));
+    if (!Array.isArray(raw?.pets) || raw.pets.length === 0) return null;
+    return raw;
+  } catch (e) {
+    return null;
+  }
+}
+
+// Normalise a snapshot record into the same shape the amvgg feed produces, so
+// buildItems() does not care which source it was given.
+function snapshotToEntries(snapshot) {
+  return snapshot.pets
+    .filter((p) => p && p.name && !EXCLUDED_RARITIES.has(String(p.rarity || '').toLowerCase()))
+    .map((p) => ({
+      name: p.name,
+      image: `https://elvebredd.com/images/pets/${p.name}.png`,
+      rarity: p.rarity,
+      type: 'pets',
+      status: p.status || 'Ready',
+      'rvalue - nopotion': p.r_np,
+      'rvalue - ride': p.r_ride,
+      'rvalue - fly': p.r_fly,
+      'rvalue - fly&ride': p.r_fr,
+      'nvalue - nopotion': p.n_np,
+      'nvalue - ride': p.n_ride,
+      'nvalue - fly': p.n_fly,
+      'nvalue - fly&ride': p.n_fr,
+      'mvalue - nopotion': p.m_np,
+      'mvalue - ride': p.m_ride,
+      'mvalue - fly': p.m_fly,
+      'mvalue - fly&ride': p.m_fr
+    }));
+}
 
 function mapRarity(raw) {
   const r = String(raw || '').toLowerCase().trim();
@@ -34,6 +85,13 @@ async function getNonce() {
 }
 
 async function fetchFeed() {
+  const snapshot = readSnapshot();
+  if (snapshot) {
+    const entries = snapshotToEntries(snapshot);
+    console.log(`[values] using the elvebredd.com snapshot (${snapshot.generatedAt}) - ${entries.length} pets`);
+    return entries;
+  }
+  console.log('[values] no snapshot found, falling back to the amvgg mirror');
   const nonce = await getNonce();
   const params = new URLSearchParams();
   params.append('action', 'elvebredd_load_pet_data');
@@ -136,6 +194,7 @@ function buildItems(list, existingByName) {
       tradable: true,
       isEnabled: true,
       source: 'elvebredd',
+      sourceGeneratedAt: existingByName.get(key)?.sourceGeneratedAt || null,
       createdAt: prior?.createdAt || now,
       updatedAt: now
     });
