@@ -7,6 +7,9 @@ frontend/build/
 build/
 dist/
 backend/db/backup-*/
+backend/db/items.backup-*.json
+backend/db/Tbot.lua
+backend/db/main.py
 .eslintcache
 .DS_Store
 Thumbs.db
