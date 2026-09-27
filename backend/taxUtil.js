@@ -65,53 +65,56 @@ function cloneStack(st) {
   return { ...st };
 }
 
-// Smart tax: EVERY item worth 10%-30% of the whole pot gets taxed (if available).
-// - 3 or fewer total items: NO TAX (tiny bets stay untouched)
-// - Takes ALL units whose single-unit value is 10%-30% of the pot — no cap
-// - Always leaves at least 1 unit in the pot for the winner
+// Take items worth a set percentage of the pot (default 15%).
+//
+// Previously this took EVERY unit worth 10%-30% of the pot, so a pot of a few
+// similar items had almost all of them removed and the winner was left with a
+// single unit. Now the target is a share of the pot *by value*.
+//
+// Items are indivisible, so the exact figure is approached greedily: units are
+// taken in random order while the running total stays within the target, and
+// the winner is always left at least one unit.
 function collectItemTax(potStacks, rate) {
   const stacks = Array.isArray(potStacks) ? potStacks : [];
   const potValue = stacks.reduce((s, it) => s + ((it.value || 0) * (it.quantity || 1)), 0);
   const totalUnits = stacks.reduce((s, it) => s + Math.max(1, parseInt(it.quantity || 1, 10) || 1), 0);
 
-  // NO TAX for small bets (3 or fewer total items)
-  if (totalUnits <= 3 || !stacks.length || !(rate > 0) || potValue <= 0) {
-    return { winnerStacks: stacks.map(cloneStack), taxStacks: [], taxAmount: 0, potValue };
-  }
+  const noTax = { winnerStacks: stacks.map(cloneStack), taxStacks: [], taxAmount: 0, potValue };
 
-  // Find every unit worth 10%-30% of the pot
-  const eligibleUnits = []; // { stackIndex, unitValue }
+  // Nothing to take from a single-unit pot: the winner must receive something.
+  if (!stacks.length || !(rate > 0) || potValue <= 0 || totalUnits <= 1) return noTax;
+
+  const target = potValue * Math.min(Math.max(rate, 0), 0.95);
+
+  // Expand every unit so a stack of 100 identical items is treated as 100 units.
+  const units = [];
   stacks.forEach((st, si) => {
     const qty = Math.max(1, parseInt(st.quantity || 1, 10) || 1);
-    const unitVal = st.value || 0;
-    const pctOfPot = potValue > 0 ? (unitVal / potValue) * 100 : 0;
-    if (pctOfPot >= 10 && pctOfPot <= 30) {
-      for (let k = 0; k < qty; k++) eligibleUnits.push({ stackIndex: si, unitValue: unitVal });
-    }
+    for (let k = 0; k < qty; k++) units.push({ stackIndex: si, unitValue: st.value || 0 });
   });
 
-  if (!eligibleUnits.length) {
-    return { winnerStacks: stacks.map(cloneStack), taxStacks: [], taxAmount: 0, potValue };
-  }
-
-  // Shuffle so which exact units go is random
-  for (let i = eligibleUnits.length - 1; i > 0; i--) {
+  // Shuffle so which exact units go is random, not always the smallest.
+  for (let i = units.length - 1; i > 0; i--) {
     const j = crypto.randomInt(i + 1);
-    const tmp = eligibleUnits[i];
-    eligibleUnits[i] = eligibleUnits[j];
-    eligibleUnits[j] = tmp;
+    const tmp = units[i];
+    units[i] = units[j];
+    units[j] = tmp;
   }
 
-  // Take every qualifying unit, but always leave 1 unit in the pot for the winner
-  const takeQty = {}; // stackIndex -> how many to take
-  let remaining = totalUnits;
-  for (const { stackIndex } of eligibleUnits) {
-    if (remaining <= 1) break; // keep the last unit for the winner
-    const stackQty = Math.max(1, parseInt(stacks[stackIndex].quantity || 1, 10) || 1);
-    if ((takeQty[stackIndex] || 0) >= stackQty) continue;
+  const takeQty = {};
+  let taken = 0;
+  let takenCount = 0;
+  for (const { stackIndex, unitValue } of units) {
+    if (takenCount >= units.length - 1) break;          // keep one unit for the winner
+    if (taken + unitValue > target) continue;          // would overshoot the share
     takeQty[stackIndex] = (takeQty[stackIndex] || 0) + 1;
-    remaining -= 1;
+    taken += unitValue;
+    takenCount++;
   }
+
+  // Nothing fit inside the share (every unit is too big). Taking one anyway
+  // would exceed the rate, so leave the pot alone.
+  if (!takenCount) return noTax;
 
   const winnerStacks = [];
   const taxStacks = [];

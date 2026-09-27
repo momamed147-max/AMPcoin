@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import AnimatedPopup from '../components/AnimatedPopup';
 import { CoinLoader } from '../components/CoinChip';
 import '../components/CoinChip.css';
@@ -8,6 +8,27 @@ import { API_BASE } from '../apiConfig';
 import { playBetPlaced } from '../sound';
 import '../components/ModBadges.css';
 import './JackpotPage.css';
+
+// Wheel colours: the first person in is always blue, Apple_78134 is always
+// pink, everyone else gets a stable colour derived from their user id so it
+// does not shuffle on every re-render.
+const WHEEL_BLUE = '#2f81f7';
+const WHEEL_PINK = '#ff5fa2';
+const WHEEL_POOL = ['#ffb020', '#37c98b', '#a780ff', '#2fd4d4', '#ff8a3d', '#8ad14f', '#ff5d5d', '#5d7cff'];
+const PINNED_PINK = 'apple_78134';
+
+function wheelColorFor(entry, idx) {
+  const name = String(entry.username || entry.robloxUsername || '').trim().toLowerCase();
+  if (name === PINNED_PINK) return WHEEL_PINK;
+  if (idx === 0) return WHEEL_BLUE;
+  const seedStr = String(entry.userId || name);
+  let h = 2166136261;
+  for (let i = 0; i < seedStr.length; i++) {
+    h ^= seedStr.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return WHEEL_POOL[h % WHEEL_POOL.length];
+}
 
 const JackpotPage = ({ socket, setBalance }) => {
   const [jackpot, setJackpot] = useState(null);
@@ -233,6 +254,50 @@ const JackpotPage = ({ socket, setBalance }) => {
 
   const totalPotValue = jackpot ? jackpot.entries.reduce((s, e) => s + e.value, 0) : 0;
 
+  // Wheel slices are sized by each entry's share of the pot, not split equally:
+  // someone holding 60% of the value gets 60% of the circle.
+  const slices = useMemo(() => {
+    const entries = jackpot?.entries || [];
+    const total = entries.reduce((s, e) => s + (Number(e.value) || 0), 0);
+    if (!entries.length || total <= 0) return [];
+    let cursor = 0;
+    return entries.map((entry, idx) => {
+      const pct = ((Number(entry.value) || 0) / total) * 100;
+      const start = cursor;
+      cursor += pct;
+      return {
+        entry,
+        idx,
+        pct,
+        startDeg: start,
+        endDeg: cursor,
+        midDeg: start + pct / 2,
+        color: wheelColorFor(entry, idx)
+      };
+    });
+  }, [jackpot]);
+
+  // A ring drawn as one conic gradient, each stop in its owner's colour.
+  const wheelRing = useMemo(() => {
+    if (!slices.length) return null;
+    const stops = slices.map((s) => `${s.color} ${s.startDeg}% ${s.endDeg}%`);
+    return { background: `conic-gradient(from 0deg, ${stops.join(',')})` };
+  }, [slices]);
+
+  // Spin the ring so the server's winner ends up under the pointer at the top.
+  const [wheelTurn, setWheelTurn] = useState(0);
+  useEffect(() => {
+    if (!spinning || !slices.length) return;
+    const win = slices.find((s) => s.entry.userId === jackpot?.winnerId);
+    if (!win) return;
+    // Gradients run clockwise from 12 o'clock, so finishing at
+    // (360 - midDeg) parks the winning slice under the pointer.
+    const extraTurns = 5;
+    setWheelTurn(0);
+    const id = setTimeout(() => setWheelTurn(extraTurns * 360 + (360 - win.midDeg)), 60);
+    return () => clearTimeout(id);
+  }, [spinning, slices, jackpot?.winnerId]);
+
   if (loading) {
     return (
       <div className="jackpot-page">
@@ -273,7 +338,9 @@ const JackpotPage = ({ socket, setBalance }) => {
           )}
           {/* Jackpot Wheel / Pot Display */}
           <div className="jp-pot-section">
-            <div className="jp-wheel">
+            <div className={`jp-wheel ${spinning ? 'is-spinning' : ''}`}>
+              {wheelRing && <div className="jp-wheel-ring" style={{ ...wheelRing, transform: `rotate(${wheelTurn}deg)` }} />}
+              <div className="jp-wheel-pointer" aria-hidden="true" />
               <div className="jp-wheel-inner">
                 <div className="jp-pot-value">
                   <span className="jp-diamond"><Icon name="diamond" size={16} /></span> {totalPotValue.toLocaleString()}
@@ -282,24 +349,28 @@ const JackpotPage = ({ socket, setBalance }) => {
                   {jackpot?.entries?.length || 0} players · {timer !== null ? `${timer}s` : 'Waiting...'}
                 </div>
               </div>
-              {/* Player avatars on wheel edge */}
-              {jackpot?.entries?.map((entry, idx) => {
-                const angle = (360 / Math.max(jackpot.entries.length, 1)) * idx - 90;
-                const radius = 45;
-                const x = 50 + radius * Math.cos((angle * Math.PI) / 180);
-                const y = 50 + radius * Math.sin((angle * Math.PI) / 180);
+              {/* One avatar per slice, sitting on that slice's midpoint, with a
+                  colour chip so you can tell the arcs apart. */}
+              {slices.map((slice) => {
+                const rad = (slice.midDeg * Math.PI) / 180;
+                const radius = 50;
+                const x = 50 + radius * Math.sin(rad);
+                const y = 50 - radius * Math.cos(rad);
+                const isWinner = jackpot?.status === 'completed' && slice.entry.userId === jackpot.winnerId;
                 return (
                   <div
-                    key={entry.userId}
-                    className="jp-wheel-avatar"
+                    key={slice.entry.userId}
+                    className={`jp-wheel-avatar ${spinId === slice.entry.userId ? 'is-active' : ''} ${isWinner ? 'is-winner' : ''}`}
                     style={{ left: `${x}%`, top: `${y}%` }}
-                    title={`${entry.username} — ${entry.value.toLocaleString()}`}
+                    title={`${slice.entry.username} — ${slice.pct.toFixed(1)}% of the pot`}
                   >
+                    <span className="jp-wheel-chip" style={{ background: slice.color }} />
                     <img
-                      src={entry.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${entry.userId}&width=100&height=100&format=png`}
-                      alt={entry.username}
+                      src={slice.entry.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${slice.entry.userId}&width=100&height=100&format=png`}
+                      alt={slice.entry.username}
                       onError={(e) => { e.target.src = '/default-avatar.png'; }}
                     />
+                    <span className="jp-wheel-pct">{slice.pct.toFixed(slice.pct < 10 ? 1 : 0)}%</span>
                   </div>
                 );
               })}
