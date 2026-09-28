@@ -28,6 +28,7 @@ function Sidebar() {
     { path: '/coinflip', label: 'Coinflip', icon: 'coin' },
     { path: '/jackpot', label: 'Jackpot', icon: 'jackpot' },
     { path: '/rps', label: 'RPS', icon: 'rpsScissors' },
+    { path: '/blackjack', label: 'Blackjack', icon: 'card' },
     { path: '/upgrader', label: 'Upgrader', icon: 'battery' },
     { path: '/trading', label: 'Trading', icon: 'wave' },
     { path: '/stats', label: 'Stats', icon: 'chart' },

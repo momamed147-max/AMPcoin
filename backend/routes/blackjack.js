@@ -79,6 +79,11 @@ const getGameResult = (playerHand, dealerHand) => {
 
 const HIDDEN_CARD = { suit: 'hidden', rank: 'hidden', value: 0 };
 
+// A game holds the player's wagered items until they stand or bust. If they
+// close the tab the items are locked forever with no way to get them back, so a
+// stale game is refunded automatically.
+const ABANDONED_AFTER_MS = 30 * 60 * 1000;
+
 // Public view of a game. The dealer's hole card stays hidden until reveal=true.
 function publicGame(game, reveal) {
   const shown = !!reveal || game.status === 'completed';
@@ -105,6 +110,42 @@ function findGame(gameId) {
   const db = dbManager.getMainDb();
   db.blackjackGames = db.blackjackGames || [];
   return { db, game: db.blackjackGames.find((g) => g.id === gameId) };
+}
+
+/**
+ * Refund any game whose player walked away mid-hand. Without this a single
+ * closed tab locks that player's wagered items permanently.
+ * Returns the games that were reclaimed.
+ */
+function reclaimAbandonedGames() {
+  const db = dbManager.getMainDb();
+  const now = Date.now();
+  const reclaimed = [];
+  for (const game of db.blackjackGames || []) {
+    if (game.status !== 'in_progress') continue;
+    const startedAt = new Date(game.updatedAt || game.createdAt || 0).getTime();
+    if (!startedAt || now - startedAt < ABANDONED_AFTER_MS) continue;
+    returnWagerToPlayer(game);
+    game.status = 'abandoned';
+    game.result = 'abandoned';
+    game.payout = 0;
+    game.profit = 0;
+    game.completedAt = new Date().toISOString();
+    recordTransaction(db, {
+      userId: game.playerId,
+      robloxUsername: game.playerName,
+      amount: 0,
+      type: 'blackjack_abandoned',
+      metadata: { gameId: game.id, betValue: game.betValue, refunded: true }
+    });
+    reclaimed.push(game);
+  }
+  if (reclaimed.length) {
+    dbManager.saveMainDb();
+    dbManager.saveUsersDb();
+    console.warn(`Blackjack: refunded ${reclaimed.length} abandoned game(s)`);
+  }
+  return reclaimed;
 }
 
 function recordTransaction(db, entry) {
@@ -186,6 +227,9 @@ router.post('/start', authenticateToken, (req, res) => {
     if (!userInventory || !userInventory.items || userInventory.items.length === 0) {
       return res.status(400).json({ message: 'You have no items in your inventory' });
     }
+
+    // Clear out any hand this player abandoned, so their items are not stuck.
+    reclaimAbandonedGames();
 
     // Validate ownership and lock the wagered items into the game
     const wagerStacks = [];
