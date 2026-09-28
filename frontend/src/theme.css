@@ -128,6 +128,42 @@
   --theme-on-accent: #241503;
 }
 
+:root[data-theme='haetae'],
+:root[data-theme='haetae'] .jackpot-page,
+:root[data-theme='haetae'] .tr-page,
+:root[data-theme='haetae'] .wm-modal,
+:root[data-theme='haetae'] .vc-modal {
+  /* Haetae: orange lead, teal second, white text. Deep teal-black ground so
+     both hues read without fighting. */
+  --bg0: #07100f;
+  --bg1: #0b1a18;
+  --panel: #10241f;
+  --panel2: #16302a;
+  --panel3: #1d3d35;
+  --line: rgba(20, 184, 166, 0.20);
+  --line-soft: rgba(20, 184, 166, 0.10);
+  --txt: #ffffff;
+  --mut: #c3d8d2;
+  --dim: #8aa8a1;
+  --acc: #14b8a6;
+  --acc-bright: #2dd4bf;
+  --acc-soft: rgba(20, 184, 166, 0.16);
+  --grn: #4ade80;
+  --red: #fb7185;
+  --gold: #fbbf24;
+  --orange: #f97316;
+  --theme-nav: rgba(9, 24, 22, 0.92);
+  --theme-header: rgba(11, 30, 27, 0.88);
+  --theme-chat: rgba(8, 22, 20, 0.9);
+  --theme-panel: #10241f;
+  --theme-grid: rgba(20, 184, 166, 0.016);
+  --theme-glow-a: rgba(249, 115, 22, 0.15);
+  --theme-glow-b: rgba(20, 184, 166, 0.12);
+  --theme-accent-2: #f97316;
+  --theme-chat-accent: rgba(20, 184, 166, 0.15);
+  --theme-on-accent: #04100e;
+}
+
 html[data-theme] body {
   background:
     radial-gradient(900px 520px at 18% -12%, var(--theme-glow-a), transparent 66%),

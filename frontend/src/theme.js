@@ -26,6 +26,12 @@ export const THEMES = {
     name: 'Verity',
     description: 'Yellow + orange',
     swatches: ['#f59e0b', '#2b1d05', '#fbbf24']
+  },
+  haetae: {
+    id: 'haetae',
+    name: 'Haetae',
+    description: 'Orange + teal + white',
+    swatches: ['#f97316', '#0f2e2e', '#14b8a6']
   }
 };
 
@@ -57,7 +63,13 @@ export function applyTheme(themeId, persist = true) {
     document.documentElement.dataset.theme = id;
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
-      metaTheme.setAttribute('content', id === 'pitch-dark' ? '#030305' : id === 'verity' ? '#100c04' : id === 'mikayla' ? '#120817' : '#060910');
+      const THEME_COLORS = {
+        'pitch-dark': '#030305',
+        verity: '#100c04',
+        mikayla: '#120817',
+        haetae: '#07100f'
+      };
+      metaTheme.setAttribute('content', THEME_COLORS[id] || '#060910');
     }
   }
   if (persist && typeof window !== 'undefined') {

@@ -562,7 +562,6 @@ const Header = ({ balance, socket }) => {
         const getVal = (u) => num(u.value || u.details?.value);
         const getName = (u) => u.name || u.details?.name || u.itemName || 'Unknown';
         const getRarity = (u) => u.rarity || u.details?.rarity || 'common';
-        const anyWithdrawOnly = unitTiles.some((u) => u.withdrawOnly === true || u.details?.withdrawOnly === true);
         const rarities = [...new Set(unitTiles.map(getRarity))];
         const q = wmSearch.trim().toLowerCase();
         let visible = unitTiles.filter((u) => {
@@ -648,8 +647,6 @@ const Header = ({ balance, socket }) => {
               ) : visible.length > 0 ? (
                 pageItems.map((unit) => {
                   const isSelected = selectedUnits.includes(unit.unitKey);
-                  const flagged = unit.withdrawOnly === true || unit.details?.withdrawOnly === true;
-                  const showBadge = anyWithdrawOnly ? flagged : true;
                   return (
                     <div
                       key={unit.unitKey}
@@ -665,9 +662,6 @@ const Header = ({ balance, socket }) => {
                       tabIndex={0}
                       aria-pressed={isSelected}
                     >
-                      {showBadge && (
-                        <span className="wm-badge"><Icon name="board" size={10} /> Withdraw only</span>
-                      )}
                       <div className="wm-img-wrap">
                         {unit.image || unit.imageUrl || unit.details?.imageUrl ? (
                           <img
