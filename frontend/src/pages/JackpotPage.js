@@ -63,20 +63,24 @@ const JackpotPage = ({ socket, setBalance }) => {
     // slice for at most a few seconds, then settle on the server-selected winner.
     const sweepOrder = order.slice(0, Math.min(order.length, 12));
     if (!sweepOrder.includes(jp.winnerId)) sweepOrder[sweepOrder.length - 1] = jp.winnerId;
-    const cycles = sweepOrder.length <= 6 ? 2 : 1;
+    const cycles = sweepOrder.length <= 6 ? 3 : 2;
     const totalSteps = sweepOrder.length * cycles + 1;
+    // Must finish before the ring's 6.5s transition so the card highlight
+    // and the wheel never disagree about who won.
+    const SPIN_MS = 6500;
+    const perStep = SPIN_MS / totalSteps;
     let t = 0;
     for (let s = 0; s < totalSteps; s++) {
       const uid = sweepOrder[s % sweepOrder.length];
       const progress = s / totalSteps;
-      // ease-out: 70ms -> 420ms
-      t += 70 + Math.pow(progress, 2.2) * 350;
-      spinTimers.current.push(setTimeout(() => setSpinId(uid), t));
+      // ease-out: quick early steps stretching as it slows
+      t += perStep * (0.45 + Math.pow(progress, 2.4) * 1.9);
+      spinTimers.current.push(setTimeout(() => setSpinId(uid), Math.min(t, SPIN_MS - 60)));
     }
     spinTimers.current.push(setTimeout(() => {
       setSpinId(jp.winnerId);
       setSpinning(false);
-    }, t + 650));
+    }, t + 200));
   }, []);
 
   const showCustomPopup = (message, type = 'info') => {
@@ -285,18 +289,28 @@ const JackpotPage = ({ socket, setBalance }) => {
   }, [slices]);
 
   // Spin the ring so the server's winner ends up under the pointer at the top.
+  // The ring's CSS transition and the JS sweep are separate timers, so the
+  // winner is only announced once the ring itself has actually come to rest.
+  const SPIN_MS = 6500;
   const [wheelTurn, setWheelTurn] = useState(0);
+  const [spinSettled, setSpinSettled] = useState(false);
   useEffect(() => {
-    if (!spinning || !slices.length) return;
+    if (!spinning || !slices.length) {
+      // Nothing to spin: a finished jackpot on load is already settled.
+      if (!spinning && jackpot?.status === 'completed') setSpinSettled(true);
+      return;
+    }
     const win = slices.find((s) => s.entry.userId === jackpot?.winnerId);
     if (!win) return;
     // Gradients run clockwise from 12 o'clock, so finishing at
     // (360 - midDeg) parks the winning slice under the pointer.
-    const extraTurns = 5;
+    const extraTurns = 7;
+    setSpinSettled(false);
     setWheelTurn(0);
-    const id = setTimeout(() => setWheelTurn(extraTurns * 360 + (360 - win.midDeg)), 60);
-    return () => clearTimeout(id);
-  }, [spinning, slices, jackpot?.winnerId]);
+    const kick = setTimeout(() => setWheelTurn(extraTurns * 360 + (360 - win.midDeg)), 60);
+    const settle = setTimeout(() => setSpinSettled(true), SPIN_MS + 80);
+    return () => { clearTimeout(kick); clearTimeout(settle); };
+  }, [spinning, slices, jackpot?.winnerId, jackpot?.status]);
 
   if (loading) {
     return (
@@ -324,14 +338,14 @@ const JackpotPage = ({ socket, setBalance }) => {
 
       {activeTab === 'active' ? (
         <div className="jp-active">
-          {/* Winner banner (after the sweep lands) */}
-          {jackpot && jackpot.status === 'completed' && jackpot.winnerUsername && !spinning && (
+          {/* Winner banner - only once the ring has come to rest */}
+          {jackpot && jackpot.status === 'completed' && jackpot.winnerUsername && !spinning && spinSettled && (
             <div className="jp-winner-banner">
               <Icon name="trophy" size={18} />
               <span><strong>{jackpot.winnerUsername}</strong> won the jackpot — <Icon name="diamond" size={13} /> {totalPotValue.toLocaleString()}</span>
             </div>
           )}
-          {spinning && (
+          {(spinning || (jackpot?.status === 'completed' && !spinSettled)) && (
             <div className="jp-spinning-banner">
               <span className="jp-spin-dots"><span /><span /><span /></span> Drawing winner...
             </div>
@@ -382,17 +396,19 @@ const JackpotPage = ({ socket, setBalance }) => {
             )}
           </div>
 
-          {/* Player Cards */}
+          {/* Player Cards + what each of them actually put in */}
           <div className={`jp-players ${spinning ? 'spinning' : ''}`}>
             <h3>Players in Pot</h3>
             {jackpot?.entries?.length > 0 ? (
               jackpot.entries.map((entry) => {
                 const isLeader = totalPotValue > 0 && entry.value === Math.max(...jackpot.entries.map((e) => e.value));
+                const colour = slices.find((s) => s.entry.userId === entry.userId)?.color;
                 return (
                 <div
                   key={entry.userId}
                   className={`jp-player-card ${spinId === entry.userId ? 'spin-active' : ''} ${jackpot.status === 'completed' && jackpot.winnerId === entry.userId && !spinning ? 'is-winner' : ''} ${isLeader && jackpot.status !== 'completed' ? 'is-leader' : ''}`}
-                >  <img
+                >  <span className="jp-player-swatch" style={{ background: colour }} />
+                  <img
                     src={entry.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${entry.userId}&width=100&height=100&format=png`}
                     alt={entry.username}
                     className="jp-player-avatar"
@@ -403,6 +419,29 @@ const JackpotPage = ({ socket, setBalance }) => {
                     <span className="jp-player-value">
                       <Icon name="diamond" size={12} /> {entry.value.toLocaleString()} · {entry.itemCount} items
                     </span>
+                    {Array.isArray(entry.items) && entry.items.length > 0 && (
+                      <div className="jp-player-pets">
+                        {entry.items.map((it, i) => {
+                          const qty = Number(it.quantity || 1);
+                          const val = Number(it.value || 0);
+                          const nm = it.name || it.itemName || 'Item';
+                          return (
+                            <span
+                              key={`${it.itemId || it.id || nm}-${i}`}
+                              className="jp-player-pet"
+                              title={`${nm} x${qty} — ${(val * qty).toLocaleString()}`}
+                            >
+                              {(it.imageUrl || it.image) && (
+                                <img src={it.imageUrl || it.image} alt="" onError={(e) => { e.target.style.display = 'none'; }} />
+                              )}
+                              <span className="jp-player-pet-name">{nm}</span>
+                              {qty > 1 && <span className="jp-player-pet-qty">x{qty}</span>}
+                              <span className="jp-player-pet-val">{(val * qty).toLocaleString()}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <span className="jp-player-chance">
                     {totalPotValue > 0 ? ((entry.value / totalPotValue) * 100).toFixed(1) : 0}%

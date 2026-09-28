@@ -102,7 +102,7 @@
   -webkit-mask: radial-gradient(circle, transparent 0 45%, #000 46% 100%);
   mask: radial-gradient(circle, transparent 0 45%, #000 46% 100%);
   z-index: 0; pointer-events: none;
-  transition: transform 4.2s cubic-bezier(.12,.72,.14,1);
+  transition: transform 6.5s cubic-bezier(.06,.84,.16,1);
 }
 .jp-wheel.is-spinning .jp-wheel-ring { filter: saturate(1.25) brightness(1.1); }
 /* Pointer at 12 o'clock, sitting on the inner edge of the ring. */
@@ -174,6 +174,26 @@
 .jp-player-name { font-weight: 700; color: var(--txt); font-size: .88rem; }
 .jp-player-value { color: var(--mut); font-size: .78rem; font-weight: 600; }
 .jp-player-chance { color: var(--grn); font-weight: 800; font-size: .9rem; }
+/* Colour swatch matching this player's slice on the wheel */
+.jp-player-swatch {
+  width: 4px; align-self: stretch; border-radius: 99px; flex: 0 0 4px;
+  box-shadow: 0 0 8px currentColor;
+}
+.jp-player-pets {
+  display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px;
+}
+.jp-player-pet {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 6px 2px 3px; border-radius: 99px;
+  background: var(--bg1); border: 1px solid var(--line-soft);
+  font-size: .66rem; color: var(--mut); max-width: 190px;
+}
+.jp-player-pet img { width: 15px; height: 15px; border-radius: 50%; object-fit: cover; flex: 0 0 15px; }
+.jp-player-pet-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 96px;
+}
+.jp-player-pet-qty { color: var(--acc); font-weight: 800; }
+.jp-player-pet-val { color: var(--txt); font-weight: 700; }
 .jp-empty {
   color: var(--dim); text-align: center; padding: 28px 20px; font-size: .85rem;
   background: var(--panel); border: 1px dashed var(--line); border-radius: var(--r-md);

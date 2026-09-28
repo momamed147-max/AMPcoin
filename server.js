@@ -113,6 +113,7 @@ const realtime = require('./backend/realtime');
 const adminRoutes = require('./backend/routes/admin');
 const statsRoutes = require('./backend/routes/stats');
 const jackpotRoutes = require('./backend/routes/jackpot');
+const upgraderRoutes = require('./backend/routes/upgrader');
 const tradesRoutes = require('./backend/routes/trades');
 
 realtime.setIo(io);
@@ -124,6 +125,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/items', itemRoutes);
 app.use('/api/coinflip', coinflipRoutes);
 app.use('/api/jackpot', jackpotRoutes);
+app.use('/api/upgrader', upgraderRoutes);
 app.use('/api/trades', tradesRoutes);
 app.use('/api/blackjack', blackjackRoutes);
 app.use('/api/wallet', walletRoutes);

@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import AnimatedPopup from '../components/AnimatedPopup';
 import ModeratorPanel from '../components/ModeratorPanel';
 import AdminPetsTab from '../components/AdminPetsTab';
+import AdminUpgraderTab from '../components/AdminUpgraderTab';
 import ModalPortal from '../components/ModalPortal';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
@@ -1291,6 +1292,9 @@ function FullAdminPanel() {
           <button className={`tab-btn ${activeTab === 'pets' ? 'active' : ''}`} onClick={() => setActiveTab('pets')}>
             Manage Pets
           </button>
+          <button className={`tab-btn ${activeTab === 'upgrader' ? 'active' : ''}`} onClick={() => setActiveTab('upgrader')}>
+            Upgrader
+          </button>
           <button className={`tab-btn ${activeTab === 'transactions' ? 'active' : ''}`} onClick={() => setActiveTab('transactions')}>
             Transactions
           </button>
@@ -1624,6 +1628,8 @@ function FullAdminPanel() {
               onWipe={handleWipeEverywhere}
             />
           )}
+
+          {activeTab === 'upgrader' && <AdminUpgraderTab />}
 
           {activeTab === 'transactions' && (
             <div className="manage-transactions">

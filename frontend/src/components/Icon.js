@@ -7,6 +7,8 @@ import React from 'react';
 const PATHS = {
   coin: (<g><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v9M9.2 9.8c0-1 1.2-1.8 2.8-1.8s2.8.8 2.8 1.8-1 1.6-2.8 2-2.8 1-2.8 2 1.2 1.8 2.8 1.8s2.8-.8 2.8-1.8" /></g>),
   jackpot: (<g><rect x="3" y="7" width="18" height="12" rx="2.5" /><path d="M3 11h18M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7M12 12.2v.1M8.5 14.5v.1M15.5 14.5v.1" /><circle cx="12" cy="14.5" r="1.1" /></g>),
+  // battery gauge with a charge arrow - the Upgrader wheel
+  battery: (<g><rect x="2.5" y="7" width="16" height="10" rx="2.5" /><path d="M21 10.5v3" /><path d="M8 14.5 11.2 11l2.4 2.4L17 9.6" /></g>),
   eye: (<g><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" /><circle cx="12" cy="12" r="3" /></g>),
   diamond: (<g><path d="M7 3.5h10l3.5 5-8.5 12-8.5-12Z" /><path d="M3.5 8.5h17M9.5 8.5 12 20.5 14.5 8.5M7 3.5l2.5 5M17 3.5l-2.5 5" /></g>),
   trophy: (<g><path d="M8 4h8v5a4 4 0 0 1-8 0Z" /><path d="M8 5H4.5a.5.5 0 0 0-.5.5C4 8 6 10 8.5 10M16 5h3.5a.5.5 0 0 1 .5.5c0 2.5-2 4.5-4.5 4.5M12 13v4M8.5 20.5h7M10 17h4" /></g>),

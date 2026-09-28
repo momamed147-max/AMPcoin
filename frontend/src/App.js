@@ -21,6 +21,7 @@ import { initializeTheme } from './theme';
 const CoinflipPage = lazy(() => import('./pages/CoinflipPage'));
 const JackpotPage = lazy(() => import('./pages/JackpotPage'));
 const RpsPage = lazy(() => import('./pages/RpsPage'));
+const UpgraderPage = lazy(() => import('./pages/UpgraderPage'));
 const TradingPage = lazy(() => import('./pages/TradingPage'));
 const StatsPage = lazy(() => import('./pages/StatsPage'));
 const ProvablyFairPage = lazy(() => import('./pages/ProvablyFairPage'));
@@ -188,6 +189,7 @@ function AppContent() {
               <Route path="/jackpot" element={<ProtectedRoute><JackpotPage socket={socket} setBalance={setBalance} /></ProtectedRoute>} />
               <Route path="/rps" element={<ProtectedRoute><RpsPage socket={socket} /></ProtectedRoute>} />
               <Route path="/trading" element={<ProtectedRoute><TradingPage socket={socket} /></ProtectedRoute>} />
+              <Route path="/upgrader" element={<ProtectedRoute><UpgraderPage socket={socket} /></ProtectedRoute>} />
               <Route path="/blackjack" element={<ProtectedRoute><JackpotPage socket={socket} setBalance={setBalance} /></ProtectedRoute>} />
               <Route path="/wallet" element={<ProtectedRoute><Navigate to="/coinflip" replace /></ProtectedRoute>} />
               <Route path="/stats" element={<ProtectedRoute><StatsPage /></ProtectedRoute>} />
