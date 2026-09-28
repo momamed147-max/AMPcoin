@@ -20,13 +20,13 @@ const CELLS = 40; // battery segments
  * The server has already decided the round, so the arrow is aimed at a cell of
  * the matching colour rather than being left to decide the outcome.
  */
-function landingPoint(chance, won, nudge = 0) {
+function landingPoint(chance, won) {
   const green = Math.max(1, Math.min(CELLS - 1, Math.round((chance / 100) * CELLS)));
   const cells = [];
   for (let i = 0; i < CELLS; i++) cells.push(i < green);
   const wanted = cells.map((g, i) => (g === won ? i : -1)).filter((i) => i >= 0);
   if (!wanted.length) return 50;
-  const pick = wanted[Math.floor(((won ? green : CELLS - green) * 0.5 + nudge) % wanted.length)];
+  const pick = wanted[Math.floor(wanted.length / 2)];
   return ((pick + 0.5) / CELLS) * 100;
 }
 
@@ -45,7 +45,7 @@ function ItemRow({ item, value, max, onChange, onReset, dimmed }) {
       />
       <div className="ug-item-body">
         <span className="ug-item-name">{item.name || item.itemName}</span>
-        <span className="ug-item-val"><Icon name="diamond" size={11} /> {(Number(item.value) || 0).toLocaleString()}</span>
+        <span className="ug-item-val"><Icon name="diamond" size={11} /> {(Number(item.value) || 0).toLocaleString()} each</span>
         <ModBadges mods={item.mods || item.variantMods} />
       </div>
       <div className="ug-stepper">
@@ -63,11 +63,12 @@ function ItemRow({ item, value, max, onChange, onReset, dimmed }) {
 const UpgraderPage = ({ socket }) => {
   const [stock, setStock] = useState([]);
   const [stockUnits, setStockUnits] = useState(0);
+  const [minMultiplier, setMinMultiplier] = useState(1.5);
+  const [houseEdge, setHouseEdge] = useState(0.1);
+  const [taxRate, setTaxRate] = useState(0);
   const [inventory, setInventory] = useState([]);
   const [potSel, setPotSel] = useState({});   // itemId -> qty (your pets at risk)
   const [upSel, setUpSel] = useState({});    // itemId -> qty (from the house shelf)
-  const [chance, setChance] = useState(45);
-  const [taxRate, setTaxRate] = useState(0);
   const [round, setRound] = useState(null);
   const [result, setResult] = useState(null);
   const [phase, setPhase] = useState('idle'); // idle | spinning | done
@@ -90,6 +91,8 @@ const UpgraderPage = ({ socket }) => {
         setStockUnits(d.stockUnits || 0);
         setHistory(Array.isArray(d.history) ? d.history : []);
         setTaxRate(d.taxRate || 0);
+        if (typeof d.houseEdge === 'number') setHouseEdge(d.houseEdge);
+        if (typeof d.minMultiplier === 'number') setMinMultiplier(d.minMultiplier);
         if (d.active && ['pending', 'spinning'].includes(d.active.status)) setRound(d.active);
         else if (!result) setRound(null);
       }
@@ -138,43 +141,31 @@ const UpgraderPage = ({ socket }) => {
   const potValue = potItems.reduce((s, i) => s + stackValue(i), 0);
   const upValue = upItems.reduce((s, i) => s + stackValue(i), 0);
 
-  const MAX = 60;
-  const served = Math.min(MAX, Math.max(1, Number(chance) || 1));
-  // Mirrors the server: chance x (1 + bonus x (1 - tax)) = 0.9, so the live
-  // preview is what the player actually gets, tax included.
-  const keep = Math.max(1 - (taxRate || 0), 0.05);
-  const bonus = served > 0 ? (0.9 / (served / 100) - 1) / keep : 0;
-  const totalMultiplier = 1 + bonus;
-  const targetValue = potValue * bonus;
-  const capped = Number(chance) > MAX;
+  // ── the odds follow the selection, exactly as the server computes them ──
+  const returnPct = (1 - houseEdge) * 100;         // 90
+  const multiplier = potValue > 0 ? upValue / potValue : 0;
+  const rawChance = multiplier > 0 ? returnPct / multiplier : 0;
+  const chance = Math.min(60, rawChance);
+  const capped = rawChance > 60;
+  const tooSmall = potValue > 0 && upValue > 0 && multiplier < minMultiplier;
 
-  const greenCells = Math.max(1, Math.min(CELLS - 1, Math.round((served / 100) * CELLS)));
+  const greenCells = Math.max(1, Math.min(CELLS - 1, Math.round((chance / 100) * CELLS)));
   const cells = useMemo(
     () => Array.from({ length: CELLS }, (_, i) => i < greenCells),
     [greenCells]
   );
 
   const busyRound = busy || phase === 'spinning';
-  const canStart = potItems.length > 0 && upItems.length > 0 && potValue > 0 && served > 0 && upValue >= targetValue && !busyRound;
-  const upgradeShort = upItems.length > 0 && upValue < targetValue;
-  // The server pays the single cheapest shelf pet when the bonus is smaller than
-  // anything on offer, but refuses if that would overshoot by too much.
-  const cheapestShelf = stock.reduce((m, i) => {
-    const v = Number(i.value) || 0;
-    return v > 0 && v < m ? v : m;
-  }, Infinity);
-  const shelfTooCoarse = potValue > 0 && Number.isFinite(cheapestShelf) && cheapestShelf > targetValue * 1.25;
+  const canStart = potItems.length > 0 && upItems.length > 0 && potValue > 0 && !tooSmall && !busyRound;
 
   /** Sweep the arrow across the battery and let it settle on the real outcome. */
   const runWheel = useCallback((won, chancePercent, duration = 4200) => {
     cancelAnimationFrame(rafRef.current);
     const target = landingPoint(chancePercent, won);
     const start = performance.now();
-    // ease-out-quint: a hard launch that bleeds off, like a real gauge needle
     const ease = (t) => 1 - Math.pow(1 - t, 5);
     const steps = (t) => {
       const e = ease(t);
-      // sweep out past the far end first, so it reads as a throw rather than a slide
       const overshoot = Math.sin(Math.min(1, t * 1.6) * Math.PI) * 26;
       const back = t < 0.06 ? (t / 0.06) * (target - 50) : 0;
       setArrow(50 + (target - 50 + overshoot + back) * e);
@@ -193,7 +184,7 @@ const UpgraderPage = ({ socket }) => {
     try {
       const made = await fetch(`${API_BASE}/api/upgrader/round`, {
         method: 'POST', headers: json(),
-        body: JSON.stringify({ potItems, upgradeeItems: upItems, targetPercent: chance })
+        body: JSON.stringify({ potItems, upgradeeItems: upItems })
       });
       const r = await made.json();
       if (!made.ok) return say(r.message || 'Could not start the upgrade', 'error');
@@ -212,7 +203,7 @@ const UpgraderPage = ({ socket }) => {
 
       runWheel(rolled.won, rolled.chance);
 
-      await new Promise((r2) => setTimeout(r2, 4600));
+      await new Promise((res) => setTimeout(res, 4600));
       const claimRes = await fetch(`${API_BASE}/api/upgrader/round/${r.id}/claim`, {
         method: 'POST', headers: json(), body: '{}'
       });
@@ -227,7 +218,7 @@ const UpgraderPage = ({ socket }) => {
       setRound(null);
       say(
         claimed.won
-          ? `Upgraded! ${claimed.potValue.toLocaleString()} AMP came back plus ${claimed.payoutValue.toLocaleString()} more.`
+          ? `Upgraded! ${claimed.potValue.toLocaleString()} AMP became ${claimed.payoutValue.toLocaleString()} AMP.`
           : `Upgrade failed. You lost ${claimed.potValue.toLocaleString()} AMP.`,
         claimed.won ? 'success' : 'error'
       );
@@ -269,25 +260,32 @@ const UpgraderPage = ({ socket }) => {
         <div className="ug-grid">
           {/* ── the battery gauge ── */}
           <div className="ug-stage">
-            <div className="ug-readout">
-              <div className="ug-readout-row">
+            <div className="ug-odds">
+              <div className="ug-odds-col">
+                <span className="ug-label">You risk</span>
+                <strong className="ug-big">{potValue.toLocaleString()}</strong>
+              </div>
+              <span className="ug-arrow-sep">&rarr;</span>
+              <div className="ug-odds-col">
+                <span className="ug-label">You get back</span>
+                <strong className="ug-big win">{upValue.toLocaleString()}</strong>
+              </div>
+            </div>
+
+            <div className="ug-derived">
+              <div className="ug-derived-row">
+                <span className="ug-label">Multiplier</span>
+                <span className="ug-mult">{multiplier > 0 ? `${multiplier.toFixed(2)}x` : '--'}</span>
+              </div>
+              <div className="ug-derived-row">
                 <span className="ug-label">Win chance</span>
-                <span className={`ug-chance ${capped ? 'capped' : ''}`}>{served}%</span>
+                <span className="ug-chance">{chance > 0 ? `${chance.toFixed(2)}%` : '--'}</span>
               </div>
-              <input
-                type="range" className="ug-slider" min={5} max={70} step={5}
-                value={chance} disabled={busyRound}
-                onChange={(e) => setChance(Number(e.target.value))}
-              />
-              {capped && <div className="ug-cap-note">Capped at {MAX}% — that is the most you can be offered.</div>}
-              <div className="ug-readout-row ug-multi-row">
-                <span className="ug-label">Win returns</span>
-                <span className="ug-mult">{totalMultiplier.toFixed(2)}x</span>
-              </div>
-              <div className="ug-target">
-                Risk <strong>{potValue.toLocaleString()}</strong>. A win gets it back plus{' '}
-                <strong>{targetValue.toLocaleString()}</strong> upgraded
-                {taxRate > 0 && <span className="ug-tax"> (tax applies to the upgrade)</span>}
+              <div className="ug-formula">
+                {multiplier > 0
+                  ? `${returnPct} ÷ ${multiplier.toFixed(2)} = ${rawChance.toFixed(2)}%`
+                  : `${returnPct} ÷ your multiplier`}
+                {capped && <span className="ug-cap-note"> capped at 60%</span>}
               </div>
             </div>
 
@@ -301,7 +299,7 @@ const UpgraderPage = ({ socket }) => {
               </div>
               <div className="ug-battery-ends">
                 <span className="ug-end lose">Lose everything</span>
-                <span className="ug-end win">Get {totalMultiplier.toFixed(2)}x back</span>
+                <span className="ug-end win">{chance > 0 ? `${chance.toFixed(2)}% to ${multiplier.toFixed(2)}x` : 'Pick your items'}</span>
               </div>
             </div>
 
@@ -309,13 +307,10 @@ const UpgraderPage = ({ socket }) => {
               {phase === 'spinning' && <span className="ug-dots"><span /><span /><span /></span>}
               {phase === 'done' && result && (
                 result.won
-                  ? <span className="ug-verdict-win">
-                    <Icon name="trophy" size={17} />
-                    {result.potValue.toLocaleString()} back + {result.payoutValue.toLocaleString()} upgraded
-                  </span>
+                  ? <span className="ug-verdict-win"><Icon name="trophy" size={17} /> Upgraded to {result.payoutValue.toLocaleString()} AMP</span>
                   : <span className="ug-verdict-lose"><Icon name="close" size={17} /> Lost {result.potValue.toLocaleString()} AMP</span>
               )}
-              {phase === 'idle' && !round && <span className="ug-idle">Stage your pets and an upgrade, then hit Upgrade.</span>}
+              {phase === 'idle' && !round && <span className="ug-idle">Pick the pets you risk and the pets you want back.</span>}
               {round && phase !== 'done' && <span className="ug-idle">Upgrade in progress...</span>}
             </div>
 
@@ -323,13 +318,12 @@ const UpgraderPage = ({ socket }) => {
               <div className="ug-result-detail">
                 {result.won ? (
                   <>
-                    <span>Your <strong>{result.potValue.toLocaleString()}</strong> came back</span>
-                    <span className="ug-plus">+ {result.payoutValue.toLocaleString()} upgraded</span>
+                    <span className="ug-plus">{result.potValue.toLocaleString()} became {result.payoutValue.toLocaleString()}</span>
                     <div className="ug-gain-list">
-                      {(result.payout || []).map((p, i) => (
+                      {(result.payout || []).map((x, i) => (
                         <span key={i} className="ug-gain">
-                          {p.image && <img src={p.image} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />}
-                          {p.name}{p.quantity > 1 ? ` x${p.quantity}` : ''}
+                          {x.image && <img src={x.image} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />}
+                          {x.name}{x.quantity > 1 ? ` x${x.quantity}` : ''}
                         </span>
                       ))}
                     </div>
@@ -340,27 +334,27 @@ const UpgraderPage = ({ socket }) => {
               </div>
             )}
 
-            {shelfTooCoarse && (
+            {tooSmall && (
               <div className="ug-short-note">
-                The smallest pet on the shelf is worth {cheapestShelf.toLocaleString()}, too much to pay a{' '}
-                {Math.round(targetValue).toLocaleString()} upgrade. Raise your win chance, or ask an admin
-                to stock smaller pets.
+                {multiplier.toFixed(2)}x needs {rawChance.toFixed(1)}% to win, but the maximum is 60%.
+                Pick pets worth at least {(potValue * minMultiplier).toLocaleString()}.
               </div>
             )}
 
-            <button className="ug-btn" disabled={!canStart || shelfTooCoarse} onClick={startUpgrade}>
+            <button className="ug-btn" disabled={!canStart} onClick={startUpgrade}>
               {busyRound ? 'Upgrading...' : 'Upgrade'}
             </button>
             <div className="ug-hint">
-              A win returns better pets than you put in. A loss loses the pot outright.
-              House edge 10%, tax applies to the payout.
+              Your {potValue > 0 ? `${multiplier.toFixed(2)}x ` : ''}upgrade pays
+              {chance > 0 ? ` ${chance.toFixed(2)}% of the time` : ''}. House edge {Math.round(houseEdge * 100)}%,
+              tax {Math.round(taxRate * 100)}% applies to the payout.
             </div>
           </div>
 
           {/* ── what you are risking ── */}
           <div className="ug-panel">
             <h3>Your pets <span className="ug-count">{potItems.length ? `${potItems.length} picked` : ''}</span></h3>
-            <p className="ug-panel-sub">These are at risk. On a win they come back upgraded.</p>
+            <p className="ug-panel-sub">These are at risk. On a win they are swapped for the upgrade.</p>
             <div className="ug-list">
               {inventory.length === 0 && <div className="ug-empty">No pets in your inventory.</div>}
               {inventory.map((i) => (
@@ -379,39 +373,26 @@ const UpgraderPage = ({ socket }) => {
 
           {/* ── what you win ── */}
           <div className="ug-panel">
-            <h3>Upgrade <span className="ug-count">{stockUnits} on the shelf</span></h3>
+            <h3>You get back <span className="ug-count">{stockUnits} on the shelf</span></h3>
             <p className="ug-panel-sub">
               {potValue > 0
-                ? <>A {served}% win pays <strong>{targetValue.toLocaleString()}</strong>, so pick at least that much.</>
+                ? <>Needs {(potValue * minMultiplier).toLocaleString()} or more ({minMultiplier}x) to be playable.</>
                 : 'Taken from the upgrader stock when you start.'}
             </p>
             <div className="ug-list">
               {stock.length === 0 && <div className="ug-empty">The upgrader is out of stock. Ask an admin to fill it.</div>}
-              {stock.map((i) => {
-                const total = Number(i.value) * (Number(i.quantity) || 1);
-                const tooSmall = potValue > 0 && total < targetValue;
-                return (
-                  <ItemRow
-                    key={i.itemId} item={i}
-                    value={upSel[i.itemId] || 0} max={Number(i.quantity) || 1}
-                    onChange={setQty(setUpSel)} onReset={setQty(setUpSel)}
-                    dimmed={tooSmall}
-                  />
-                );
-              })}
+              {stock.map((i) => (
+                <ItemRow
+                  key={i.itemId} item={i}
+                  value={upSel[i.itemId] || 0} max={Number(i.quantity) || 1}
+                  onChange={setQty(setUpSel)} onReset={setQty(setUpSel)}
+                />
+              ))}
             </div>
             <div className="ug-total">
               <span>Selected upgrade</span>
-              <span className={upgradeShort ? 'short' : ''}>
-                <Icon name="diamond" size={13} /> {upValue.toLocaleString()}
-                {upgradeShort && ` / ${targetValue.toLocaleString()} needed`}
-              </span>
+              <span><Icon name="diamond" size={13} /> {upValue.toLocaleString()}</span>
             </div>
-            {upgradeShort && (
-              <div className="ug-short-note">
-                Too small to cover the multiplier. Pick more, or lower your chance.
-              </div>
-            )}
           </div>
         </div>
       ) : (
@@ -428,7 +409,7 @@ const UpgraderPage = ({ socket }) => {
               <div className="ug-history-body">
                 <span className="ug-history-name">{h.username}</span>
                 <span className="ug-history-detail">
-                  {h.chance}% chance @ {Number(h.totalMultiplier || (1 + Number(h.multiplier || 0))).toFixed(2)}x
+                  {Number(h.multiplier || 0).toFixed(2)}x at {Number(h.chance || 0).toFixed(2)}%
                   {' · '}
                   <Icon name="diamond" size={10} /> {Number(h.potValue || 0).toLocaleString()}
                 </span>
