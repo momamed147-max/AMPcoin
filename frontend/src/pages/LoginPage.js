@@ -164,13 +164,13 @@ const LoginPage = () => {
 
         {LOCAL_DEV_TOOLS && (
           <div className="auth-dev-panel">
-            <div className="auth-dev-heading"><span><Icon name="target" size={13} /> Local test mode</span><small>RPS only</small></div>
-            <p>Use a throwaway local account to test the arena without Roblox verification.</p>
+            <div className="auth-dev-heading"><span><Icon name="target" size={13} /> Local test mode</span><small>local only</small></div>
+            <p>Use a throwaway local account to test the games without Roblox verification. Sign in as <code>local-admin</code> to reach the admin panel.</p>
             <form onSubmit={handleDevLogin} className="auth-dev-form">
               <input value={devName} onChange={(event) => setDevName(event.target.value)} placeholder="local-player-1" aria-label="Local test username" maxLength={32} />
               <button type="submit" className="auth-btn-secondary" disabled={devLoading}>{devLoading ? 'Starting...' : 'Use local account'}</button>
             </form>
-            <small className="auth-dev-note">Open a second browser profile with another name to test 1v1 RPS.</small>
+            <small className="auth-dev-note">Open a second browser profile with another name to test 1v1 RPS and coinflip.</small>
           </div>
         )}
       </div>
