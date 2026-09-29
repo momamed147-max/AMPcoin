@@ -16,6 +16,11 @@ const WHEEL_BLUE = '#2f81f7';
 const WHEEL_PINK = '#ff5fa2';
 const WHEEL_POOL = ['#ffb020', '#37c98b', '#a780ff', '#2fd4d4', '#ff8a3d', '#8ad14f', '#ff5d5d', '#5d7cff'];
 const PINNED_PINK = 'apple_78134';
+// The ring is masked to show only a band from 45% to 100% of the radius, so an
+// avatar placed at 50% sits on the INNER EDGE of its slice. The middle of the
+// coloured band is (45 + 100) / 2.
+const RING_INNER_PCT = 45;
+const AVATAR_RADIUS = (RING_INNER_PCT + 100) / 2; // 72.5
 
 function wheelColorFor(entry, idx) {
   const name = String(entry.username || entry.robloxUsername || '').trim().toLowerCase();
@@ -363,31 +368,35 @@ const JackpotPage = ({ socket, setBalance }) => {
                   {jackpot?.entries?.length || 0} players · {timer !== null ? `${timer}s` : 'Waiting...'}
                 </div>
               </div>
-              {/* One avatar per slice, sitting on that slice's midpoint, with a
-                  colour chip so you can tell the arcs apart. */}
-              {slices.map((slice) => {
-                const rad = (slice.midDeg * Math.PI) / 180;
-                const radius = 50;
-                const x = 50 + radius * Math.sin(rad);
-                const y = 50 - radius * Math.cos(rad);
-                const isWinner = jackpot?.status === 'completed' && slice.entry.userId === jackpot.winnerId;
-                return (
-                  <div
-                    key={slice.entry.userId}
-                    className={`jp-wheel-avatar ${spinId === slice.entry.userId ? 'is-active' : ''} ${isWinner ? 'is-winner' : ''}`}
-                    style={{ left: `${x}%`, top: `${y}%` }}
-                    title={`${slice.entry.username} — ${slice.pct.toFixed(1)}% of the pot`}
-                  >
-                    <span className="jp-wheel-chip" style={{ background: slice.color }} />
-                    <img
-                      src={slice.entry.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${slice.entry.userId}&width=100&height=100&format=png`}
-                      alt={slice.entry.username}
-                      onError={(e) => { e.target.src = '/default-avatar.png'; }}
-                    />
-                    <span className="jp-wheel-pct">{slice.pct.toFixed(slice.pct < 10 ? 1 : 0)}%</span>
-                  </div>
-                );
-              })}
+              {/* One avatar per slice, at the MIDDLE of that slice's own arc.
+                  The layer rotates with the ring so nobody drifts off their
+                  colour when the wheel spins. */}
+              <div className="jp-wheel-people" style={{ '--jp-turn': `${wheelTurn}deg` }}>
+                {slices.map((slice) => {
+                  const rad = (slice.midDeg * Math.PI) / 180;
+                  // The ring band runs from 45% to 100% of the radius, so the
+                  // middle of the coloured part is ~72.5%, not the inner edge.
+                  const x = 50 + AVATAR_RADIUS * Math.sin(rad);
+                  const y = 50 - AVATAR_RADIUS * Math.cos(rad);
+                  const isWinner = jackpot?.status === 'completed' && slice.entry.userId === jackpot.winnerId;
+                  return (
+                    <div
+                      key={slice.entry.userId}
+                      className={`jp-wheel-avatar ${spinId === slice.entry.userId ? 'is-active' : ''} ${isWinner ? 'is-winner' : ''}`}
+                      style={{ left: `${x}%`, top: `${y}%` }}
+                      title={`${slice.entry.username} — ${slice.pct.toFixed(1)}% of the pot`}
+                    >
+                      <span className="jp-wheel-chip" style={{ background: slice.color }} />
+                      <img
+                        src={slice.entry.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${slice.entry.userId}&width=100&height=100&format=png`}
+                        alt={slice.entry.username}
+                        onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                      />
+                      <span className="jp-wheel-pct">{slice.pct.toFixed(slice.pct < 10 ? 1 : 0)}%</span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             {timer !== null && (
               <div className="jp-timer-bar">

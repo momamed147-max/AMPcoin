@@ -349,10 +349,15 @@ const dbManager = {
     const inv = this.getUserInventory(userId);
     const qty = typeof quantity === 'number' ? quantity : (item.quantity || 1);
 
-    const existing = inv.items.find(i =>
-      (i.itemId && i.itemId === (item.itemId || item.id)) ||
-      (i.id && i.id === (item.itemId || item.id))
-    );
+    // Match on itemId ONLY. `id` is a per-stack UUID, so falling back to it let
+    // a credit land on an unrelated stack whenever itemId was missing - which
+    // silently inflated one random pet's quantity.
+    const want = item.itemId === undefined || item.itemId === null
+      ? null
+      : String(item.itemId);
+    const existing = want === null
+      ? null
+      : inv.items.find((i) => i.itemId !== undefined && String(i.itemId) === want);
 
     if (existing) {
       existing.quantity = (existing.quantity || 1) + qty;
@@ -395,8 +400,13 @@ const dbManager = {
     if (!inv || !Array.isArray(inv.items)) return false;
     const qty = typeof quantity === 'number' ? quantity : 1;
 
-    const idx = inv.items.findIndex(i =>
-      i.itemId === itemId || i.id === itemId
+    // Match on itemId ONLY, as a string. A strict === against a caller that
+    // passed a coerced string found nothing at all, which meant the item was
+    // never removed while the code believed it was. Falling back to `id` was
+    // worse: that is a per-stack UUID, so it could match an unrelated pet.
+    const want = String(itemId);
+    const idx = inv.items.findIndex(
+      (i) => i.itemId !== undefined && String(i.itemId) === want
     );
     if (idx === -1) return false;
 

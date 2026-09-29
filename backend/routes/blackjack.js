@@ -84,6 +84,101 @@ const HIDDEN_CARD = { suit: 'hidden', rank: 'hidden', value: 0 };
 // stale game is refunded automatically.
 const ABANDONED_AFTER_MS = 30 * 60 * 1000;
 
+// How long a creator waits for an opponent before the round is called off.
+const MATCH_TIMEOUT_MS = 90 * 1000;
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * Multiplayer Blackjack
+ *
+ * Structured like Coinflip: one player creates a table by wagering items, then
+ * either a real player joins it or the house dealer bot takes the other seat.
+ * The dealer then plays out of a real deck against the joined player's hand.
+ *
+ * The dealer always holds the hole card and plays to the house rules, whoever
+ * created the table. A player who busts loses their wager to the dealer.
+ * ────────────────────────────────────────────────────────────────────────── */
+
+const HOUSE_RULE = 'dealer stands on 17, including soft 17';
+const BLACKJACK_PAYOUT = 1.5; // 3:2
+
+// Public shape of a table. Never leaks the dealer's hole card or the deck.
+function publicTable(t, viewerId, reveal) {
+  if (!t) return null;
+  const shown = !!reveal || t.status === 'completed';
+  const visibleDealer = shown
+    ? t.dealerHand
+    : [t.dealerHand[0], { ...HIDDEN_CARD }];
+
+  // The creator always deals and the joiner always plays. The house dealer bot
+  // is simply a creator that happens to be a bot, so the seats never swap and
+  // the client does not have to infer anything.
+  const dealerSeat = {
+    id: t.creatorId,
+    username: t.creatorUsername,
+    avatar: t.creatorAvatar || '',
+    isBot: t.creatorIsBot === true
+  };
+  const playerSeat = {
+    id: t.opponentId || null,
+    username: t.opponentUsername || null,
+    avatar: t.opponentAvatar || '',
+    isBot: t.opponentIsBot === true
+  };
+
+  return {
+    id: t.id,
+    status: t.status,
+    creatorId: t.creatorId,
+    creatorUsername: t.creatorUsername,
+    creatorAvatar: t.creatorAvatar || '',
+    creatorItems: t.creatorItems || [],
+    creatorValue: t.creatorValue || 0,
+    creatorIsBot: !!t.creatorIsBot,
+    opponentId: t.opponentId || null,
+    opponentUsername: t.opponentUsername || null,
+    opponentAvatar: t.opponentAvatar || '',
+    opponentItems: t.opponentItems || [],
+    opponentValue: t.opponentValue || 0,
+    opponentIsBot: !!t.opponentIsBot,
+    potValue: (t.creatorValue || 0) + (t.opponentValue || 0),
+    // The seated player is whoever is NOT the dealer: the opponent on a human
+    // table, the creator on a table the bot opened.
+    // The joiner is always the seated player, whether the creator is a human
+    // or the house dealer bot.
+    playerId: t.opponentId || null,
+    playerUsername: t.opponentUsername || null,
+    playerAvatar: t.opponentAvatar || '',
+    dealerSeat,
+    playerSeat,
+    playerHand: t.playerHand || [],
+    playerValue: calculateHandValue(t.playerHand || []),
+    dealerHand: visibleDealer,
+    dealerValue: shown
+      ? calculateHandValue(t.dealerHand || [])
+      : calculateHandValue([t.dealerHand[0]].filter(Boolean)),
+    result: t.result || null,
+    payout: t.payout || 0,
+    profit: t.profit || 0,
+    tax: t.taxAmount || 0,
+    viewerIsCreator: viewerId === t.creatorId,
+    viewerIsPlayer: viewerId === t.opponentId,
+    timeoutSeconds: t.status === 'waiting'
+      ? Math.max(0, Math.round(((new Date(t.createdAt).getTime() + MATCH_TIMEOUT_MS) - Date.now()) / 1000))
+      : null,
+    createdAt: t.createdAt
+  };
+}
+
+function findTable(tableId) {
+  const db = dbManager.getMainDb();
+  db.blackjackTables = db.blackjackTables || [];
+  return { db, table: db.blackjackTables.find((t) => t.id === tableId) };
+}
+
+function dealFrom(deck) {
+  return deck.pop();
+}
+
 // Public view of a game. The dealer's hole card stays hidden until reveal=true.
 function publicGame(game, reveal) {
   const shown = !!reveal || game.status === 'completed';
@@ -479,6 +574,713 @@ router.get('/:gameId', authenticateToken, (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+/* ── multiplayer tables ─────────────────────────────────────────────────── */
+
+const { emitToAll, emitToUser } = require('../realtime');
+
+const broadcastTables = () => {
+  const db = dbManager.getMainDb();
+  emitToAll('blackjackTables', { tables: (db.blackjackTables || []).map((t) => publicTable(t, null, false)) });
+};
+
+/**
+ * Give a table its wagers back when nobody finished the hand: no opponent ever
+ * sat down, or the player vanished mid-hand.
+ *
+ * Without this, a player who opened a table and closed the tab would have their
+ * pets held hostage indefinitely, and a 'waiting' table would block the slot
+ * forever. Tables that already settled are left strictly alone - re-running this
+ * over a completed table is exactly the double-payout bug the settlement guard
+ * exists to prevent.
+ */
+function reclaimTables() {
+  const db = dbManager.getMainDb();
+  const now = Date.now();
+  const reclaimed = [];
+  for (const t of db.blackjackTables || []) {
+    if (!['waiting', 'in_progress'].includes(t.status)) continue;
+    const stamp = new Date(t.updatedAt || t.createdAt || 0).getTime();
+    if (!stamp) continue;
+    // A waiting table only needs to wait out the match timer; a live hand gets
+    // the full grace period so a slow player is never robbed mid-hand.
+    const limit = t.status === 'waiting' ? MATCH_TIMEOUT_MS : ABANDONED_AFTER_MS;
+    if (now - stamp < limit) continue;
+
+    if (t.status === 'waiting') {
+      // Nobody ever sat down, so the dealer's wager simply goes back.
+      returnDealerStock(t, t.creatorItems);
+    } else {
+      // Mid-hand: refund the player, and return the dealer's stake unplayed.
+      if (t.opponentId) {
+        const who = typeof t.opponentId === 'string' && t.opponentId.startsWith('bot-')
+          ? t.opponentId.slice(4)
+          : t.opponentId;
+        for (const it of t.opponentItems || []) {
+          dbManager.addItemToUserInventory(who, it, it.quantity || 1);
+        }
+      }
+      returnDealerStock(t, t.creatorItems);
+    }
+    t.status = 'abandoned';
+    t.result = 'abandoned';
+    t.payout = 0;
+    t.profit = 0;
+    t.settled = true;
+    t.completedAt = new Date().toISOString();
+    reclaimed.push(t);
+  }
+  if (reclaimed.length) {
+    dbManager.saveMainDb();
+    dbManager.saveUsersDb();
+    console.warn(`Blackjack: reclaimed ${reclaimed.length} abandoned table(s)`);
+  }
+  return reclaimed;
+}
+
+/** Put a table's unused dealer stock back where it came from. */
+function pickBotItems(target) {
+  const recipient = getTaxRecipient();
+  if (!recipient) return null;
+  const inv = dbManager.getUserInventory(recipient.id);
+  const pool = ((inv && inv.items) || [])
+    .map((it) => ({
+      itemId: String(it.itemId || it.id),
+      name: it.name || it.itemName || 'Item',
+      itemName: it.name || it.itemName || 'Item',
+      value: Number(it.value || 0),
+      quantity: Math.max(1, parseInt(it.quantity || 1, 10) || 1),
+      rarity: it.rarity || 'common',
+      image: it.imageUrl || it.image || '',
+      imageUrl: it.imageUrl || it.image || ''
+    }))
+    .filter((it) => it.itemId && it.value > 0 && it.quantity > 0);
+  if (!pool.length) return null;
+
+  const asc = [...pool].sort((a, b) => a.value - b.value);
+  const desc = [...pool].sort((a, b) => b.value - a.value);
+  const stock = new Map(pool.map((it) => [it.itemId, it.quantity]));
+  const picked = new Map();
+  let total = 0;
+
+  // Positive q takes units, negative q puts them back. The two directions must
+  // be handled separately: Math.min(q, avail) with a negative q is always
+  // negative, so an undo would silently do nothing and the search would keep
+  // building on units it thought it had removed.
+  const take = (it, q) => {
+    const avail = stock.get(it.itemId) || 0;
+    if (q < 0) {
+      const entry = picked.get(it.itemId);
+      if (!entry || entry.quantity < 1) return;
+      entry.quantity -= 1;
+      if (entry.quantity === 0) picked.delete(it.itemId);
+      stock.set(it.itemId, avail + 1);
+      total -= it.value;
+      return;
+    }
+    const n = Math.min(q, avail);
+    if (n <= 0) return;
+    stock.set(it.itemId, avail - n);
+    const entry = picked.get(it.itemId) || { ...it, quantity: 0 };
+    entry.quantity += n;
+    picked.set(it.itemId, entry);
+    total += it.value * n;
+  };
+
+  // Put a whole stack back on the shelf and take it out of the pick.
+  const dropStack = (itemId) => {
+    const entry = picked.get(itemId);
+    if (!entry) return 0;
+    const value = entry.value * entry.quantity;
+    stock.set(itemId, (stock.get(itemId) || 0) + entry.quantity);
+    picked.delete(itemId);
+    total -= value;
+    return value;
+  };
+
+  if (target > 0) {
+    // Aim within 1.25% of the target.
+    const lo = Math.max(1, Math.floor(target * 0.9875));
+    const hi = Math.ceil(target * 1.0125);
+
+    // Bounded search over 1-3 units. A greedy fill strands itself whenever no
+    // single stack fits the band, and a two-unit search still misses targets
+    // like 19020 that need 2020 + 8440 + 8440. Three covers every real case and
+    // keeps the work trivial.
+    let solved = false;
+    const avail = (it) => (stock.get(it.itemId) || 0) > 0;
+    for (let i = 0; i < asc.length && !solved; i++) {
+      const a = asc[i];
+      if (!avail(a)) continue;
+      if (a.value >= lo && a.value <= hi) { take(a, 1); solved = true; break; }
+      if (a.value > hi) break; // ascending: nothing later can start us either
+      take(a, 1);
+
+      for (let j = 0; j < asc.length && !solved; j++) {
+        const b = asc[j];
+        if (!avail(b) || (j === i && (stock.get(a.itemId) || 0) < 1)) continue;
+        if (total + b.value > hi) break;
+        take(b, 1);
+
+        for (let k = j; k < asc.length && !solved; k++) {
+          const c = asc[k];
+          if (!avail(c)) continue;
+          if (j === i && k === i && (stock.get(a.itemId) || 0) < 1) continue;
+          if (total + c.value > hi) break;
+          take(c, 1);
+          if (total >= lo) solved = true;
+          else take(c, -1); // over-shot the floor; undo and try a bigger filler
+        }
+        if (!solved) take(b, -1);
+      }
+      if (!solved) dropStack(a.itemId);
+    }
+
+    // Nothing landed in the band: take the closest sensible approximation
+    // rather than nothing, so the bot can still play.
+    if (!solved) {
+      for (const it of desc) {
+        if (total >= lo) break;
+        take(it, Math.floor((lo - total) / it.value));
+      }
+      for (const it of asc) {
+        if (total >= lo) break;
+        if (total + it.value > hi) break;
+        take(it, 1);
+      }
+    }
+  }
+  if (total <= 0) {
+    const smallest = asc[0];
+    take(smallest, 1);
+  }
+  if (total <= 0) return null;
+  return { recipient, items: [...picked.values()], value: total };
+}
+
+/**
+ * Put a table's unused dealer stock back where it came from.
+ *
+ * The dealer seat always holds creatorItems - whoever opened the table deals.
+ * dealerStockOwner records whose inventory actually backed that stake, because
+ * on a bot table it is the house account rather than the synthetic bot id.
+ */
+function returnDealerStock(t, items) {
+  let owner = t.dealerStockOwner || t.creatorId;
+  // "bot-<id>" is synthetic; credits must land on the real account.
+  if (typeof owner === 'string' && owner.startsWith('bot-')) owner = owner.slice(4);
+  if (!owner) return;
+  for (const it of items || []) {
+    dbManager.addItemToUserInventory(owner, it, it.quantity || 1);
+  }
+}
+
+function dealTableHand(table) {
+  table.deck = shuffleDeck(createDeck());
+  // Creator is the dealer, so their hand is dealt first from the shared deck.
+  table.dealerHand = [dealFrom(table.deck), dealFrom(table.deck)];
+  table.playerHand = [dealFrom(table.deck), dealFrom(table.deck)];
+  table.playerValue = calculateHandValue(table.playerHand);
+  table.dealerValue = calculateHandValue(table.dealerHand);
+}
+
+// List open + recent tables
+router.get('/tables', authenticateToken, (req, res) => {
+  try {
+    const db = dbManager.getMainDb();
+    reclaimTables();
+    const tables = (db.blackjackTables || [])
+      .filter((t) => ['waiting', 'in_progress', 'completed'].includes(t.status))
+      .slice(0, 25);
+    res.json({ tables: tables.map((t) => publicTable(t, req.user.userId, false)) });
+  } catch (err) {
+    console.error('Error listing blackjack tables:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// The house dealer bot opens a table and waits for a player to challenge it.
+// Same shape as a human table, but the creator IS the bot, so the human who
+// joins takes the player seat and plays.
+router.post('/tables/bot', authenticateToken, (req, res) => {
+  try {
+    const { targetValue } = req.body || {};
+    const pick = pickBotItems(Number(targetValue) || 0);
+    if (!pick) {
+      return res.status(400).json({ message: 'The house dealer has no pets to wager. Ask an admin to stock the bot.' });
+    }
+    for (const it of pick.items) {
+      dbManager.removeItemFromUserInventory(pick.recipient.id, it.itemId, it.quantity || 1);
+    }
+    reclaimAbandonedGames();
+
+    const table = {
+      id: uuidv4(),
+      status: 'waiting',
+      creatorId: `bot-${pick.recipient.id}`,
+      creatorUsername: pick.recipient.username || 'House Dealer',
+      creatorAvatar: '',
+      creatorItems: pick.items,
+      creatorValue: pick.value,
+      creatorIsBot: true,
+      opponentId: null,
+      opponentUsername: null,
+      opponentAvatar: '',
+      opponentItems: [],
+      opponentValue: 0,
+      opponentIsBot: false,
+      // The bot opened this table and staked from the house account, which is
+      // where an abandoned dealer seat must be refunded to.
+      dealerStockOwner: pick.recipient.id,
+      deck: null,
+      dealerHand: [],
+      playerHand: [],
+      playerValue: 0,
+      dealerValue: 0,
+      result: null,
+      payout: 0,
+      profit: 0,
+      taxAmount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const db = dbManager.getMainDb();
+    db.blackjackTables = db.blackjackTables || [];
+    db.blackjackTables.unshift(table);
+    db.blackjackTables = db.blackjackTables.slice(0, 60);
+    dbManager.saveMainDb();
+    broadcastTables();
+
+    res.status(201).json(publicTable(table, req.user.userId, false));
+  } catch (err) {
+    console.error('Error creating bot blackjack table:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create a table. The creator is the dealer; a player joins and plays the hand.
+router.post('/tables', authenticateToken, (req, res) => {
+  try {
+    const { selectedItems } = req.body || {};
+    const userId = req.user.userId;
+    if (!Array.isArray(selectedItems) || !selectedItems.length) {
+      return res.status(400).json({ message: 'Select the pets the dealer will risk' });
+    }
+    reclaimAbandonedGames();
+
+    const usersDb = dbManager.getUsersDb();
+    const user = usersDb.users.find((u) => u.id === userId);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const inventory = dbManager.getUserInventory(userId);
+    const wagerStacks = [];
+    for (const sel of selectedItems) {
+      const itemId = sel.itemId || sel.id;
+      const qty = Math.max(1, parseInt(sel.quantity || 1, 10) || 1);
+      const stack = (inventory.items || []).find((i) => String(i.itemId || i.id) === String(itemId));
+      if (!stack || (stack.quantity || 0) < qty) {
+        return res.status(400).json({ message: `You do not have ${qty}x of ${sel.name || itemId}` });
+      }
+      wagerStacks.push({
+        itemId: String(itemId),
+        name: stack.name || stack.itemName || 'Item',
+        itemName: stack.name || stack.itemName || 'Item',
+        value: Number(stack.value) || 0,
+        rarity: stack.rarity || 'common',
+        quantity: qty,
+        image: stack.image || stack.imageUrl || ''
+      });
+    }
+    const value = wagerStacks.reduce((s, it) => s + it.value * it.quantity, 0);
+    if (value <= 0) return res.status(400).json({ message: 'Those pets have no value' });
+
+    for (const it of wagerStacks) {
+      dbManager.removeItemFromUserInventory(userId, it.itemId, it.quantity);
+    }
+
+    const table = {
+      id: uuidv4(),
+      status: 'waiting',
+      creatorId: userId,
+      creatorUsername: user.displayName || user.robloxUsername,
+      creatorAvatar: user.avatar || '',
+      creatorItems: wagerStacks,
+      creatorValue: value,
+      // A human opened this table, so their own inventory backs the dealer seat.
+      dealerStockOwner: userId,
+      opponentId: null,
+      opponentUsername: null,
+      opponentAvatar: '',
+      opponentItems: [],
+      opponentValue: 0,
+      opponentIsBot: false,
+      // True when the creator is the house dealer bot rather than a human.
+      creatorIsBot: false,
+      deck: null,
+      dealerHand: [],
+      playerHand: [],
+      playerValue: 0,
+      dealerValue: 0,
+      result: null,
+      payout: 0,
+      profit: 0,
+      taxAmount: 0,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const db = dbManager.getMainDb();
+    db.blackjackTables = db.blackjackTables || [];
+    db.blackjackTables.unshift(table);
+    // keep the list from growing forever
+    db.blackjackTables = db.blackjackTables.slice(0, 60);
+    dbManager.saveMainDb();
+    broadcastTables();
+
+    res.status(201).json(publicTable(table, userId, false));
+  } catch (err) {
+    console.error('Error creating blackjack table:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// A real player takes the seat and the hand is dealt.
+router.post('/tables/:id/join', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { selectedItems } = req.body || {};
+    const { db, table } = findTable(req.params.id);
+    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (table.status !== 'waiting') return res.status(400).json({ message: 'That table is no longer open' });
+    if (table.creatorId === userId) return res.status(400).json({ message: 'You cannot play your own dealer' });
+    if (table.creatorId === `bot-${userId}`) return res.status(400).json({ message: 'You cannot play yourself as the dealer' });
+    if (table.opponentId) return res.status(400).json({ message: 'That seat is taken' });
+    if (!Array.isArray(selectedItems) || !selectedItems.length) {
+      return res.status(400).json({ message: 'Select the pets to play with' });
+    }
+
+    const usersDb = dbManager.getUsersDb();
+    const user = usersDb.users.find((u) => u.id === userId);
+    const inventory = dbManager.getUserInventory(userId);
+    const stacks = [];
+    for (const sel of selectedItems) {
+      const itemId = sel.itemId || sel.id;
+      const qty = Math.max(1, parseInt(sel.quantity || 1, 10) || 1);
+      const stack = (inventory.items || []).find((i) => String(i.itemId || i.id) === String(itemId));
+      if (!stack || (stack.quantity || 0) < qty) {
+        return res.status(400).json({ message: `You do not have ${qty}x of ${sel.name || itemId}` });
+      }
+      stacks.push({
+        itemId: String(itemId),
+        name: stack.name || stack.itemName || 'Item',
+        itemName: stack.name || stack.itemName || 'Item',
+        value: Number(stack.value) || 0,
+        rarity: stack.rarity || 'common',
+        quantity: qty,
+        image: stack.image || stack.imageUrl || ''
+      });
+    }
+    const value = stacks.reduce((s, it) => s + it.value * it.quantity, 0);
+    if (value <= 0) return res.status(400).json({ message: 'Those pets have no value' });
+
+    for (const it of stacks) {
+      dbManager.removeItemFromUserInventory(userId, it.itemId, it.quantity);
+    }
+    table.opponentId = userId;
+    table.opponentUsername = user.displayName || user.robloxUsername;
+    table.opponentAvatar = user.avatar || '';
+    table.opponentItems = stacks;
+    table.opponentValue = value;
+    dealTableHand(table);
+
+    // A natural on the deal settles immediately, like any blackjack table.
+    if (table.playerValue === 21 && table.dealerValue !== 21) {
+      settleTable(table, 'blackjack');
+    } else if (table.playerValue === 21 && table.dealerValue === 21) {
+      settleTable(table, 'push');
+    } else {
+      table.status = 'in_progress';
+    }
+    table.updatedAt = new Date().toISOString();
+    dbManager.saveMainDb();
+    dbManager.saveUsersDb();
+    broadcastTables();
+
+    res.json(publicTable(table, userId, table.status === 'completed'));
+    void usersDb;
+  } catch (err) {
+    console.error('Error joining blackjack table:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// The house dealer bot takes the seat and the hand is dealt.
+router.post('/tables/:id/bot-join', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { db, table } = findTable(req.params.id);
+    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (table.creatorId !== userId) {
+      return res.status(403).json({ message: 'Only the dealer can call the house bot' });
+    }
+    if (table.status !== 'waiting' || table.opponentId) {
+      return res.status(400).json({ message: 'That table is no longer open' });
+    }
+
+    const pick = pickBotItems(table.creatorValue);
+    if (!pick) {
+      return res.status(400).json({ message: "The house dealer has no pets to wager. Ask an admin to stock the bot." });
+    }
+    for (const it of pick.items) {
+      dbManager.removeItemFromUserInventory(pick.recipient.id, it.itemId, it.quantity || 1);
+    }
+
+    // The bot sits in the player's seat, so it is the one who hits and stands.
+    // The bot IS the dealer. It opened the table and it holds the hole card;
+    // the human who joins takes the player seat and hits or stands.
+    table.opponentId = `bot-${pick.recipient.id}`;
+    table.opponentUsername = pick.recipient.username || 'House Dealer';
+    table.opponentAvatar = '';
+    table.opponentItems = pick.items;
+    table.opponentValue = pick.value;
+    table.opponentIsBot = true;
+    table.creatorIsBot = true;
+    // The bot's stake came from the house account, so that is what must be
+    // refunded if this table is abandoned or drawn.
+    table.dealerStockOwner = pick.recipient.id;
+    dealTableHand(table);
+
+    if (table.playerValue === 21 && table.dealerValue !== 21) {
+      settleTable(table, 'blackjack');
+    } else if (table.playerValue === 21 && table.dealerValue === 21) {
+      settleTable(table, 'push');
+    } else {
+      table.status = 'in_progress';
+    }
+    table.updatedAt = new Date().toISOString();
+    dbManager.saveMainDb();
+    dbManager.saveUsersDb();
+    broadcastTables();
+
+    res.json(publicTable(table, userId, table.status === 'completed'));
+  } catch (err) {
+    console.error('Error adding bot to blackjack table:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// The seated player hits.
+router.post('/tables/:id/hit', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { db, table } = findTable(req.params.id);
+    if (!table) return res.status(404).json({ message: 'Table not found' });
+    // Only the seated player (the joiner) may act. The creator deals, and a bot
+    // creator plays out its own hand, so nobody else can drive it.
+    if (table.opponentId !== userId) return res.status(403).json({ message: 'Not your hand' });
+    if (table.status !== 'in_progress') return res.status(400).json({ message: 'Cannot hit right now' });
+
+    if (!table.deck || !table.deck.length) table.deck = shuffleDeck(createDeck());
+    table.playerHand.push(dealFrom(table.deck));
+    table.playerValue = calculateHandValue(table.playerHand);
+
+    if (table.playerValue > 21) {
+      // A bust hands the pot straight to the dealer, per the rules.
+      settleTable(table, 'bust');
+    }
+    table.updatedAt = new Date().toISOString();
+    dbManager.saveMainDb();
+    dbManager.saveUsersDb();
+    broadcastTables();
+    res.json(publicTable(table, userId, table.status === 'completed'));
+  } catch (err) {
+    console.error('Error hitting on blackjack table:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// The seated player stands, then the dealer plays to the house rules.
+router.post('/tables/:id/stand', authenticateToken, (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const { db, table } = findTable(req.params.id);
+    if (!table) return res.status(404).json({ message: 'Table not found' });
+    // The creator always deals, so standing is always the joiner's move - the
+    // human plays the player seat and the bot dealer resolves on its own turn.
+    if (table.opponentId !== userId) return res.status(403).json({ message: 'Not your hand' });
+    if (table.status !== 'in_progress') return res.status(400).json({ message: 'Cannot stand right now' });
+
+    if (!table.deck || !table.deck.length) table.deck = shuffleDeck(createDeck());
+    let dealerValue = calculateHandValue(table.dealerHand);
+    while (dealerValue < 17) {
+      if (!table.deck.length) table.deck = shuffleDeck(createDeck());
+      table.dealerHand.push(dealFrom(table.deck));
+      dealerValue = calculateHandValue(table.dealerHand);
+    }
+    table.dealerValue = dealerValue;
+
+    const result = getGameResult(table.playerHand, table.dealerHand);
+    settleTable(table, result);
+    table.updatedAt = new Date().toISOString();
+    dbManager.saveMainDb();
+    dbManager.saveUsersDb();
+    broadcastTables();
+    res.json(publicTable(table, userId, true));
+  } catch (err) {
+    console.error('Error standing on blackjack table:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// The house dealer plays its own hand: hits on 16 or less, stands on 17+.
+// The bot is the creator on its own tables, so this is the dealer taking its
+// turn after the challenger has stood.
+router.post('/tables/:id/bot-play', authenticateToken, (req, res) => {
+  try {
+    const { table } = findTable(req.params.id);
+    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (table.creatorIsBot !== true) return res.status(400).json({ message: 'That is not the house dealer' });
+    if (table.status !== 'in_progress') return res.status(400).json({ message: 'Nothing for the dealer to do' });
+
+    if (!table.deck || !table.deck.length) table.deck = shuffleDeck(createDeck());
+    let dealerValue = calculateHandValue(table.dealerHand);
+    while (dealerValue < 17) {
+      if (!table.deck.length) table.deck = shuffleDeck(createDeck());
+      table.dealerHand.push(dealFrom(table.deck));
+      dealerValue = calculateHandValue(table.dealerHand);
+    }
+    table.dealerValue = dealerValue;
+    settleTable(table, getGameResult(table.playerHand, table.dealerHand));
+    table.updatedAt = new Date().toISOString();
+    dbManager.saveMainDb();
+    dbManager.saveUsersDb();
+    broadcastTables();
+    res.json(publicTable(table, req.user.userId, true));
+  } catch (err) {
+    console.error('Error playing the bot hand:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Read one table.
+router.get('/tables/:id', authenticateToken, (req, res) => {
+  try {
+    const { table } = findTable(req.params.id);
+    if (!table) return res.status(404).json({ message: 'Table not found' });
+    const reveal = table.status === 'completed'
+      || table.creatorId === req.user.userId
+      || table.opponentId === req.user.userId;
+    res.json(publicTable(table, req.user.userId, reveal));
+  } catch (err) {
+    console.error('Error fetching blackjack table:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+/**
+ * Settle a table, exactly once.
+ *
+ * Every route that can end a hand calls this, and two of them can fire for the
+ * same table (a hit that busts, or a stand racing a reconnect). Without the
+ * guard the second call paid the wagers out a second time, inventing pets out
+ * of nothing - which is what the conservation test caught.
+ */
+function settleTable(table, result) {
+  if (table.settled === true || table.status === 'completed') {
+    return { alreadySettled: true, result: table.result };
+  }
+  table.settled = true;
+  table.result = result;
+  table.status = 'completed';
+  table.completedAt = new Date().toISOString();
+  table.playerValue = calculateHandValue(table.playerHand);
+  table.dealerValue = calculateHandValue(table.dealerHand);
+
+
+  // The two seats, resolved ONCE and used by every branch below. The CREATOR
+  // always deals and the JOINER always plays - the bot is just a creator that
+  // is not human. One rule, no special cases: reading the seats twice with
+  // slightly different logic is how payouts started inventing pets.
+  const seats = {
+    dealerId: table.creatorId,
+    dealerItems: table.creatorItems,
+    dealerValue: table.creatorValue,
+    playerId: table.opponentId,
+    playerItems: table.opponentItems,
+    playerValue: table.opponentValue
+  };
+
+  // A bot's seat id is synthetic ("bot-<realUserId>"), so it must be resolved
+  // back to the real account before any credit is made against it. Crediting
+  // "bot-..." created a brand new inventory nobody can ever spend from, which
+  // is how a losing player's wager used to disappear.
+  const realAccount = (id) => (typeof id === 'string' && id.startsWith('bot-')
+    ? id.slice('bot-'.length)
+    : id);
+  seats.dealerId = realAccount(seats.dealerId);
+  seats.playerId = realAccount(seats.playerId);
+
+  if (!seats.playerId) {
+    console.warn(`Blackjack: table ${table.id} settled with no seated player, skipping payouts`);
+    return { alreadySettled: false, result, noPlayer: true };
+  }
+  const playerSide = { items: seats.playerItems, value: seats.playerValue };
+  const dealerSide = { items: seats.dealerItems, value: seats.dealerValue };
+  const recipient = getTaxRecipient();
+  // Losing wagers go to the dealer seat, exactly once. Fall back to the tax
+  // recipient only if there is genuinely no dealer account.
+  const dealerSeatId = seats.dealerId || (recipient && recipient.id);
+  const toHouse = (items) => {
+    if (!dealerSeatId) return;
+    for (const it of items || []) {
+      dbManager.addItemToUserInventory(dealerSeatId, it, it.quantity || 1);
+    }
+  };
+  const toPlayer = (items) => {
+    for (const it of items || []) {
+      dbManager.addItemToUserInventory(seats.playerId, it, it.quantity || 1);
+    }
+  };
+
+  if (result === 'win' || result === 'blackjack' || result === 'dealer_bust') {
+    // The player keeps their own wager back and also takes the dealer's.
+    toPlayer(playerSide.items);
+    toPlayer(dealerSide.items);
+    // A natural pays 3:2 on top; a plain win is even money on the dealer's pot.
+    const dealerPot = dealerSide.value || 0;
+    const gross = result === 'blackjack'
+      ? Math.round(dealerPot * BLACKJACK_PAYOUT)
+      : dealerPot;
+    // Tax is taken off the dealer's side, which is what actually changed hands.
+    const taxAmount = Math.round(dealerPot * getTaxConfig().rate);
+    table.taxAmount = taxAmount;
+    table.payout = Math.max(0, gross - taxAmount);
+    table.profit = table.payout;
+  } else if (result === 'push') {
+    // Each side gets their own wager back and nothing more. Crediting the
+    // dealer's stake to the player here would hand over the whole pot.
+    toPlayer(playerSide.items);
+    returnDealerStock(table, dealerSide.items);
+    table.payout = 0;
+    table.profit = 0;
+  } else {
+    // Loss or bust. The dealer's own stake comes back untouched, and the
+    // player's wager is added to it. Nothing goes back to the player - that is
+    // what losing means.
+    returnDealerStock(table, dealerSide.items);
+    toHouse(playerSide.items);
+    table.payout = 0;
+    table.profit = -playerSide.value;
+  }
+
+  if (seats.playerId) {
+    try {
+      const usersDb = dbManager.getUsersDb();
+      bumpStats(usersDb, seats.playerId, result === 'win' || result === 'blackjack' || result === 'dealer_bust');
+    } catch { /* stats are not worth failing a settlement over */ }
+  }
+}
 
 // Get user's blackjack history
 router.get('/user/:userId/history', authenticateToken, (req, res) => {
