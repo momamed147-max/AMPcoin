@@ -433,6 +433,11 @@ const BlackjackPage = ({ socket }) => {
                 {table.profit === 0 && <span>wager returned</span>}
                 {iAmPlayer && table.tax > 0 && <span className="bj-tax">includes {table.tax.toLocaleString()} tax</span>}
                 {iAmPlayer && table.rake > 0 && <span className="bj-tax">+ {table.rake.toLocaleString()} house edge</span>}
+                {iAmPlayer && table.bonusShortfall > 0 && (
+                  <span className="bj-tax">
+                    3:2 bonus rounded down {table.bonusShortfall.toLocaleString()} by item value
+                  </span>
+                )}
               </div>
             )}
 
