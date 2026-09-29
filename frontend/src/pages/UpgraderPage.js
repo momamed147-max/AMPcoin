@@ -30,11 +30,14 @@ function landingPoint(chance, won) {
   return ((pick + 0.5) / CELLS) * 100;
 }
 
-function ItemRow({ item, value, max, onChange, onReset, dimmed }) {
-  const [qty, setQty] = useState(0);
-  useEffect(() => { setQty(Math.min(max, value)); /* eslint-disable-line */ }, [value, max]);
+// Quantity lives in the PARENT, not here. Holding it locally meant the parent
+// never learned what was picked, so the pot stayed at zero and the Upgrade
+// button never became usable.
+function ItemRow({ item, value, max, onChange, dimmed }) {
   const avail = Number(item.quantity) || 1;
-  const step = (n) => setQty((q) => Math.max(0, Math.min(avail, q + n)));
+  const id = item.itemId || item.id;
+  const qty = Math.min(Number(value) || 0, avail);
+  const step = (n) => onChange(id, Math.max(0, Math.min(avail, qty + n)));
   return (
     <div className={`ug-item ${qty > 0 ? 'picked' : ''} ${dimmed ? 'dimmed' : ''}`}>
       <img
@@ -49,12 +52,12 @@ function ItemRow({ item, value, max, onChange, onReset, dimmed }) {
         <ModBadges mods={item.mods || item.variantMods} />
       </div>
       <div className="ug-stepper">
-        <button type="button" onClick={() => step(-1)} disabled={qty <= 0}>-</button>
+        <button type="button" onClick={() => step(-1)} disabled={qty <= 0} aria-label="fewer">-</button>
         <span className={qty > 0 ? 'on' : ''}>{qty}</span>
-        <button type="button" onClick={() => step(1)} disabled={qty >= avail}>+</button>
+        <button type="button" onClick={() => step(1)} disabled={qty >= avail} aria-label="more">+</button>
       </div>
       {qty > 0 && (
-        <button type="button" className="ug-item-clear" onClick={() => { setQty(0); onReset(item.itemId || item.id); }}>x</button>
+        <button type="button" className="ug-item-clear" onClick={() => onChange(id, 0)} aria-label="clear">x</button>
       )}
     </div>
   );
@@ -361,7 +364,7 @@ const UpgraderPage = ({ socket }) => {
                 <ItemRow
                   key={i.itemId || i.id} item={i}
                   value={potSel[i.itemId || i.id] || 0} max={Number(i.quantity) || 1}
-                  onChange={setQty(setPotSel)} onReset={setQty(setPotSel)}
+                  onChange={setQty(setPotSel)}
                 />
               ))}
             </div>
@@ -385,7 +388,7 @@ const UpgraderPage = ({ socket }) => {
                 <ItemRow
                   key={i.itemId} item={i}
                   value={upSel[i.itemId] || 0} max={Number(i.quantity) || 1}
-                  onChange={setQty(setUpSel)} onReset={setQty(setUpSel)}
+                  onChange={setQty(setUpSel)}
                 />
               ))}
             </div>
