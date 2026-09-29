@@ -148,9 +148,8 @@ function publicTable(t, viewerId, reveal) {
     opponentValue: t.opponentValue || 0,
     opponentIsBot: !!t.opponentIsBot,
     potValue: (t.creatorValue || 0) + (t.opponentValue || 0),
-    // The seated player is whoever is NOT the dealer: the opponent on a human
-    // table, the creator on a table the bot opened.
-    // The creator is the player; the joiner deals.
+    // The creator plays; the joiner deals. The client uses these two flags to
+    // decide whose turn it is, so they must not be inferred from ids here.
     playerId: t.creatorId,
     playerUsername: t.creatorUsername,
     playerAvatar: t.creatorAvatar || '',
@@ -171,7 +170,7 @@ function publicTable(t, viewerId, reveal) {
     blackjackPays: '3:2',
     houseEdge: HOUSE_EDGE,
     viewerIsCreator: viewerId === t.creatorId,
-    viewerIsPlayer: viewerId === t.opponentId,
+    viewerIsPlayer: viewerId === t.creatorId,
     timeoutSeconds: t.status === 'waiting'
       ? Math.max(0, Math.round(((new Date(t.createdAt).getTime() + MATCH_TIMEOUT_MS) - Date.now()) / 1000))
       : null,
@@ -596,6 +595,26 @@ router.post('/:gameId/stand', authenticateToken, (req, res) => {
 });
 
 // Get blackjack game by ID
+//
+// NOTE: '/:gameId' below is a one-segment catch-all for the solo game, so
+// every named collection route has to be registered BEFORE it. '/tables' used
+// to live further down this file and was silently swallowed by the catch-all,
+// which answered every list request with "Game not found".
+router.get('/tables', authenticateToken, (req, res) => {
+  try {
+    const db = dbManager.getMainDb();
+    reclaimTables();
+    const tables = (db.blackjackTables || [])
+      .filter((t) => ['waiting', 'in_progress', 'completed'].includes(t.status))
+      .slice(0, 25);
+    res.json({ tables: tables.map((t) => publicTable(t, req.user.userId, false)) });
+  } catch (err) {
+    console.error('Error listing blackjack tables:', err);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get blackjack game by ID
 router.get('/:gameId', authenticateToken, (req, res) => {
   try {
     const gameId = req.params.gameId;
@@ -818,21 +837,6 @@ function dealTableHand(table) {
   table.playerValue = calculateHandValue(table.playerHand);
   table.dealerValue = calculateHandValue(table.dealerHand);
 }
-
-// List open + recent tables
-router.get('/tables', authenticateToken, (req, res) => {
-  try {
-    const db = dbManager.getMainDb();
-    reclaimTables();
-    const tables = (db.blackjackTables || [])
-      .filter((t) => ['waiting', 'in_progress', 'completed'].includes(t.status))
-      .slice(0, 25);
-    res.json({ tables: tables.map((t) => publicTable(t, req.user.userId, false)) });
-  } catch (err) {
-    console.error('Error listing blackjack tables:', err);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
 // Create a bet. The creator is the PLAYER: they stake their pets and play the
 // hand. Either the house bot or another player joins to take the dealer seat.
