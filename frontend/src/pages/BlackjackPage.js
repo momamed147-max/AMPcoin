@@ -1,31 +1,35 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import AnimatedPopup from '../components/AnimatedPopup';
-import { CoinLoader } from '../components/CoinChip';
-import '../components/CoinChip.css';
+import ModalPortal from '../components/ModalPortal';
+import BlackjackModal from '../components/BlackjackModal';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
+import { useAuth } from '../context/AuthContext';
 import { playBetPlaced, playCoinflipJoin } from '../sound';
 import './BlackjackPage.css';
 
-const auth = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-const json = () => ({ 'Content-Type': 'application/json', ...auth() });
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+const json = () => ({ 'Content-Type': 'application/json', ...authHeaders() });
+const compact = (n) => {
+  const v = Number(n) || 0;
+  if (v >= 1e9) return `${(v / 1e9).toFixed(1)}B`;
+  if (v >= 1e6) return `${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `${(v / 1e3).toFixed(1)}K`;
+  return v.toLocaleString();
+};
 
 const SUIT_CHAR = { hearts: '♥', diamonds: '♦', clubs: '♣', spades: '♠' };
 const isRed = (suit) => suit === 'hearts' || suit === 'diamonds';
-const myId = () => {
-  try { return (JSON.parse(localStorage.getItem('user') || '{}').id) || ''; } catch { return ''; }
-};
 
 const RESULT_COPY = {
   blackjack: { text: 'Blackjack! Paid 3:2', tone: 'win' },
   win: { text: 'You beat the dealer', tone: 'win' },
   dealer_bust: { text: 'Dealer busts - you win', tone: 'win' },
   push: { text: 'Push - wager returned', tone: 'push' },
-  loss: { text: 'Dealer wins the pot', tone: 'loss' },
+  loss: { text: 'Dealer takes the pot', tone: 'loss' },
   bust: { text: 'Bust - the dealer takes the pot', tone: 'loss' }
 };
-
-const DEALER_RULE = 'Dealer stands on flat 17 and must hit a soft 17';
 
 function Card({ card, index = 0, hidden, highlight, dimmed }) {
   if (!card) return null;
@@ -45,15 +49,8 @@ function Card({ card, index = 0, hidden, highlight, dimmed }) {
   );
 }
 
-/**
- * A hand, animated.
- *
- * `seq` is bumped by the caller whenever new cards actually land, which
- * restarts the deal animation for the cards already on the table and lets the
- * newest one fly in on its own instead of the whole hand re-dealing.
- */
-function Hand({ cards, seq, total, label, sub, hiddenIndex, highlight, dimmed, empty }) {
-  const isMe = highlight && highlight.length > 0;
+/** One hand. `seq` restarts the deal animation when new cards actually land. */
+function Hand({ cards, seq, total, label, sub, hiddenIndex, highlight = [], dimmed, empty }) {
   return (
     <div className="bj-hand-row">
       <div className="bj-hand-label">
@@ -71,7 +68,7 @@ function Hand({ cards, seq, total, label, sub, hiddenIndex, highlight, dimmed, e
             card={c}
             index={i}
             hidden={hiddenIndex === i}
-            highlight={isMe && highlight.includes(i)}
+            highlight={highlight.includes(i)}
             dimmed={dimmed && !highlight.includes(i)}
           />
         ))}
@@ -80,118 +77,63 @@ function Hand({ cards, seq, total, label, sub, hiddenIndex, highlight, dimmed, e
   );
 }
 
-/** Quantity lives here, not in the row, so the totals below are never stale. */
-function Picker({ items, sel, onChange, max, emptyText }) {
-  if (!items.length) return <div className="bj-empty">{emptyText}</div>;
-  return (
-    <div className="bj-list">
-      {items.map((i) => {
-        const id = i.itemId || i.id;
-        const avail = Number(i.quantity) || 1;
-        const qty = sel[id] || 0;
-        return (
-          <div key={id} className={`bj-item ${qty > 0 ? 'picked' : ''}`}>
-            <img
-              className="bj-item-img"
-              src={i.image || i.imageUrl || '/default-item.png'}
-              alt=""
-              onError={(e) => { e.target.style.visibility = 'hidden'; }}
-            />
-            <div className="bj-item-body">
-              <span className="bj-item-name">{i.name || i.itemName}</span>
-              <span className="bj-item-val">
-                <Icon name="diamond" size={11} /> {(Number(i.value) || 0).toLocaleString()} each
-              </span>
-            </div>
-            <div className="bj-stepper">
-              <button type="button" onClick={() => onChange(id, qty - 1)} disabled={qty <= 0} aria-label="fewer">-</button>
-              <span className={qty > 0 ? 'on' : ''}>{qty}</span>
-              <button
-                type="button"
-                onClick={() => onChange(id, qty + 1)}
-                disabled={qty >= avail || (max && qty >= max)}
-                aria-label="more"
-              >+</button>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 const BlackjackPage = ({ socket }) => {
+  const { user } = useAuth();
+  const [lobby, setLobby] = useState({ tables: [], activeCount: 0 });
+  const [myTable, setMyTable] = useState(null);
+  const [viewId, setViewId] = useState(null);
   const [inventory, setInventory] = useState([]);
-  const [tables, setTables] = useState([]);
-  const [table, setTable] = useState(null);
-  const [history, setHistory] = useState([]);
-  const [activeTab, setActiveTab] = useState('table');
+  const [inventoryLoading, setInventoryLoading] = useState(false);
+  const [modal, setModal] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
-  const [dealing, setDealing] = useState(false);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
   const [popup, setPopup] = useState({ show: false, message: '', type: 'info' });
+  const [seq, setSeq] = useState(0);
 
-  const [wager, setWager] = useState({});      // the bet I open
-  const [joinSel, setJoinSel] = useState({});  // the bet I deal against
-  const [joinTarget, setJoinTarget] = useState(null);
-  const [showJoin, setShowJoin] = useState(false);
+  const showPopup = useCallback(
+    (message, type = 'info') => setPopup({ show: true, message, type }),
+    []
+  );
 
-  const [seq, setSeq] = useState(0);  // bumps to replay the deal animation
-
-  const say = (message, type = 'info') => setPopup({ show: true, message, type });
-
-  const loadInventory = useCallback(async () => {
+  const fetchInventory = useCallback(async () => {
+    if (!user?.id) return;
+    setInventoryLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/users/inventory`, { headers: auth() });
-      if (res.ok) {
-        const d = await res.json();
-        setInventory(Array.isArray(d) ? d : d.items || []);
-      }
-    } catch { /* shown as an empty inventory */ }
-  }, []);
+      const res = await fetch(`${API_BASE}/api/users/inventory/${encodeURIComponent(user.id)}`, {
+        headers: authHeaders()
+      });
+      const d = await res.json().catch(() => ({}));
+      if (res.ok) setInventory(Array.isArray(d.items) ? d.items : []);
+    } finally {
+      setInventoryLoading(false);
+    }
+  }, [user?.id]);
 
-  const loadHistory = useCallback(async () => {
-    const uid = myId();
-    if (!uid) return;
+  const refresh = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/blackjack/user/${uid}/history`, { headers: auth() });
-      if (res.ok) setHistory(await res.json());
-    } catch { /* history is optional */ }
-  }, []);
-
-  const loadTables = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/blackjack/tables`, { headers: auth() });
-      if (res.ok) {
-        const d = await res.json();
-        setTables(Array.isArray(d) ? d : d.tables || []);
-      }
-    } catch { /* shown as an empty board */ }
-  }, []);
-
-  // The table the viewer is actually sitting at, refreshed on its own so the
-  // hole card and totals are always the server's, never a guess made locally.
-  const loadMyTable = useCallback(async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/blackjack/tables`, { headers: auth() });
-      if (!res.ok) return;
+      const res = await fetch(`${API_BASE}/api/blackjack/tables`, { headers: authHeaders() });
+      if (!res.ok) throw new Error(`Blackjack board unavailable (${res.status})`);
       const d = await res.json();
       const list = Array.isArray(d) ? d : d.tables || [];
-      const uid = myId();
-      const mine = list.find(
-        (t) => (t.playerSeat && t.playerSeat.id === uid) || (t.dealerSeat && t.dealerSeat.id === uid)
-      );
-      if (!mine) { setTable(null); return; }
-      const one = await fetch(`${API_BASE}/api/blackjack/tables/${mine.id}`, { headers: auth() });
-      if (one.ok) setTable(await one.json());
-    } catch { /* keep whatever we had */ }
+      setLobby({ tables: list, activeCount: list.filter((t) => t.status === 'waiting').length });
+      setMyTable((cur) => {
+        if (d.myTable) return d.myTable;
+        // Keep a just-settled hand up briefly so the result stays readable
+        // instead of vanishing on the next poll.
+        if (cur?.status === 'completed'
+          && Date.now() - new Date(cur.updatedAt || Date.now()).getTime() < 4 * 60 * 1000) return cur;
+        return null;
+      });
+      setError('');
+    } catch (e) {
+      setError(e.message || 'Blackjack board unavailable');
+    }
   }, []);
 
   useEffect(() => {
     (async () => {
-      await Promise.all([loadInventory(), loadTables()]);
-      await loadMyTable();
-      await loadHistory();
+      await Promise.all([refresh(), fetchInventory()]);
       setLoading(false);
     })();
     // eslint-disable-next-line
@@ -199,404 +141,391 @@ const BlackjackPage = ({ socket }) => {
 
   useEffect(() => {
     if (!socket) return undefined;
-    const onTables = () => { loadTables(); loadMyTable(); };
-    const onInv = () => loadInventory();
+    const onTables = () => refresh();
+    const onInv = () => fetchInventory();
     socket.on('blackjackTables', onTables);
     socket.on('inventoryUpdate', onInv);
-    socket.on('balanceUpdate', onInv);
     return () => {
       socket.off('blackjackTables', onTables);
       socket.off('inventoryUpdate', onInv);
-      socket.off('balanceUpdate', onInv);
     };
-  }, [socket, loadTables, loadMyTable, loadInventory]);
+  }, [socket, refresh, fetchInventory]);
 
-  const buildItems = useCallback((items, sel) => items
-    .filter((i) => (sel[i.itemId || i.id] || 0) > 0)
-    .map((i) => ({
-      itemId: i.itemId || i.id,
-      name: i.name,
-      value: i.value,
-      quantity: sel[i.itemId || i.id]
-    })), []);
-
-  const wagerItems = useMemo(() => buildItems(inventory, wager), [inventory, wager, buildItems]);
-  const joinItems = useMemo(() => buildItems(inventory, joinSel), [inventory, joinSel, buildItems]);
-
-  const valueOf = useCallback(
-    (items, sel) => items.reduce(
-      (s, i) => s + (Number(i.value) || 0) * (sel[i.itemId || i.id] || 0), 0
-    ),
-    []
-  );
-  const wagerValue = valueOf(inventory, wager);
-  const joinValue = valueOf(inventory, joinSel);
-
-  const setQty = (setter) => (itemId, qty) => setter((prev) => {
-    const next = { ...prev };
-    if (qty > 0) next[itemId] = qty; else delete next[itemId];
-    return next;
-  });
-
-  /** Open a bet: the creator is the player, and the dealer is still to come. */
-  const openTable = async () => {
-    if (!wagerItems.length || busy) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/blackjack/tables`, {
-        method: 'POST', headers: json(), body: JSON.stringify({ selectedItems: wagerItems })
-      });
-      const d = await res.json();
-      if (!res.ok) return say(d.message || 'Could not open the table', 'error');
-      setWager({});
-      setDealing(true);
-      setSeq((s) => s + 1);
-      setTable(d);
-      setActiveTab('table');
-      playBetPlaced();
-      setTimeout(() => setDealing(false), 700);
-      await Promise.all([loadInventory(), loadTables()]);
-    } catch {
-      say('Something went wrong', 'error');
-    } finally {
-      setBusy(false);
-    }
+  const openCreate = async () => {
+    playBetPlaced();
+    await fetchInventory();
+    setModal({ mode: 'create' });
   };
 
-  /** Call the house dealer onto my own table. */
-  const callDealer = async () => {
-    if (!table || busy) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/blackjack/tables/${table.id}/bot-join`, {
-        method: 'POST', headers: json(), body: '{}'
-      });
-      const d = await res.json();
-      if (!res.ok) return say(d.message || 'The dealer could not be called', 'error');
-      setDealing(true);
-      setSeq((s) => s + 1);
-      setTable(d);
-      playCoinflipJoin();
-      setTimeout(() => setDealing(false), 800);
-      await Promise.all([loadInventory(), loadTables()]);
-    } catch {
-      say('Something went wrong', 'error');
-    } finally {
-      setBusy(false);
-    }
+  const openJoin = async (t) => {
+    playCoinflipJoin();
+    await fetchInventory();
+    setModal({ mode: 'join', table: t });
   };
 
-  const openJoin = (t) => { setJoinTarget(t); setJoinSel({}); setShowJoin(true); };
-
-  const confirmJoin = async () => {
-    if (!joinTarget || !joinItems.length || busy) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`${API_BASE}/api/blackjack/tables/${joinTarget.id}/join`, {
-        method: 'POST', headers: json(), body: JSON.stringify({ selectedItems: joinItems })
-      });
-      const d = await res.json();
-      if (!res.ok) return say(d.message || 'Could not deal against that table', 'error');
-      setShowJoin(false);
-      setDealing(true);
-      setSeq((s) => s + 1);
-      setTable(d);
-      setActiveTab('table');
-      playCoinflipJoin();
-      setTimeout(() => setDealing(false), 800);
-      await Promise.all([loadInventory(), loadTables()]);
-    } catch {
-      say('Something went wrong', 'error');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const act = async (path, label) => {
-    if (!table || busy) return;
-    setBusy(true);
-    setDealing(true);
+  const handleDone = (t) => {
+    setModal(null);
     setSeq((s) => s + 1);
+    setMyTable(t);
+    setViewId(t.id);
+    showPopup(
+      t.status === 'waiting'
+        ? 'Bet posted. Waiting for a player to join.'
+        : 'Cards dealt. Play your hand.',
+      'success'
+    );
+    fetchInventory();
+    refresh();
+  };
+
+  const request = useCallback(async (path, body, label) => {
+    if (busy) return null;
+    setBusy(label);
     try {
-      const res = await fetch(`${API_BASE}/api/blackjack/tables/${table.id}/${path}`, {
-        method: 'POST', headers: json(), body: '{}'
+      const res = await fetch(`${API_BASE}/api/blackjack/tables${path}`, {
+        method: 'POST',
+        headers: json(),
+        body: JSON.stringify(body || {})
       });
       const d = await res.json();
-      if (!res.ok) return say(d.message || `Could not ${label}`, 'error');
-      // Let the card land before the totals change, or the animation reads as
-      // the number jumping rather than the card arriving.
-      await new Promise((r) => setTimeout(r, 620));
-      setTable(d);
-      await Promise.all([loadInventory(), loadHistory()]);
-      const copy = RESULT_COPY[d.result];
-      if (copy) say(copy.text, copy.tone === 'win' ? 'success' : copy.tone === 'loss' ? 'error' : 'info');
+      if (!res.ok) {
+        showPopup(d.message || 'Blackjack action failed.', 'error');
+        return null;
+      }
+      return d;
     } catch {
-      say('Something went wrong', 'error');
+      showPopup('Something went wrong.', 'error');
+      return null;
     } finally {
-      setDealing(false);
-      setBusy(false);
+      setBusy('');
+    }
+  }, [busy, showPopup]);
+
+  const hit = async () => {
+    if (!myTable) return;
+    setSeq((s) => s + 1);
+    const d = await request(`/${myTable.id}/hit`, {}, 'hit');
+    if (d) { setMyTable(d); await fetchInventory(); }
+  };
+
+  const stand = async () => {
+    if (!myTable) return;
+    setSeq((s) => s + 1);
+    const d = await request(`/${myTable.id}/stand`, {}, 'stand');
+    if (!d) return;
+    setMyTable(d);
+    await fetchInventory();
+    const copy = RESULT_COPY[d.result];
+    if (copy) showPopup(copy.text, copy.tone === 'win' ? 'success' : copy.tone === 'loss' ? 'error' : 'info');
+  };
+
+  // The dealer is the creator, so only they can call the house bot onto their
+  // own table. This is "deal against the house" in one click.
+  const callHouse = async () => {
+    if (!myTable) return;
+    setSeq((s) => s + 1);
+    const d = await request(`/${myTable.id}/bot-join`, {}, 'bot');
+    if (!d) return;
+    setMyTable(d);
+    showPopup('The house bot is in. It will play after you stand.', 'success');
+    await fetchInventory();
+  };
+
+  // Drive the bot's hand. The bot is the player here, so it hits and stands and
+  // then the dealer's hand plays out server-side.
+  const runBot = async () => {
+    if (!myTable) return;
+    let cur = myTable;
+    let guard = 0;
+    while (cur.status === 'in_progress' && guard++ < 8) {
+      setSeq((s) => s + 1);
+      // eslint-disable-next-line no-await-in-loop
+      const d = await request(`/${myTable.id}/bot-play`, {}, 'bot-play');
+      if (!d) return;
+      cur = d;
+      setMyTable(d);
+      // eslint-disable-next-line no-await-in-loop
+      await new Promise((r) => setTimeout(r, 550));
+    }
+    if (cur.status === 'completed') {
+      const copy = RESULT_COPY[cur.result];
+      showPopup(copy ? copy.text : 'Hand over', cur.result === 'win' || cur.result === 'blackjack' || cur.result === 'dealer_bust' ? 'error' : 'success');
+      await fetchInventory();
     }
   };
 
-  const leave = async () => {
-    setTable(null);
-    setSeq((s) => s + 1);
-    await loadTables();
-  };
+  const closeView = () => setViewId(null);
 
   if (loading) {
-    return <div className="bj-page"><div className="bj-loading"><CoinLoader size={84} label="Loading blackjack..." /></div></div>;
+    return <div className="cf-loading"><div className="loading-spinner" /><p>Loading Blackjack...</p></div>;
   }
 
-  const me = myId();
-  const iAmPlayer = !!(table && table.playerSeat && table.playerSeat.id === me);
-  const iAmDealer = !!(table && table.dealerSeat && table.dealerSeat.id === me);
-  const inHand = !!table && table.status === 'in_progress';
-  const finished = !!table && table.status === 'waiting' ? false : !!table && table.status !== 'in_progress';
-  const live = inHand && iAmPlayer;
-
-  const playerHand = table?.playerHand || [];
-  const dealerHand = table?.dealerHand || [];
-  const playerBJ = playerHand.length === 2 && table?.playerValue === 21;
-  const dealerBJ = dealerHand.length === 2 && table?.dealerValue === 21;
-  const result = finished ? RESULT_COPY[table.result] : null;
-  const iWon = finished && ['win', 'blackjack', 'dealer_bust'].includes(table.result) && iAmPlayer;
-  const iLost = finished && ['loss', 'bust'].includes(table.result) && iAmPlayer;
-
-  const openBoards = tables.filter((t) => t.status === 'waiting' && t.playerSeat && t.playerSeat.id !== me);
+  const me = user?.id;
+  const waiting = lobby.tables.filter((t) => t.status === 'waiting' && t.creatorId !== me);
+  const viewTable = viewId ? lobby.tables.find((t) => t.id === viewId) || myTable : null;
 
   return (
-    <div className="bj-page">
+    <div className="cf-page bj-page">
       <AnimatedPopup
         show={popup.show} message={popup.message} type={popup.type}
         onClose={() => setPopup({ show: false, message: '', type: 'info' })}
       />
 
-      <div className="bj-tabs">
-        <button className={`bj-tab ${activeTab === 'table' ? 'active' : ''}`} onClick={() => setActiveTab('table')}>
-          <Icon name="jackpot" size={15} /> Table
-        </button>
-        <button className={`bj-tab ${activeTab === 'deals' ? 'active' : ''}`} onClick={() => setActiveTab('deals')}>
-          <Icon name="board" size={15} /> Deals
-          {openBoards.length > 0 && <span className="bj-tab-count">{openBoards.length}</span>}
-        </button>
-        <button className={`bj-tab ${activeTab === 'history' ? 'active' : ''}`} onClick={() => setActiveTab('history')}>
-          <Icon name="board" size={15} /> History
-        </button>
+      <div className="cf-topbar">
+        <div className="cf-topbar-tabs">
+          <Link to="/coinflip" className="cf-tab"><span className="cf-tab-label"><Icon name="coin" size={12} /> Coinflip</span></Link>
+          <Link to="/jackpot" className="cf-tab"><span className="cf-tab-label"><Icon name="jackpot" size={12} /> Jackpot</span></Link>
+          <Link to="/rps" className="cf-tab"><span className="cf-tab-label"><Icon name="rpsScissors" size={12} /> RPS</span></Link>
+          <button className="cf-tab cf-tab-active"><span className="cf-tab-label"><Icon name="card" size={12} /> Blackjack</span><span className="cf-tab-count">{lobby.activeCount}</span></button>
+          <span className="cf-tab-divider" />
+          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon"><span className="cf-tab-label"><Icon name="shop" size={12} /> Market</span></button>
+          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon"><span className="cf-tab-label"><Icon name="flag" size={12} /> Race</span></button>
+        </div>
+        <div className="cf-topbar-right">
+          <div className="cf-topbar-stat"><span className="cf-dice-icon"><Icon name="card" size={13} /></span><span>{waiting.length} open</span></div>
+          {myTable && viewId !== myTable.id && (
+            <button className="cf-topbar-btn" onClick={() => setViewId(myTable.id)}>
+              <Icon name="target" size={13} /> Your table
+            </button>
+          )}
+          <button
+            className="cf-topbar-btn cf-topbar-btn-gold"
+            onClick={openCreate}
+            disabled={inventoryLoading || !!myTable}
+            title={myTable ? 'Finish your current table first' : 'Post a new blackjack bet'}
+          >
+            <Icon name="plus" size={13} /> Bet Items
+          </button>
+        </div>
       </div>
 
-      {activeTab === 'table' && (
-        <div className="bj-grid">
-          <div className="bj-table">
-            {/* the dealer, who is whoever opened the bet's opponent */}
-            <Hand
-              seq={seq}
-              label="Dealer"
-              sub={table?.dealerSeat?.username || (table ? 'no dealer yet' : 'open a bet')}
-              total={table ? table.dealerValue + (inHand ? '+?' : '') : '-'}
-              cards={dealerHand}
-              hiddenIndex={inHand ? 1 : -1}
-              highlight={dealerBJ ? [0, 1] : []}
-              dimmed={finished && !dealerBJ && table.result !== 'push'}
-              empty="waiting for a dealer"
-            />
+      {error && (
+        <div className="rps-error" role="alert">
+          <Icon name="warn" size={15} /><span>{error}</span>
+          <button type="button" onClick={refresh}>Retry</button>
+        </div>
+      )}
 
-            {/* the 3:2 plaque every blackjack table carries */}
-            <div className="bj-plaque">
-              <span className="bj-plaque-big">BLACKJACK PAYS {table?.blackjackPays || '3:2'}</span>
-              <span className="bj-plaque-sub">
-                {table?.houseRule || DEALER_RULE} &middot; {(table?.houseEdge ?? 0.1) * 100}% house edge
-              </span>
+      {myTable && (
+        <div className="rps-active-note">
+          <Icon name="target" size={14} />
+          <span>
+            You have a table open &mdash; you are the {myTable.viewerIsCreator ? 'dealer' : 'player'}.
+            {myTable.status === 'waiting' ? ' Waiting for someone to join.' : ' Finish the hand to start another.'}
+          </span>
+          <button type="button" onClick={() => setViewId(myTable.id)}>Open</button>
+        </div>
+      )}
+
+      <div className="cf-lobby">
+        {waiting.length > 0 ? waiting.map((t) => (
+          <div key={t.id} className="cf-row bj-lobby-row">
+            <div className="cf-row-players">
+              <div className="cf-row-player">
+                <div className="cf-row-avatar-ring ring-heads">
+                  <img
+                    className="cf-row-avatar"
+                    src={t.dealerSeat?.avatar || '/default-avatar.png'}
+                    alt={t.dealerSeat?.username}
+                    onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
+                  />
+                  <span className="cf-row-chip-badge"><Icon name="card" size={18} /></span>
+                </div>
+              </div>
+              <span className="cf-row-vs">VS</span>
+              <div className="cf-row-player">
+                <div className="cf-row-avatar-ring ring-tails">
+                  <div className="cf-row-avatar cf-row-avatar-empty">?</div>
+                </div>
+              </div>
             </div>
 
-            <div className="bj-divider" />
+            <div className="cf-row-items">
+              {(t.creatorItems || []).slice(0, 4).map((i, n) => (
+                <span key={n} className="cf-item-thumb" title={i.name}>
+                  <img src={i.image || '/default-item.png'} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />
+                </span>
+              ))}
+            </div>
 
-            {/* the player, who is whoever opened the bet */}
-            <Hand
-              seq={seq}
-              label="You"
-              sub={table?.playerSeat?.username ? 'your hand' : 'you play this hand'}
-              total={table ? table.playerValue : '-'}
-              cards={playerHand}
-              highlight={playerBJ || (iWon ? playerHand.map((_, n) => n) : [])}
-              dimmed={finished && iLost}
-              empty="open a bet to be dealt in"
-            />
+            <div className="cf-row-value">
+              <div className="cf-row-total">
+                <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {compact(t.creatorValue)}
+              </div>
+              <div className="cf-row-range">
+                Join {compact(t.minJoinValue)}-{compact(t.maxJoinValue)}
+              </div>
+              <div className="cf-row-cap">Blackjack 3:2</div>
+            </div>
 
-            {result && (
-              <div className={`bj-result ${result.tone}`}>
-                <strong>{iAmDealer && result.tone !== 'push'
-                  ? (result.tone === 'win' ? 'The player beat you' : 'You take the pot')
-                  : result.text}</strong>
-                {iAmPlayer && table.profit > 0 && <span>+{table.profit.toLocaleString()} AMP</span>}
-                {iAmPlayer && table.profit < 0 && <span>{table.profit.toLocaleString()} AMP</span>}
-                {table.profit === 0 && <span>wager returned</span>}
-                {iAmPlayer && table.tax > 0 && <span className="bj-tax">includes {table.tax.toLocaleString()} tax</span>}
-                {iAmPlayer && table.rake > 0 && <span className="bj-tax">+ {table.rake.toLocaleString()} house edge</span>}
-                {iAmPlayer && table.bonusShortfall > 0 && (
-                  <span className="bj-tax">
-                    3:2 bonus rounded down {table.bonusShortfall.toLocaleString()} by item value
+            <div className="cf-row-action">
+              {!myTable && <button className="cf-join-btn" onClick={() => openJoin(t)}>Join</button>}
+              {myTable && <span className="cf-row-cap">One table at a time</span>}
+            </div>
+          </div>
+        )) : (
+          <div className="cf-empty">
+            <div className="cf-empty-icon"><Icon name="card" size={34} /></div>
+            <p>No open blackjack bets</p>
+            <p className="cf-empty-sub">Post an item wager to deal against it!</p>
+            <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreate} disabled={!!myTable}>
+              <Icon name="plus" size={13} /> Create Blackjack Bet
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ═══ The table itself ═══ */}
+      {viewTable && (() => {
+        const dSeat = viewTable.dealerSeat || {};
+        const pSeat = viewTable.playerSeat || {};
+        const iDeal = dSeat.id === me;
+        const iPlay = pSeat.id === me;
+        const inHand = viewTable.status === 'in_progress';
+        const finished = viewTable.status === 'completed';
+        const pHand = viewTable.playerHand || [];
+        const dHand = viewTable.dealerHand || [];
+        const pBJ = pHand.length === 2 && viewTable.playerValue === 21;
+        const dBJ = dHand.length === 2 && viewTable.dealerValue === 21;
+        const result = finished ? RESULT_COPY[viewTable.result] : null;
+        const iWon = finished && iPlay
+          && ['win', 'blackjack', 'dealer_bust'].includes(viewTable.result);
+        const iLost = finished && iPlay && ['loss', 'bust'].includes(viewTable.result);
+        const botTurn = inHand && pSeat.isBot;
+        // A bot is always driven from the dealer's screen, since the bot has
+        // no way to press its own buttons.
+        const canAct = inHand && iPlay && !pSeat.isBot;
+
+        return (
+          <ModalPortal>
+            <div className="cf-modal-overlay" onClick={closeView}>
+              <div className="cf-modal bj-table-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+                <button className="cf-modal-close" onClick={closeView} aria-label="Close table"><Icon name="close" size={15} /></button>
+
+                <div className="bj-table-top">
+                  <div className={`bj-seat ${iDeal ? 'me' : ''}`}>
+                    {dSeat.avatar
+                      ? <img className="bj-seat-avatar" src={dSeat.avatar} alt="" onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }} />
+                      : <span className="bj-seat-avatar fallback">{(dSeat.username || '?').slice(0, 1).toUpperCase()}</span>}
+                    <span className="bj-seat-name">
+                      {dSeat.username || 'Dealer'}
+                      {dSeat.isBot && <span className="bj-seat-tag">house</span>}
+                    </span>
+                    <span className="bj-seat-role">dealer</span>
+                  </div>
+                  <div className="bj-vs">VS</div>
+                  <div className={`bj-seat ${iPlay ? 'me' : ''}`}>
+                    {pSeat.avatar
+                      ? <img className="bj-seat-avatar" src={pSeat.avatar} alt="" onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }} />
+                      : <span className="bj-seat-avatar fallback">{(pSeat.username || '?').slice(0, 1).toUpperCase()}</span>}
+                    <span className="bj-seat-name">
+                      {pSeat.username || 'Waiting'}
+                      {pSeat.isBot && <span className="bj-seat-tag">house</span>}
+                    </span>
+                    <span className="bj-seat-role">player</span>
+                  </div>
+                </div>
+
+                <div className="bj-plaque">
+                  <span className="bj-plaque-big">BLACKJACK PAYS {viewTable.blackjackPays || '3:2'}</span>
+                  <span className="bj-plaque-sub">
+                    {viewTable.houseRule || 'Dealer stands on flat 17 and must hit a soft 17'}
+                    {' \u00b7 '}
+                    {Math.round((viewTable.houseEdge ?? 0.1) * 100)}% house edge
                   </span>
+                </div>
+
+                <Hand
+                  seq={seq}
+                  label="Dealer"
+                  total={viewTable.dealerValue + (inHand ? '+?' : '')}
+                  cards={dHand}
+                  hiddenIndex={inHand ? 1 : -1}
+                  highlight={dBJ ? [0, 1] : []}
+                  dimmed={finished && !dBJ && viewTable.result !== 'push'}
+                  empty="dealing"
+                />
+
+                <Hand
+                  seq={seq}
+                  label="Player"
+                  total={viewTable.playerValue}
+                  cards={pHand}
+                  highlight={pBJ || (iWon ? pHand.map((_, n) => n) : [])}
+                  dimmed={finished && iLost}
+                  empty={viewTable.status === 'waiting' ? 'waiting for a player to join' : 'dealing'}
+                />
+
+                {result && (
+                  <div className={`bj-result ${result.tone}`}>
+                    <strong>{iDeal && result.tone !== 'push'
+                      ? (result.tone === 'win' ? 'The player beat you' : 'You take the pot')
+                      : result.text}</strong>
+                    {iPlay && viewTable.profit > 0 && <span>+{viewTable.profit.toLocaleString()} AMP</span>}
+                    {iPlay && viewTable.profit < 0 && <span>{viewTable.profit.toLocaleString()} AMP</span>}
+                    {iPlay && viewTable.profit === 0 && <span>wager returned</span>}
+                    {iPlay && viewTable.tax > 0 && <span className="bj-tax">includes {viewTable.tax.toLocaleString()} tax</span>}
+                    {iPlay && viewTable.rake > 0 && <span className="bj-tax">+ {viewTable.rake.toLocaleString()} house edge</span>}
+                    {iPlay && viewTable.bonusShortfall > 0 && (
+                      <span className="bj-tax">
+                        3:2 bonus rounded down {viewTable.bonusShortfall.toLocaleString()} by item value
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {viewTable.status === 'waiting' && (
+                  <div className="bj-waiting">
+                    <div className="bj-waiting-text">
+                      {iDeal
+                        ? `Waiting for a player${viewTable.timeoutSeconds > 0 ? ` (${viewTable.timeoutSeconds}s)` : ''}.`
+                        : 'Waiting for the hand to be dealt.'}
+                    </div>
+                    {iDeal && (
+                      <button className="cf-topbar-btn" onClick={callHouse} disabled={busy === 'bot'}>
+                        <Icon name="target" size={13} /> Deal against the house
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {canAct && (
+                  <div className="bj-actions">
+                    <button className="cf-topbar-btn" onClick={hit} disabled={busy === 'hit'}>Hit</button>
+                    <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={stand} disabled={busy === 'stand'}>Stand</button>
+                  </div>
+                )}
+
+                {botTurn && iDeal && (
+                  <div className="bj-actions">
+                    <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={runBot} disabled={busy === 'bot-play'}>
+                      <Icon name="card" size={13} /> Play the bot's hand
+                    </button>
+                  </div>
+                )}
+                {botTurn && !iDeal && (
+                  <div className="bj-waiting"><div className="bj-waiting-text">The house bot is playing its hand...</div></div>
+                )}
+
+                {finished && (
+                  <div className="bj-actions">
+                    <button className="cf-topbar-btn" onClick={closeView}>Close</button>
+                  </div>
                 )}
               </div>
-            )}
-
-            <div className="bj-actions">
-              {!table && (
-                <button className="bj-btn" disabled={!wagerItems.length || busy} onClick={openTable}>
-                  Open the table
-                </button>
-              )}
-              {table && table.status === 'waiting' && iAmPlayer && (
-                <button className="bj-btn" disabled={busy} onClick={callDealer}>
-                  Deal with the house
-                </button>
-              )}
-              {table && table.status === 'waiting' && iAmDealer && (
-                <span className="bj-waiting-note">
-                  {table.timeoutSeconds != null && table.timeoutSeconds > 0
-                    ? `the player has ${table.timeoutSeconds}s to sit down`
-                    : 'waiting for the player'}
-                </span>
-              )}
-              {live && (
-                <>
-                  <button className="bj-btn" disabled={busy || dealing} onClick={() => act('hit', 'hit')}>Hit</button>
-                  <button className="bj-btn secondary" disabled={busy || dealing} onClick={() => act('stand', 'stand')}>Stand</button>
-                </>
-              )}
-              {finished && <button className="bj-btn" onClick={leave}>Back to the table</button>}
             </div>
+          </ModalPortal>
+        );
+      })()}
 
-            <div className="bj-hint">{DEALER_RULE}. Blackjack pays 3:2.</div>
-          </div>
-
-          <div className="bj-panel">
-            <h3>
-              {table && iAmDealer ? 'Dealing against you' : 'Your wager'}
-              <span className="bj-count">{wagerItems.length ? `${wagerItems.length} picked` : ''}</span>
-            </h3>
-            <p className="bj-panel-sub">
-              {table
-                ? 'The cards are already dealt. Open a new table to risk more pets.'
-                : 'You open the bet and play the hand. A dealer - another player or the house - takes the other seat.'}
-            </p>
-            <Picker
-              items={inventory}
-              sel={wager}
-              onChange={setQty(setWager)}
-              emptyText="No pets in your inventory."
-            />
-            <div className="bj-total">
-              <span>Total wager</span>
-              <span><Icon name="diamond" size={13} /> {wagerValue.toLocaleString()}</span>
-            </div>
-            {!table && (
-              <button className="bj-btn" disabled={!wagerItems.length || busy} onClick={openTable}>
-                Open the table
-              </button>
-            )}
-            {table && table.status === 'waiting' && (
-              <button className="bj-btn secondary" onClick={leave}>Cancel the table</button>
-            )}
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'deals' && (
-        <div className="bj-boards">
-          <div className="bj-boards-head">
-            <h3>Open tables</h3>
-            <p>
-              Deal against someone else. You take the dealer seat: the player draws and stands first,
-              then you turn the hole card and play to the rules.
-            </p>
-          </div>
-          {openBoards.length === 0 && (
-            <div className="bj-empty">No open tables right now. Open one and someone can deal against you.</div>
-          )}
-          {openBoards.map((t) => (
-            <div key={t.id} className="bj-board">
-              <div className="bj-board-who">
-                {t.playerSeat?.avatar
-                  ? <img className="bj-board-avatar" src={t.playerSeat.avatar} alt="" />
-                  : <span className="bj-board-avatar fallback">{String(t.playerSeat?.username || '?').slice(0, 1)}</span>}
-                <div className="bj-board-names">
-                  <span className="bj-board-name">{t.playerSeat?.username || 'Unknown'}</span>
-                  <span className="bj-board-sub">is playing this hand</span>
-                </div>
-              </div>
-              <div className="bj-board-pot">
-                <span className="bj-board-pot-val">
-                  <Icon name="diamond" size={13} /> {Number(t.creatorValue || 0).toLocaleString()}
-                </span>
-                <span className="bj-board-sub">at risk</span>
-              </div>
-              {t.timeoutSeconds != null && (
-                <span className="bj-board-timer">{t.timeoutSeconds}s</span>
-              )}
-              <button className="bj-btn small" onClick={() => openJoin(t)}>Deal</button>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {activeTab === 'history' && (
-        <div className="bj-history">
-          {history.length === 0 && <div className="bj-empty">No hands played yet.</div>}
-          {history.slice(0, 30).map((h) => {
-            const copy = RESULT_COPY[h.result] || { text: h.result, tone: 'loss' };
-            return (
-              <div key={h.id} className={`bj-history-row ${copy.tone}`}>
-                <div className="bj-history-cards">
-                  {(h.playerHand || []).slice(0, 5).map((c, i) => (
-                    <span key={i} className={`bj-mini ${isRed(c.suit) ? 'red' : 'black'}`}>
-                      {c.rank}{SUIT_CHAR[c.suit]}
-                    </span>
-                  ))}
-                </div>
-                <div className="bj-history-body">
-                  <span className="bj-history-outcome">{copy.text}</span>
-                  <span className="bj-history-detail">
-                    <Icon name="diamond" size={10} /> {Number(h.betValue || 0).toLocaleString()} wagered
-                  </span>
-                </div>
-                <span className="bj-history-profit">
-                  {h.profit > 0 ? '+' : ''}{Number(h.profit || 0).toLocaleString()}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {showJoin && joinTarget && (
-        <div className="bj-modal-wrap" onClick={() => setShowJoin(false)}>
-          <div className="bj-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="bj-modal-head">
-              <h3>Deal against {joinTarget.playerSeat?.username}</h3>
-              <button className="bj-modal-x" onClick={() => setShowJoin(false)} aria-label="close">x</button>
-            </div>
-            <p className="bj-panel-sub">
-              They are risking <strong>{Number(joinTarget.creatorValue || 0).toLocaleString()}</strong>.
-              You take the dealer seat and play after they stand or bust.
-            </p>
-            <Picker
-              items={inventory}
-              sel={joinSel}
-              onChange={setQty(setJoinSel)}
-              emptyText="No pets in your inventory."
-            />
-            <div className="bj-total">
-              <span>Your stake</span>
-              <span><Icon name="diamond" size={13} /> {joinValue.toLocaleString()}</span>
-            </div>
-            <div className="bj-actions">
-              <button className="bj-btn secondary" onClick={() => setShowJoin(false)}>Cancel</button>
-              <button className="bj-btn" disabled={!joinItems.length || busy} onClick={confirmJoin}>Take the seat</button>
-            </div>
-          </div>
-        </div>
+      {modal && (
+        <BlackjackModal
+          mode={modal.mode}
+          table={modal.table}
+          userInventory={inventory}
+          onClose={() => setModal(null)}
+          onDone={handleDone}
+        />
       )}
     </div>
   );

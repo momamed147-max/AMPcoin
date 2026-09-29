@@ -1,35 +1,43 @@
-.bj-page {
-  max-width: 1220px; margin: 0 auto; padding: 18px 20px 60px;
-  display: flex; flex-direction: column; gap: 14px;
-}
+/* The page is just the shared cf shell now; the table lives in a modal. */
+.bj-page { max-width: 1220px; margin: 0 auto; padding: 18px 20px 60px; }
 .bj-loading { display: grid; place-items: center; min-height: 60vh; }
 
-.bj-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); }
-.bj-tab {
-  background: none; border: none; border-bottom: 2px solid transparent;
-  color: var(--mut); font-weight: 700; font-size: .88rem;
-  padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-}
-.bj-tab:hover { color: var(--txt); }
-.bj-tab.active { color: var(--txt); border-bottom-color: var(--acc); }
-.bj-tab-count {
-  display: inline-grid; place-items: center; min-width: 17px; height: 17px;
-  padding: 0 4px; border-radius: 9px; background: var(--acc); color: #fff;
-  font-size: .66rem; font-weight: 900;
-}
-
-.bj-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 14px; align-items: start; }
-@media (max-width: 900px) { .bj-grid { grid-template-columns: 1fr; } }
-
-/* ── the felt ── */
-.bj-table {
+/* ── the table modal ── */
+.bj-table-modal {
+  width: min(560px, 100%);
+  max-height: 90vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 14px; padding: 20px;
   background:
-    radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 9%, transparent), transparent 70%),
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--acc) 8%, transparent), transparent 70%),
     var(--panel);
-  border: 1px solid var(--line); border-radius: 16px;
-  padding: 22px; display: flex; flex-direction: column; gap: 16px;
-  box-shadow: inset 0 1px 0 var(--line-soft);
 }
+
+.bj-table-top { display: flex; align-items: center; gap: 12px; }
+.bj-seat {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  flex: 1; min-width: 0;
+}
+.bj-seat.me .bj-seat-name { color: var(--acc); }
+.bj-seat-avatar {
+  width: 42px; height: 42px; border-radius: 50%; object-fit: cover;
+  background: var(--panel3);
+}
+.bj-seat-avatar.fallback {
+  display: grid; place-items: center; color: var(--mut);
+  font-weight: 900; font-size: 1rem;
+}
+.bj-seat-name {
+  display: flex; align-items: center; gap: 5px;
+  font-size: .82rem; font-weight: 800;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bj-seat-tag {
+  font-size: .6rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em;
+  padding: 1px 5px; border-radius: 5px;
+  background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold);
+}
+.bj-seat-role { font-size: .68rem; color: var(--dim); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
+.bj-vs { color: var(--dim); font-weight: 900; font-size: .8rem; flex: 0 0 auto; }
 
 .bj-hand-row { display: flex; flex-direction: column; gap: 8px; }
 .bj-hand-label { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
@@ -109,7 +117,11 @@
 }
 .bj-plaque-sub { font-size: .68rem; color: var(--dim); font-weight: 600; }
 
-.bj-waiting-note { flex: 1; display: grid; place-items: center; color: var(--dim); font-size: .82rem; font-weight: 700; }
+.bj-lobby-row .cf-item-thumb {
+  width: 30px; height: 30px; border-radius: 7px; overflow: hidden;
+  background: var(--panel3); flex: 0 0 auto;
+}
+.bj-lobby-row .cf-item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
 /* ── result ── */
 .bj-result {
@@ -122,20 +134,18 @@
 .bj-result.push { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 10%, transparent); color: var(--gold); }
 .bj-tax { color: var(--mut); font-size: .8rem; }
 
-.bj-actions { display: flex; gap: 9px; }
-.bj-btn {
-  flex: 1; padding: 13px; border: none; border-radius: 10px;
-  background: var(--acc); color: #fff; font-weight: 900; font-size: .98rem; cursor: pointer;
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--acc) 32%, transparent);
-  transition: transform .12s ease, filter .12s ease;
+/* ── the two buttons, using the shared cf sizing ── */
+.bj-actions { display: flex; gap: 8px; }
+.bj-actions .cf-topbar-btn { flex: 1; justify-content: center; }
+
+.bj-waiting {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 11px 13px; border-radius: 11px;
+  background: var(--bg1); border: 1px solid var(--line);
 }
-.bj-btn.secondary { background: var(--panel3); color: var(--txt); box-shadow: none; border: 1px solid var(--line); }
-.bj-btn:hover:not(:disabled) { filter: brightness(1.1); transform: translateY(-1px); }
-.bj-btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.bj-waiting-text { color: var(--mut); font-size: .82rem; font-weight: 700; }
 
-.bj-hint { color: var(--dim); font-size: .76rem; text-align: center; }
-
-/* ── wager panel ── */
+/* ── history (kept for the shared cf styling) ── */
 .bj-panel {
   background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
   padding: 14px; display: flex; flex-direction: column; gap: 9px;

@@ -87,6 +87,11 @@ const ABANDONED_AFTER_MS = 30 * 60 * 1000;
 // How long a creator waits for an opponent before the round is called off.
 const MATCH_TIMEOUT_MS = 90 * 1000;
 
+// A joiner's wager has to land within this much of the dealer's, the same band
+// RPS and Coinflip use. Publishes as minJoinValue / maxJoinValue so the client
+// can show the range before anyone picks pets.
+const VALUE_TOLERANCE = 0.05;
+
 /* ──────────────────────────────────────────────────────────────────────────
  * Multiplayer Blackjack
  *
@@ -168,15 +173,15 @@ function publicTable(t, viewerId, reveal) {
     ? t.dealerHand
     : [t.dealerHand[0], { ...HIDDEN_CARD }];
 
-  // The creator plays; the joiner (a human or the house bot) deals. Named
-  // explicitly so the client never has to infer a seat from an id.
-  const playerSeat = {
+  // The creator deals and the joiner plays - the bot is just a joiner that is
+  // not human. Named explicitly so the client never has to infer a seat.
+  const dealerSeat = {
     id: t.creatorId,
     username: t.creatorUsername,
     avatar: t.creatorAvatar || '',
-    isBot: false
+    isBot: t.creatorIsBot === true
   };
-  const dealerSeat = {
+  const playerSeat = {
     id: t.opponentId || null,
     username: t.opponentUsername || null,
     avatar: t.opponentAvatar || '',
@@ -199,11 +204,11 @@ function publicTable(t, viewerId, reveal) {
     opponentValue: t.opponentValue || 0,
     opponentIsBot: !!t.opponentIsBot,
     potValue: (t.creatorValue || 0) + (t.opponentValue || 0),
-    // The creator plays; the joiner deals. The client uses these two flags to
+    // The joiner plays; the creator deals. The client uses these two flags to
     // decide whose turn it is, so they must not be inferred from ids here.
-    playerId: t.creatorId,
-    playerUsername: t.creatorUsername,
-    playerAvatar: t.creatorAvatar || '',
+    playerId: t.opponentId || null,
+    playerUsername: t.opponentUsername || null,
+    playerAvatar: t.opponentAvatar || '',
     dealerSeat,
     playerSeat,
     playerHand: t.playerHand || [],
@@ -228,11 +233,36 @@ function publicTable(t, viewerId, reveal) {
     blackjackPays: '3:2',
     houseEdge: HOUSE_EDGE,
     viewerIsCreator: viewerId === t.creatorId,
-    viewerIsPlayer: viewerId === t.creatorId,
+    viewerIsPlayer: viewerId === t.opponentId,
+    // The band a joiner must land in, so the UI can show it up front instead of
+    // refusing after someone has picked their pets.
+    minJoinValue: Math.floor((t.creatorValue || 0) * (1 - VALUE_TOLERANCE)),
+    maxJoinValue: Math.ceil((t.creatorValue || 0) * (1 + VALUE_TOLERANCE)),
     timeoutSeconds: t.status === 'waiting'
       ? Math.max(0, Math.round(((new Date(t.createdAt).getTime() + MATCH_TIMEOUT_MS) - Date.now()) / 1000))
       : null,
     createdAt: t.createdAt
+  };
+}
+
+/**
+ * The viewer's own table, in the same call as the board.
+ *
+ * The board maps every table through publicTable with a null viewer, so
+ * viewerIsCreator and viewerIsPlayer are false everywhere in it - the client
+ * cannot tell whose hand it is looking at. This attaches the viewer's own
+ * table, properly resolved, so the page never has to guess.
+ */
+function withMyTable(db, viewerId) {
+  const tables = (db.blackjackTables || [])
+    .filter((t) => ['waiting', 'in_progress', 'completed'].includes(t.status))
+    .slice(0, 25);
+  const mine = tables.find(
+    (t) => t.creatorId === viewerId || t.opponentId === viewerId
+  );
+  return {
+    tables: tables.map((t) => publicTable(t, viewerId, false)),
+    myTable: mine ? publicTable(mine, viewerId, mine.status === 'completed') : null
   };
 }
 
@@ -258,8 +288,8 @@ function isSoft17(hand) {
 
 /**
  * Play the dealer's hand to the rules: stand on 17, but a SOFT 17 (an ace
- * counted as 11) must be hit. Every dealer draw goes through here so the solo
- * game, the table game and the bot all obey the same rule.
+ * counted as 11) must be hit. Every dealer draw goes through here so a table
+ * and the house bot can never drift apart on the stopping rule.
  */
 function playDealerHand(table) {
   if (!Array.isArray(table.deck) || !table.deck.length) table.deck = shuffleDeck(createDeck());
@@ -286,20 +316,12 @@ function bumpStats(usersDb, userId, won) {
   u.updatedAt = new Date().toISOString();
 }
 
-// Get blackjack game by ID
-//
-// NOTE: '/:gameId' below is a one-segment catch-all for the solo game, so
-// every named collection route has to be registered BEFORE it. '/tables' used
-// to live further down this file and was silently swallowed by the catch-all,
-// which answered every list request with "Game not found".
+// The board, plus the viewer's own table resolved for them.
 router.get('/tables', authenticateToken, (req, res) => {
   try {
     const db = dbManager.getMainDb();
     reclaimTables();
-    const tables = (db.blackjackTables || [])
-      .filter((t) => ['waiting', 'in_progress', 'completed'].includes(t.status))
-      .slice(0, 25);
-    res.json({ tables: tables.map((t) => publicTable(t, req.user.userId, false)) });
+    res.json(withMyTable(db, req.user.userId));
   } catch (err) {
     console.error('Error listing blackjack tables:', err);
     res.status(500).json({ message: 'Server error' });
@@ -338,12 +360,12 @@ function reclaimTables() {
     if (now - stamp < limit) continue;
 
     if (t.status === 'waiting') {
-      // Nobody ever sat down, so the creator's stake simply goes back.
-      returnPlayerStock(t, t.creatorItems);
+      // Nobody ever sat down, so the dealer's stake simply goes back.
+      returnDealerStock(t, t.creatorItems);
     } else {
       // Mid-hand: refund both seats' stakes unplayed.
-      returnPlayerStock(t, t.creatorItems);
-      returnDealerStock(t, t.opponentItems);
+      returnDealerStock(t, t.creatorItems);
+      returnPlayerStock(t, t.opponentItems);
     }
     t.status = 'abandoned';
     t.result = 'abandoned';
@@ -503,9 +525,9 @@ const returnPlayerStock = (t, items) => returnStock(t, items, 'playerStockOwner'
 
 function dealTableHand(table) {
   table.deck = shuffleDeck(createDeck());
-  // The creator is the player and acts first, so their cards come first.
-  table.playerHand = [dealFrom(table.deck), dealFrom(table.deck)];
+  // The creator is the dealer, so their hand is dealt first from the shared deck.
   table.dealerHand = [dealFrom(table.deck), dealFrom(table.deck)];
+  table.playerHand = [dealFrom(table.deck), dealFrom(table.deck)];
   table.playerValue = calculateHandValue(table.playerHand);
   table.dealerValue = calculateHandValue(table.dealerHand);
 }
@@ -517,7 +539,7 @@ router.post('/tables', authenticateToken, (req, res) => {
     const { selectedItems } = req.body || {};
     const userId = req.user.userId;
     if (!Array.isArray(selectedItems) || !selectedItems.length) {
-      return res.status(400).json({ message: 'Select the pets you want to play with' });
+      return res.status(400).json({ message: 'Select the pets you want to deal with' });
     }
     reclaimTables();
 
@@ -559,8 +581,8 @@ router.post('/tables', authenticateToken, (req, res) => {
       creatorAvatar: user.avatar || '',
       creatorItems: wagerStacks,
       creatorValue: value,
-      // The creator is the player, so their own inventory backs their stake.
-      playerStockOwner: userId,
+      // The creator deals, so their own inventory backs the dealer seat.
+      dealerStockOwner: userId,
       opponentId: null,
       opponentUsername: null,
       opponentAvatar: '',
@@ -597,7 +619,11 @@ router.post('/tables', authenticateToken, (req, res) => {
   }
 });
 
-// Another player joins to take the DEALER seat against the creator's hand.
+// Another player joins to take the PLAYER seat against the creator's hand.
+//
+// The wager has to be within VALUE_TOLERANCE of the dealer's, the same 5% band
+// RPS and Coinflip use. Without it a player could join a 9,510 table with a
+// single 4-value pet and be handed a 9,510 pot to lose.
 router.post('/tables/:id/join', authenticateToken, (req, res) => {
   try {
     const userId = req.user.userId;
@@ -605,10 +631,10 @@ router.post('/tables/:id/join', authenticateToken, (req, res) => {
     const { db, table } = findTable(req.params.id);
     if (!table) return res.status(404).json({ message: 'Table not found' });
     if (table.status !== 'waiting') return res.status(400).json({ message: 'That table is no longer open' });
-    if (table.creatorId === userId) return res.status(400).json({ message: 'You cannot deal against yourself' });
+    if (table.creatorId === userId) return res.status(400).json({ message: 'You cannot play against yourself' });
     if (table.opponentId) return res.status(400).json({ message: 'That seat is taken' });
     if (!Array.isArray(selectedItems) || !selectedItems.length) {
-      return res.status(400).json({ message: 'Select the pets to deal with' });
+      return res.status(400).json({ message: 'Select the pets you want to play with' });
     }
 
     const usersDb = dbManager.getUsersDb();
@@ -635,6 +661,16 @@ router.post('/tables/:id/join', authenticateToken, (req, res) => {
     const value = stacks.reduce((s, it) => s + it.value * it.quantity, 0);
     if (value <= 0) return res.status(400).json({ message: 'Those pets have no value' });
 
+    // The join has to be within 5% of the dealer's wager, or the pot is not a
+    // contest. Checked on the server because the client can send anything.
+    const lo = Math.floor((table.creatorValue || 0) * (1 - VALUE_TOLERANCE));
+    const hi = Math.ceil((table.creatorValue || 0) * (1 + VALUE_TOLERANCE));
+    if (value < lo || value > hi) {
+      return res.status(400).json({
+        message: `Your wager must be between ${lo.toLocaleString()} and ${hi.toLocaleString()} AMP to match this table.`
+      });
+    }
+
     for (const it of stacks) {
       dbManager.removeItemFromUserInventory(userId, it.itemId, it.quantity);
     }
@@ -643,8 +679,8 @@ router.post('/tables/:id/join', authenticateToken, (req, res) => {
     table.opponentAvatar = user.avatar || '';
     table.opponentItems = stacks;
     table.opponentValue = value;
-    // A human joiner backs the dealer seat from their own inventory.
-    table.dealerStockOwner = userId;
+    // A human joiner backs the player seat from their own inventory.
+    table.playerStockOwner = userId;
     dealTableHand(table);
 
     // A natural on the deal settles immediately, like any blackjack table.
@@ -668,14 +704,15 @@ router.post('/tables/:id/join', authenticateToken, (req, res) => {
   }
 });
 
-// The house dealer bot takes the seat and the hand is dealt.
+// The house bot takes the PLAYER seat, so the creator deals. This is the
+// "play the house" mode: the bot is the one who hits and stands.
 router.post('/tables/:id/bot-join', authenticateToken, (req, res) => {
   try {
     const userId = req.user.userId;
     const { db, table } = findTable(req.params.id);
     if (!table) return res.status(404).json({ message: 'Table not found' });
     if (table.creatorId !== userId) {
-      return res.status(403).json({ message: 'Only the player can call the dealer' });
+      return res.status(403).json({ message: 'Only the dealer can call the house bot' });
     }
     if (table.status !== 'waiting' || table.opponentId) {
       return res.status(400).json({ message: 'That table is no longer open' });
@@ -689,18 +726,17 @@ router.post('/tables/:id/bot-join', authenticateToken, (req, res) => {
       dbManager.removeItemFromUserInventory(pick.recipient.id, it.itemId, it.quantity || 1);
     }
 
-    // The bot takes the DEALER seat. The creator keeps the player seat and
-    // hits/stands; the dealer turns over and plays after they stand or bust.
+    // The bot sits in the PLAYER seat: it is the one who hits and stands,
+    // while the creator deals. The bot's stake came from the house account,
+    // so that is what must be refunded if the table is abandoned.
     table.opponentId = `bot-${pick.recipient.id}`;
     table.opponentUsername = pick.recipient.username || 'House Dealer';
     table.opponentAvatar = '';
     table.opponentItems = pick.items;
     table.opponentValue = pick.value;
     table.opponentIsBot = true;
-    table.creatorIsBot = false; // the creator is a human, and they play
-    // The bot's stake came from the house account, so that is what must be
-    // refunded if this table is abandoned.
-    table.dealerStockOwner = pick.recipient.id;
+    table.creatorIsBot = false; // the creator is a human, and they deal
+    table.playerStockOwner = pick.recipient.id;
     dealTableHand(table);
 
     if (table.playerValue === 21 && table.dealerValue !== 21) {
@@ -728,8 +764,8 @@ router.post('/tables/:id/hit', authenticateToken, (req, res) => {
     const userId = req.user.userId;
     const { db, table } = findTable(req.params.id);
     if (!table) return res.status(404).json({ message: 'Table not found' });
-    // The creator is the player and takes the first turn. Only they may hit.
-    if (table.creatorId !== userId) return res.status(403).json({ message: 'Not your hand' });
+    // The joiner is the player and takes the first turn. Only they may hit.
+    if (table.opponentId !== userId) return res.status(403).json({ message: 'Not your hand' });
     if (table.status !== 'in_progress') return res.status(400).json({ message: 'Cannot hit right now' });
 
     if (!table.deck || !table.deck.length) table.deck = shuffleDeck(createDeck());
@@ -757,8 +793,8 @@ router.post('/tables/:id/stand', authenticateToken, (req, res) => {
     const userId = req.user.userId;
     const { db, table } = findTable(req.params.id);
     if (!table) return res.status(404).json({ message: 'Table not found' });
-    // The creator is the player; standing ends their turn and the dealer plays.
-    if (table.creatorId !== userId) return res.status(403).json({ message: 'Not your hand' });
+    // The joiner is the player; standing ends their turn and the dealer plays.
+    if (table.opponentId !== userId) return res.status(403).json({ message: 'Not your hand' });
     if (table.status !== 'in_progress') return res.status(400).json({ message: 'Cannot stand right now' });
 
     // Dealer stands on flat 17 and hits a soft 17.
@@ -777,17 +813,33 @@ router.post('/tables/:id/stand', authenticateToken, (req, res) => {
   }
 });
 
-// The house dealer plays its own hand. The bot is the dealer on its own
-// tables, so this is the dealer taking its turn after the player has stood.
+// The house bot plays its own hand. The bot is the PLAYER on these tables, so
+// this is the bot hitting and standing, and the dealer's hand is left alone
+// until the player has finished.
 router.post('/tables/:id/bot-play', authenticateToken, (req, res) => {
   try {
     const { table } = findTable(req.params.id);
     if (!table) return res.status(404).json({ message: 'Table not found' });
-    if (table.opponentIsBot !== true) return res.status(400).json({ message: 'That is not the house dealer' });
-    if (table.status !== 'in_progress') return res.status(400).json({ message: 'Nothing for the dealer to do' });
+    if (table.opponentIsBot !== true) return res.status(400).json({ message: 'That is not the house bot' });
+    if (table.status !== 'in_progress') return res.status(400).json({ message: 'Nothing for the bot to do' });
 
-    playDealerHand(table);
-    settleTable(table, getGameResult(table.playerHand, table.dealerHand));
+    if (!table.deck || !table.deck.length) table.deck = shuffleDeck(createDeck());
+    // The bot plays basic strategy: hit while under 17, stand on 17 or more,
+    // and only then does the creator's dealer turn over and play out.
+    let guard = 0;
+    while (calculateHandValue(table.playerHand) < 17 && guard++ < 6) {
+      if (!table.deck.length) table.deck = shuffleDeck(createDeck());
+      table.playerHand.push(dealFrom(table.deck));
+    }
+    table.playerValue = calculateHandValue(table.playerHand);
+
+    if (table.playerValue > 21) {
+      // The bot busted, so the dealer takes the pot without playing a card.
+      settleTable(table, 'bust');
+    } else {
+      playDealerHand(table);
+      settleTable(table, getGameResult(table.playerHand, table.dealerHand));
+    }
     table.updatedAt = new Date().toISOString();
     dbManager.saveMainDb();
     dbManager.saveUsersDb();
@@ -835,16 +887,16 @@ function settleTable(table, result) {
 
 
   // The two seats, resolved ONCE and used by every branch below. The CREATOR
-  // plays and the JOINER deals - the house bot is simply a joiner that is not
+  // deals and the JOINER plays - the house bot is simply a joiner that is not
   // human. One rule, no special cases: reading the seats twice under slightly
   // different logic is how payouts started inventing pets.
   const seats = {
-    playerId: table.creatorId,
-    playerItems: table.creatorItems,
-    playerValue: table.creatorValue,
-    dealerId: table.opponentId,
-    dealerItems: table.opponentItems,
-    dealerValue: table.opponentValue
+    playerId: table.opponentId,
+    playerItems: table.opponentItems,
+    playerValue: table.opponentValue,
+    dealerId: table.creatorId,
+    dealerItems: table.creatorItems,
+    dealerValue: table.creatorValue
   };
 
   // A bot's seat id is synthetic ("bot-<realUserId>"), so it must be resolved
@@ -970,7 +1022,7 @@ router.get('/user/:userId/history', authenticateToken, (req, res) => {
     const userId = req.params.userId;
     const db = dbManager.getMainDb();
     const history = (db.blackjackTables || [])
-      .filter((t) => t.status === 'completed' && t.creatorId === userId)
+      .filter((t) => t.status === 'completed' && t.opponentId === userId)
       .sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
       .slice(0, 50)
       .map((t) => ({
@@ -980,9 +1032,9 @@ router.get('/user/:userId/history', authenticateToken, (req, res) => {
         playerValue: calculateHandValue(t.playerHand || []),
         dealerHand: t.dealerHand || [],
         dealerValue: calculateHandValue(t.dealerHand || []),
-        // What the player themselves had at risk, which is the creator stake.
-        betValue: t.creatorValue || 0,
-        won: t.opponentValue || 0,
+        // What the player themselves had at risk, which is the joiner stake.
+        betValue: t.opponentValue || 0,
+        won: t.creatorValue || 0,
         profit: t.profit || 0,
         tax: t.taxAmount || 0,
         rake: t.rakeAmount || 0,
