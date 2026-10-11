@@ -5,6 +5,10 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const dbManager = require('../db/dbHelper');
 const { jwtSecret } = require('../jwtSecret');
+// Roblox lookups live in one module now: they used to be copy-pasted here,
+// in chat.js and in users.js, and all three blocked the browser's boot path
+// on a 5s timeout when Roblox was unreachable. See backend/robloxApi.js.
+const { getRobloxUserIdFromUsername, getRobloxHeadshotUrl, headshotFallbackUrl } = require('../robloxApi');
 
 const router = express.Router();
 
@@ -59,80 +63,7 @@ router.post('/dev-login', (req, res) => {
   }
 });
 
-async function getRobloxUserIdFromUsername(robloxUsername) {
-  try {
-    const https = require('https');
-    const postData = JSON.stringify({
-      usernames: [robloxUsername],
-      excludeBannedUsers: false
-    });
-    const options = {
-      hostname: 'users.roblox.com',
-      path: '/v1/usernames/users',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData),
-        'Accept': 'application/json'
-      },
-      timeout: 5000
-    };
-    return await new Promise((resolve, reject) => {
-      const reqApi = https.request(options, (resApi) => {
-        let data = '';
-        resApi.on('data', (chunk) => { data += chunk; });
-        resApi.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            if (json.data && json.data.length > 0) { resolve(json.data[0].id); }
-            else { resolve(null); }
-          } catch (e) { reject(e); }
-        });
-      });
-      reqApi.on('error', (err) => reject(err));
-      reqApi.on('timeout', () => { reqApi.destroy(); reject(new Error('timeout')); });
-      reqApi.write(postData);
-      reqApi.end();
-    });
-  } catch (error) {
-    console.error('Roblox user ID resolve error:', error.message);
-    return null;
-  }
-}
 
-async function getRobloxHeadshotUrl(robloxUserId, size = '420x420') {
-  if (!robloxUserId) return null;
-  try {
-    const https = require('https');
-    const options = {
-      hostname: 'thumbnails.roblox.com',
-      path: `/v1/users/avatar-headshot?userIds=${robloxUserId}&size=${size}&format=Png&isCircular=false`,
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      timeout: 5000
-    };
-    return await new Promise((resolve, reject) => {
-      const reqApi = https.request(options, (resApi) => {
-        let data = '';
-        resApi.on('data', (chunk) => { data += chunk; });
-        resApi.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            if (json.data && json.data.length > 0 && json.data[0].imageUrl) {
-              resolve(json.data[0].imageUrl);
-            } else { resolve(null); }
-          } catch (e) { reject(e); }
-        });
-      });
-      reqApi.on('error', (err) => reject(err));
-      reqApi.on('timeout', () => { reqApi.destroy(); reject(new Error('timeout')); });
-      reqApi.end();
-    });
-  } catch (error) {
-    console.error('Roblox headshot fetch error:', error.message);
-    return null;
-  }
-}
 
 function safeToLower(v) {
   if (v == null) return '';
@@ -169,6 +100,13 @@ async function resolveAndCacheAvatar(userId) {
     if (user.avatar && user.robloxUserId && user.avatarCachedAt && (now - user.avatarCachedAt) < ROBLOX_THUMBNAIL_CACHE_TTL) {
       return user.avatar || '';
     }
+    // Negative cache. The check above tests a truthy avatar, so a lookup that
+    // came back empty never counted as cached and was retried on every single
+    // request - an endless loop against an unreachable host. Record the failure
+    // and leave it alone until the window passes.
+    if (!user.avatar && user.avatarLookupFailedAt && (now - user.avatarLookupFailedAt) < ROBLOX_THUMBNAIL_CACHE_TTL) {
+      return '';
+    }
     let robloxUserId = user.robloxUserId;
     if (!robloxUserId) {
       robloxUserId = await getRobloxUserIdFromUsername(user.robloxUsername);
@@ -181,6 +119,10 @@ async function resolveAndCacheAvatar(userId) {
     }
     user.avatar = avatarUrl;
     user.avatarCachedAt = now;
+    // Mark the attempt either way, so an empty result is not retried on every
+    // request the way it was before.
+    if (!avatarUrl) user.avatarLookupFailedAt = now;
+    else user.avatarLookupFailedAt = null;
     user.updatedAt = new Date().toISOString();
     safeSaveUsersDb();
     return avatarUrl || '';
@@ -647,8 +589,13 @@ router.post('/verify-token', async (req, res) => {  try {
       return res.status(401).json({ valid: false, message: 'Invalid or inactive user' });
     }
 
+    // An avatar is decoration. This route runs on every single page load, so it
+    // must never wait on a third-party HTTP call to produce one: with Roblox
+    // unreachable that stall was the full request timeout, and the app sat on
+    // "Loading AMPcoin..." for ten seconds before anything rendered. Refresh in
+    // the background and answer now; the next load picks the avatar up.
     if (!user.avatar) {
-      try { await resolveAndCacheAvatar(user.id); } catch (_) {}
+      resolveAndCacheAvatar(user.id).catch(() => {});
     }
 
     const freshUser = (usersDb.users.find(u => u.id === user.id)) || user;

@@ -5,6 +5,10 @@ const { authenticateToken, authenticateAdmin, authenticateModerator } = require(
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
 const { emitToUser } = require('../realtime');
+// Roblox lookups live in one module now: they used to be copy-pasted here,
+// in chat.js and in users.js, and all three blocked the browser's boot path
+// on a 5s timeout when Roblox was unreachable. See backend/robloxApi.js.
+const { getRobloxProfileByUsername, getRobloxHeadshotUrl } = require('../robloxApi');
 const {
   scanChatMessage,
   applyProgressiveMute,
@@ -56,76 +60,7 @@ function isModerationRateLimited(actorId, targetId) {
   return false;
 }
 
-async function getRobloxUserIdFromUsername(robloxUsername) {
-  try {
-    const https = require('https');
-    const postData = JSON.stringify({ usernames: [robloxUsername], excludeBannedUsers: false });
-    const options = {
-      hostname: 'users.roblox.com',
-      path: '/v1/usernames/users',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData),
-        'Accept': 'application/json'
-      },
-      timeout: 5000
-    };
-    return await new Promise((resolve, reject) => {
-      const r = https.request(options, (resApi) => {
-        let data = '';
-        resApi.on('data', (c) => { data += c; });
-        resApi.on('end', () => {
-          try {
-            const j = JSON.parse(data);
-            if (j.data && j.data.length > 0) resolve({ id: j.data[0].id, displayName: j.data[0].displayName });
-            else resolve(null);
-          } catch (e) { reject(e); }
-        });
-      });
-      r.on('error', (err) => reject(err));
-      r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
-      r.write(postData);
-      r.end();
-    });
-  } catch (e) {
-    console.error('Roblox ID resolve error:', e.message);
-    return null;
-  }
-}
 
-async function getRobloxHeadshotUrl(robloxUserId, size = '150x150') {
-  if (!robloxUserId) return null;
-  try {
-    const https = require('https');
-    const options = {
-      hostname: 'thumbnails.roblox.com',
-      path: `/v1/users/avatar-headshot?userIds=${robloxUserId}&size=${size}&format=Png&isCircular=false`,
-      method: 'GET',
-      headers: { 'Accept': 'application/json' },
-      timeout: 5000
-    };
-    return await new Promise((resolve, reject) => {
-      const r = https.request(options, (resApi) => {
-        let data = '';
-        resApi.on('data', (c) => { data += c; });
-        resApi.on('end', () => {
-          try {
-            const j = JSON.parse(data);
-            if (j.data && j.data.length > 0 && j.data[0].imageUrl) resolve(j.data[0].imageUrl);
-            else resolve(null);
-          } catch (e) { reject(e); }
-        });
-      });
-      r.on('error', (err) => reject(err));
-      r.on('timeout', () => { r.destroy(); reject(new Error('timeout')); });
-      r.end();
-    });
-  } catch (e) {
-    console.error('Roblox headshot error:', e.message);
-    return null;
-  }
-}
 
 async function ensureUserProfileCached(user) {
   const now = Date.now();
@@ -149,7 +84,7 @@ async function ensureUserProfileCached(user) {
   let robloxUserId = dbUser.robloxUserId;
   let robloxDisplayName = dbUser.robloxDisplayName || (dbUser.customDisplayName ? null : dbUser.displayName) || dbUser.robloxUsername;
   if (!robloxUserId) {
-    const res = await getRobloxUserIdFromUsername(dbUser.robloxUsername);
+    const res = await getRobloxProfileByUsername(dbUser.robloxUsername);
     if (res) {
       robloxUserId = res.id;
       robloxDisplayName = res.displayName || robloxDisplayName;

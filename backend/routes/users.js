@@ -4,97 +4,23 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
+// Roblox lookups live in one module now: they used to be copy-pasted here, in
+// chat.js and in auth.js, and all three blocked the browser's boot path on a 5s
+// timeout when Roblox was unreachable. See backend/robloxApi.js.
+//
+// Note the two lookups are NOT interchangeable: this file wants the profile
+// record ({ id, displayName }) because it displays the display name, whereas
+// auth.js only wants the bare id. The old per-file copies had drifted apart on
+// exactly this point.
+const {
+  getRobloxProfileByUsername,
+  getRobloxHeadshotUrl,
+  headshotFallbackUrl
+} = require('../robloxApi');
 
 const ROBLOX_PROFILE_CACHE_TTL = 1000 * 60 * 60; // 1 hour cache
 
-async function getRobloxUserIdFromUsername(robloxUsername) {
-  try {
-    const https = require('https');
-    const postData = JSON.stringify({
-      usernames: [robloxUsername],
-      excludeBannedUsers: false
-    });
 
-    const options = {
-      hostname: 'users.roblox.com',
-      path: '/v1/usernames/users',
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(postData),
-        'Accept': 'application/json'
-      },
-      timeout: 5000
-    };
-
-    return await new Promise((resolve, reject) => {
-      const reqApi = https.request(options, (resApi) => {
-        let data = '';
-        resApi.on('data', (chunk) => { data += chunk; });
-        resApi.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            if (json.data && json.data.length > 0) {
-              resolve({ id: json.data[0].id, displayName: json.data[0].displayName });
-            } else {
-              resolve(null);
-            }
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-      reqApi.on('error', (err) => reject(err));
-      reqApi.on('timeout', () => { reqApi.destroy(); reject(new Error('Request timeout')); });
-      reqApi.write(postData);
-      reqApi.end();
-    });
-  } catch (error) {
-    console.error('Error resolving Roblox username to ID:', error);
-    return null;
-  }
-}
-
-async function getRobloxHeadshotUrl(robloxUserId, size = '420x420') {
-  if (!robloxUserId) return null;
-  try {
-    const https = require('https');
-    const options = {
-      hostname: 'thumbnails.roblox.com',
-      path: `/v1/users/avatar-headshot?userIds=${robloxUserId}&size=${size}&format=Png&isCircular=false`,
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json'
-      },
-      timeout: 5000
-    };
-
-    return await new Promise((resolve, reject) => {
-      const reqApi = https.request(options, (resApi) => {
-        let data = '';
-        resApi.on('data', (chunk) => { data += chunk; });
-        resApi.on('end', () => {
-          try {
-            const json = JSON.parse(data);
-            if (json.data && json.data.length > 0 && json.data[0].imageUrl) {
-              resolve(json.data[0].imageUrl);
-            } else {
-              resolve(null);
-            }
-          } catch (e) {
-            reject(e);
-          }
-        });
-      });
-      reqApi.on('error', (err) => reject(err));
-      reqApi.on('timeout', () => { reqApi.destroy(); reject(new Error('Request timeout')); });
-      reqApi.end();
-    });
-  } catch (error) {
-    console.error('Error fetching Roblox headshot URL:', error);
-    return null;
-  }
-}
 
 async function resolveAndCacheRobloxProfile(userId) {
   const usersDb = dbManager.getUsersDb();
@@ -121,10 +47,24 @@ async function resolveAndCacheRobloxProfile(userId) {
     };
   }
 
+  // Negative cache, same reason as in auth.js: `profileCached` tests a truthy
+  // avatar, so a lookup that came back empty never counted as cached and was
+  // retried on every request. This route is on the browser's boot path, so an
+  // endless retry against an unreachable host was a permanent stall.
+  if (!dbUser.avatar && dbUser.robloxLookupFailedAt && (now - dbUser.robloxLookupFailedAt) < ROBLOX_PROFILE_CACHE_TTL) {
+    return {
+      avatar: '',
+      displayName: dbUser.customDisplayName || dbUser.robloxDisplayName || dbUser.displayName,
+      customDisplayName: dbUser.customDisplayName || null,
+      robloxDisplayName: dbUser.robloxDisplayName,
+      robloxUserId: dbUser.robloxUserId || null
+    };
+  }
+
   let robloxUserId = dbUser.robloxUserId;
   let robloxDisplayName = dbUser.robloxDisplayName || (dbUser.customDisplayName ? null : dbUser.displayName);
   if (!robloxUserId) {
-    const resolved = await getRobloxUserIdFromUsername(dbUser.robloxUsername);
+    const resolved = await getRobloxProfileByUsername(dbUser.robloxUsername);
     if (resolved) {
       robloxUserId = resolved.id;
       robloxDisplayName = resolved.displayName || robloxDisplayName;
@@ -141,6 +81,7 @@ async function resolveAndCacheRobloxProfile(userId) {
   dbUser.avatar = avatarUrl;
   if (robloxDisplayName) dbUser.robloxDisplayName = robloxDisplayName;
   dbUser.avatarCachedAt = now;
+  dbUser.robloxLookupFailedAt = avatarUrl ? null : now;
   dbUser.updatedAt = new Date().toISOString();
   dbManager.saveUsersDb();
 
@@ -167,17 +108,24 @@ router.get('/profile/:robloxUsername', async (req, res) => {
     let robloxUserId = null;
 
     if (user) {
-      const profile = await resolveAndCacheRobloxProfile(user.id);
-      avatar = profile.avatar;
-      displayName = profile.displayName;
-      robloxUserId = profile.robloxUserId;
+      // Answer from what we already know, and refresh in the background. The
+      // browser calls this on its boot path, so waiting on Roblox here meant
+      // the whole app sat on its loading screen until the lookup gave up.
+      avatar = user.avatar || '';
+      displayName = user.customDisplayName || user.robloxDisplayName || user.displayName || '';
+      robloxUserId = user.robloxUserId || null;
+
+      const fresh = !avatar || !user.robloxDisplayName;
+      if (fresh) resolveAndCacheRobloxProfile(user.id).catch(() => {});
     } else {
-      const resolved = await getRobloxUserIdFromUsername(robloxUsername);
+      // Unknown username: there is nothing cached to answer with, so this one
+      // genuinely has to wait. The circuit breaker keeps it to one attempt.
+      const resolved = await getRobloxProfileByUsername(robloxUsername);
       if (resolved) {
         robloxUserId = resolved.id;
         displayName = resolved.displayName || robloxUsername;
         const hs = await getRobloxHeadshotUrl(resolved.id);
-        avatar = hs || `https://www.roblox.com/headshot-thumbnail/image?userId=${resolved.id}&width=420&height=420&format=png`;
+        avatar = hs || headshotFallbackUrl(resolved.id);
       }
     }
 
@@ -207,15 +155,16 @@ router.get('/avatar/:robloxUsername', async (req, res) => {
 
     let avatarUrl = '';
     if (user) {
-      const profile = await resolveAndCacheRobloxProfile(user.id);
-      avatarUrl = profile.avatar;
-    }
-
-    if (!avatarUrl) {
-      const resolved = await getRobloxUserIdFromUsername(robloxUsername);
+      // Same reasoning as /profile above: answer from cache, refresh behind.
+      // Returning the plain headshot URL when one is known still gives the
+      // browser a real image, because Roblox serves it directly.
+      avatarUrl = user.avatar || headshotFallbackUrl(user.robloxUserId);
+      if (!user.avatar) resolveAndCacheRobloxProfile(user.id).catch(() => {});
+    } else {
+      const resolved = await getRobloxProfileByUsername(robloxUsername);
       if (resolved) {
         const headshot = await getRobloxHeadshotUrl(resolved.id);
-        avatarUrl = headshot || `https://www.roblox.com/headshot-thumbnail/image?userId=${resolved.id}&width=420&height=420&format=png`;
+        avatarUrl = headshot || headshotFallbackUrl(resolved.id);
       }
     }
 

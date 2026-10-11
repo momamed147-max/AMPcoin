@@ -237,6 +237,12 @@ function normalizeUser(user) {
     password: user.password || '',
     avatar: user.avatar || user.profilePicture || '',
     avatarCachedAt: user.avatarCachedAt || 0,
+    // Negative-cache markers for Roblox lookups. This normaliser rebuilds the
+    // record field by field, so anything not listed here is dropped on the next
+    // save - which is what happened to the daily-bonus fields, letting a
+    // once-a-day payout be claimed for ever.
+    avatarLookupFailedAt: user.avatarLookupFailedAt || null,
+    robloxLookupFailedAt: user.robloxLookupFailedAt || null,
     balance: typeof user.balance === 'number' ? user.balance : 0,
     lockedBalance: typeof user.lockedBalance === 'number' ? user.lockedBalance : 0,
     totalDeposited: typeof user.totalDeposited === 'number' ? user.totalDeposited : 0,

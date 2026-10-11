@@ -64,13 +64,14 @@ function AppContent() {
   const [balance, setBalance] = useState(0);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
-  const [apiDown, setApiDown] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const apiDownRef = useRef(false);
   const toastRef = useRef(null);
   toastRef.current = toast;
 
   // Backend reachability canary — shows a banner instead of silent failures
+  const [apiDown, setApiDown] = useState(false);
+  const [apiNote, setApiNote] = useState('');
   const checkApi = async () => {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), 10000);
@@ -79,15 +80,29 @@ function AppContent() {
       if (!response.ok) throw new Error(`API check failed (${response.status})`);
       apiDownRef.current = false;
       setApiDown(false);
-    } catch (_) {
+      setApiNote('');
+    } catch (err) {
+      // A rate-limited server is up and healthy; it is only refusing to answer
+      // right now. Telling the player the game is offline when it is merely
+      // throttled is wrong, and it is also alarming when nothing is actually
+      // broken - the inventory shows 0, chat says it is reconnecting, and every
+      // panel reports failure, all because of one 429.
+      const throttled = /429/.test(err.message || '');
+      const note = throttled
+        ? 'Too many requests — the server is rate limiting you. It will clear in a minute.'
+        : 'Cannot reach the game server — it may be offline or redeploying.';
+      setApiNote(note);
       if (!apiDownRef.current) {
-        playError();
-        // Worth saying out loud, not only as a strip at the top of the page
-        // that may be scrolled off screen.
+        if (!throttled) playError();
         toastRef.current?.push({
-          tone: 'error', icon: 'warn', title: 'Game server unreachable',
-          body: 'You will not be able to bet until it comes back.', duration: 9000,
-          key: 'api:down'
+          tone: throttled ? 'warn' : 'error',
+          icon: 'warn',
+          title: throttled ? 'Rate limited' : 'Game server unreachable',
+          body: throttled
+            ? 'Slow down for a moment; requests will start working again shortly.'
+            : 'You will not be able to bet until it comes back.',
+          duration: 9000,
+          key: throttled ? 'api:throttled' : 'api:down'
         });
       }
       apiDownRef.current = true;
@@ -198,7 +213,7 @@ function AppContent() {
       {apiDown && (
         <div className="api-down-banner" role="status">
           <Icon name="warn" size={15} />
-          <span>Cannot reach the game server — it may be offline or redeploying.</span>
+          <span>{apiNote}</span>
           <button onClick={checkApi}>Retry</button>
         </div>
       )}

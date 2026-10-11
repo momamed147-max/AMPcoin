@@ -459,8 +459,16 @@ a.cf-tab {
   white-space: nowrap;
 }
 
-/* Value area */
-.cf-row-total {
+/* ─── Value area ─── */
+
+/* The value column: the right-hand block of a lobby row. The amount on top, the
+   join band and any item cap stacked underneath.
+
+   It has to be a COLUMN. Coinflip, RPS and Blackjack all nest the amount, the
+   join range and the item cap as siblings here, so a row layout put them side by
+   side and every row read "600  600 - 600" - the amount and its own range
+   appearing to be two different numbers. */
+.cf-row-value {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
@@ -469,17 +477,19 @@ a.cf-tab {
   flex-shrink: 0;
   padding-left: 14px;
   border-left: 1px solid var(--line-soft);
-}
-
-.cf-row-value {
-  display: flex;
-  align-items: center;
-  gap: 5px;
   color: var(--txt);
   font-size: 0.95rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+/* The amount itself: a diamond and the figure, on one line. */
+.cf-row-total {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
 }
 
 .cf-row-range {
@@ -1743,7 +1753,7 @@ a.cf-tab {
     order: 3;
   }
 
-  .cf-row-total {
+  .cf-row-value {
     min-width: auto;
     align-items: flex-start;
     border-left: none;

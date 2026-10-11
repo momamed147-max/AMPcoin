@@ -251,8 +251,13 @@ const Header = ({ balance, socket }) => {
   const getPageMeta = () => {
     switch (location.pathname) {
       case '/jackpot':
-      case '/blackjack':
         return { title: 'Jackpot', subtitle: 'Winner takes the pot', icon: 'jackpot' };
+      // Blackjack used to fall through to the jackpot case above and was titled
+      // "Jackpot" on its own page, which made two different games look like one.
+      case '/blackjack':
+        return { title: 'Blackjack', subtitle: 'Dealer stands on 17 — beat the bot', icon: 'card' };
+      case '/upgrader':
+        return { title: 'Upgrader', subtitle: 'Trade your pets for something better', icon: 'battery' };
       case '/coinflip':
         return { title: 'Coinflip', subtitle: 'Head-to-head item bets', icon: 'coin' };
       case '/rps':

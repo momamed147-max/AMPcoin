@@ -18,6 +18,7 @@ const SUITES = [
   { file: 'api.js', label: 'games API' },
   { file: 'progress.js', label: 'progression' },
   { file: 'dailybonus.js', label: 'daily bonus' },
+  { file: 'boot-latency.js', label: 'boot latency' },
   // Static: walks the frontend import graph. Needs no server, so it runs first
   // and a broken build fails fast before anything hits the API rate limit.
   { file: 'css-reachability.js', label: 'css reachability', server: false }
