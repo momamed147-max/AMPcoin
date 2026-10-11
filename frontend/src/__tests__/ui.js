@@ -131,6 +131,8 @@ const { MemoryRouter } = require(path.join(FRONTEND, 'node_modules', 'react-rout
 const { default: BlackjackPage } = require(path.join(FRONTEND, 'src', 'pages', 'BlackjackPage.js'));
 const { default: StatsPageV2 } = require(path.join(FRONTEND, 'src', 'pages', 'StatsPageV2.js'));
 const { default: ErrorBoundary } = require(path.join(FRONTEND, 'src', 'components', 'ErrorBoundary.js'));
+const { default: CommandPalette } = require(path.join(FRONTEND, 'src', 'components', 'CommandPalette.js'));
+const { default: DailyBonus } = require(path.join(FRONTEND, 'src', 'components', 'DailyBonus.js'));
 const { default: TradingPage } = require(path.join(FRONTEND, 'src', 'pages', 'TradingPage.js'));
 const { default: UpgraderPage } = require(path.join(FRONTEND, 'src', 'pages', 'UpgraderPage.js'));
 const { default: QtyStepper } = require(path.join(FRONTEND, 'src', 'components', 'QtyStepper.js'));
@@ -643,6 +645,143 @@ const INVENTORY = [
     for (const dead of ['pages/StatsPage.js', 'pages/StatsPage.css', 'pages/WalletPage.js', 'pages/WalletPage.css']) {
       ok(!fsx.existsSync(path.join(FRONTEND, 'src', dead)), `${dead} was deleted`);
     }
+  }
+
+  section('the command palette opens, searches and navigates');
+  {
+    const wrap = (el) => React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(AuthContext.Provider, { value: { user: TEST_USER, loading: false } }, el)
+    );
+
+    // Closed: renders nothing at all.
+    await render(wrap(React.createElement(CommandPalette, { open: false, onClose: () => {} })));
+    ok(!$('.cp'), 'a closed palette renders nothing');
+
+    await render(wrap(React.createElement(CommandPalette, { open: true, onClose: () => {} })));
+    ok(!!$('.cp'), 'an open palette renders');
+    ok(!!$('.cp-search input'), 'with a focused search field');
+    const allItems = $$('.cp-item');
+    ok(allItems.length >= 8, `it lists every destination by default (${allItems.length})`);
+
+    // Every game must be reachable, or the palette is decoration.
+    const labels = $$('.cp-item-label').map((n) => n.textContent);
+    for (const g of ['Coinflip', 'Jackpot', 'Rock Paper Scissors', 'Blackjack', 'Upgrader', 'Trading']) {
+      ok(labels.some((l) => l === g), `${g} is reachable from the palette`);
+    }
+
+    // Filtering.
+    await typeInto($('.cp-search input'), 'black');
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    const filtered = $$('.cp-item-label').map((n) => n.textContent);
+    ok(filtered.length === 1 && filtered[0] === 'Blackjack',
+      `typing "black" narrows it to one (${filtered.join(', ')})`);
+
+    // Fuzzy: a subsequence, not just a prefix.
+    await typeInto($('.cp-search input'), 'upgr');
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    ok($$('.cp-item-label').some((n) => n.textContent === 'Upgrader'),
+      'a partial subsequence still matches (upgr -> Upgrader)');
+
+    // No results must say so rather than showing a blank list.
+    await typeInto($('.cp-search input'), 'zzzzqqq');
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    ok(!!$('.cp-empty'), 'no matches shows an empty state');
+
+    // Arrow keys move the cursor, Enter runs the highlighted row.
+    await typeInto($('.cp-search input'), 'rps');
+    await act(async () => { await new Promise((r) => setTimeout(r, 20)); });
+    const first = $$('.cp-item').findIndex((n) => n.className.includes('is-active'));
+    await key($('.cp-search input'), 'ArrowDown');
+    const afterDown = $$('.cp-item').findIndex((n) => n.className.includes('is-active'));
+    ok(afterDown !== first || $$('.cp-item').length === 1,
+      'ArrowDown moves the active row');
+    await key($('.cp-search input'), 'ArrowUp');
+    ok($$('.cp-item').findIndex((n) => n.className.includes('is-active')) === first,
+      'ArrowUp moves it back');
+
+    // Escape closes.
+    let closed = false;
+    await render(wrap(React.createElement(CommandPalette, { open: true, onClose: () => { closed = true; } })));
+    await key($('.cp-search input'), 'Escape');
+    ok(closed === true, 'Escape closes the palette');
+  }
+
+  section('the daily bonus shows the streak and offers the claim');
+  {
+    const wrap = (el) => React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(AuthContext.Provider, { value: { user: TEST_USER, loading: false } }, el)
+    );
+    const claimable = {
+      canClaim: true, claimedToday: false, streak: 3, nextStreak: 4, best: 5,
+      totalClaimed: 120000, totalDays: 4, reward: 70000, nextReward: 85000,
+      maxStreak: 12, maxDaily: 175000, msUntilNext: 0, streakBroken: false
+    };
+    fetchQueue.length = 0;
+    fetchQueue.push({ body: claimable });
+    await render(wrap(React.createElement(DailyBonus, { open: true, onClose: () => {} })));
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+
+    ok(!!$('.db'), 'the dialog rendered');
+    ok(document.body.textContent.includes('Daily Bonus'), 'with a title');
+    ok($$('.db-day').length === 12, `the whole streak ladder is shown (${$$('.db-day').length} dots)`);
+    ok($$('.db-day.is-done').length === 3, 'the completed days are marked');
+    ok($$('.db-day.is-today').length === 1, 'exactly one dot is "today"');
+    ok(document.body.textContent.includes('70,000'), 'the reward for today is shown');
+    const btn = $$('.db-actions button').find((b) => /claim/i.test(b.textContent));
+    ok(!!btn && !btn.disabled, 'the claim button is enabled while claimable');
+    ok(document.body.textContent.includes('Total claimed'), 'lifetime totals are shown');
+
+    // Already claimed: a countdown replaces the button, so the player is not
+    // left pressing something that will be refused.
+    fetchQueue.length = 0;
+    fetchQueue.push({ body: { ...claimable, canClaim: false, claimedToday: true, nextStreak: 5, reward: 85000, msUntilNext: 3600000 } });
+    await render(wrap(React.createElement(DailyBonus, { open: true, onClose: () => {} })));
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+    ok(!!$('.db-timer'), 'a countdown replaces the button once claimed');
+    ok(!$$('.db-actions button').some((b) => /claim/i.test(b.textContent)),
+      'and there is no claim button to press');
+
+    // A broken streak must be called out rather than silently restarting. The
+    // fixture keeps a non-zero streak, because a brand-new account legitimately
+    // has streakBroken set with nothing to have lost.
+    fetchQueue.length = 0;
+    fetchQueue.push({
+      body: {
+        ...claimable, canClaim: true, streak: 5, nextStreak: 1,
+        streakBroken: true, totalDays: 6, reward: 25000
+      }
+    });
+    await render(wrap(React.createElement(DailyBonus, { open: true, onClose: () => {} })));
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+    ok(!!$('.db-note.warn'), 'a broken streak is explained');
+
+    // A brand-new account must NOT be told it lost a streak it never had.
+    fetchQueue.length = 0;
+    fetchQueue.push({
+      body: { ...claimable, canClaim: true, streak: 0, nextStreak: 1, streakBroken: true, totalDays: 0 }
+    });
+    await render(wrap(React.createElement(DailyBonus, { open: true, onClose: () => {} })));
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+    ok(!$('.db-note.warn'), 'a first-time player is not warned about losing a streak');
+
+    // A failed load must offer a retry, not a blank dialog.
+    fetchQueue.length = 0;
+    fetchQueue.push({ status: 500, body: { message: 'Server error' } });
+    await render(wrap(React.createElement(DailyBonus, { open: true, onClose: () => {} })));
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+    ok(!!$('.db-error'), 'a failed load shows an error state');
+
+    const classes = new Set();
+    document.querySelectorAll('*').forEach((n) => {
+      if (typeof n.className === 'string') n.className.split(/\s+/).forEach((c) => c && classes.add(c));
+    });
+    const unknown = [...classes].filter((c) => !cssText.includes(`.${c}`));
+    ok(unknown.length === 0,
+      `every daily-bonus class exists in CSS${unknown.length ? ` (missing: ${unknown.join(', ')})` : ''}`);
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

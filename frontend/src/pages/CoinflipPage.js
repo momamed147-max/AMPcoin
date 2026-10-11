@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import CreateCoinflipModal from '../components/CreateCoinflipModal';
+import CommandPalette from '../components/CommandPalette';
 import AnimatedPopup from '../components/AnimatedPopup';
 import ModalPortal from '../components/ModalPortal';
 import { CoinChip, CoinFlipAnimation, CoinLoader } from '../components/CoinChip';
@@ -113,6 +114,7 @@ const CoinflipPage = ({ socket, setBalance }) => {
 
   // Sort filter state
   const [sortDropdown, setSortDropdown] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Fetch coinflips
   const fetchCoinflips = useCallback(async () => {
@@ -611,6 +613,19 @@ const CoinflipPage = ({ socket, setBalance }) => {
           </button>
         </div>
         <div className="cf-topbar-right">
+          {/* The palette is global, but a visible trigger is what tells anyone
+              it exists. */}
+          <button
+            type="button"
+            className="cf-topbar-btn cp-trigger"
+            onClick={() => setPaletteOpen(true)}
+            title="Jump to a game (Ctrl+K)"
+            aria-label="Open command palette"
+          >
+            <Icon name="search" size={13} />
+            <span className="cp-trigger-label">Jump to</span>
+            <kbd className="cp-kbd">Ctrl K</kbd>
+          </button>
           <div className="cf-sort-wrap">
             <button
               type="button"
@@ -1099,6 +1114,8 @@ const CoinflipPage = ({ socket, setBalance }) => {
       )}
 
       {/* Values are opened from the main nav, via the global modal in App */}
+
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
 
       {/* ═══════════════════════════════════════════════════════════════════
           HISTORY MODAL

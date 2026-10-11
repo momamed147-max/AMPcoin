@@ -246,6 +246,15 @@ function normalizeUser(user) {
     gamesLost: typeof user.gamesLost === 'number' ? user.gamesLost : 0,
     highestStreak: typeof user.highestStreak === 'number' ? user.highestStreak : 0,
     currentStreak: typeof user.currentStreak === 'number' ? user.currentStreak : 0,
+    // Daily-login bonus. Without these in the normaliser they are written by
+    // /api/daily-bonus/claim and then silently stripped on the next write,
+    // so the streak never advances past day 1 and the reward can be claimed
+    // over and over.
+    dailyBonusStreak: typeof user.dailyBonusStreak === 'number' ? user.dailyBonusStreak : 0,
+    dailyBonusBest: typeof user.dailyBonusBest === 'number' ? user.dailyBonusBest : 0,
+    dailyBonusTotal: typeof user.dailyBonusTotal === 'number' ? user.dailyBonusTotal : 0,
+    dailyBonusDays: typeof user.dailyBonusDays === 'number' ? user.dailyBonusDays : 0,
+    dailyBonusLastClaim: user.dailyBonusLastClaim || null,
     isAdmin: user.isAdmin === true,
     isModerator: user.isModerator === true,
     isActive: user.isActive !== false,

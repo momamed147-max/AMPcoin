@@ -5,6 +5,7 @@ import InventoryPickerModal from './InventoryPickerModal';
 import ErrorBoundary from './ErrorBoundary';
 import SettingsModal from './SettingsModal';
 import ModalPortal from './ModalPortal';
+import DailyBonus from './DailyBonus';
 import Icon from './Icon';
 import ModBadges from './ModBadges';
 import { API_BASE } from '../apiConfig';
@@ -92,11 +93,30 @@ const Header = ({ balance, socket }) => {
   const [gwLoading, setGwLoading] = useState(false);
   const [gwBusyId, setGwBusyId] = useState(null);
   const [gwNote, setGwNote] = useState('');
+  const [dailyOpen, setDailyOpen] = useState(false);
+  const [dailyBonus, setDailyBonus] = useState(null);
 
   const num = (v) => {
     const n = Number(v);
     return isNaN(n) ? 0 : n;
   };
+
+  // Daily bonus state, for the header dot. A single small fetch on mount plus a
+  // refetch after any balance change, so the dot cannot go stale.
+  const loadDaily = useCallback(async () => {
+    if (!user) { setDailyBonus(null); return; }
+    try {
+      const res = await fetch(`${API_BASE}/api/daily-bonus`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (res.ok) setDailyBonus(await res.json());
+    } catch (e) {
+      // Not worth a visible failure: the button still opens the dialog.
+      void e;
+    }
+  }, [user]);
+
+  useEffect(() => { loadDaily(); }, [loadDaily]);
 
   const unreadCount = notifList.filter((n) => !n.read).length;
 
@@ -293,7 +313,10 @@ const Header = ({ balance, socket }) => {
   useEffect(() => {
     if (!socket) return;
     const refresh = () => fetchInventory();
-    socket.on('balanceUpdate', refresh);
+    // A balance change can be a bonus claim, so the streak dot is re-checked
+    // here too rather than going stale until the next reload.
+    const onBalance = () => { refresh(); loadDaily(); };
+    socket.on('balanceUpdate', onBalance);
     socket.on('newCoinflip', refresh);
     socket.on('coinflipJoined', refresh);
     socket.on('coinflipResult', refresh);
@@ -301,7 +324,7 @@ const Header = ({ balance, socket }) => {
     socket.on('inventoryUpdate', refresh);
     socket.on('giveawayUpdate', refresh);
     return () => {
-      socket.off('balanceUpdate', refresh);
+      socket.off('balanceUpdate', onBalance);
       socket.off('newCoinflip', refresh);
       socket.off('coinflipJoined', refresh);
       socket.off('coinflipResult', refresh);
@@ -309,7 +332,7 @@ const Header = ({ balance, socket }) => {
       socket.off('inventoryUpdate', refresh);
       socket.off('giveawayUpdate', refresh);
     };
-  }, [socket, fetchInventory]);
+  }, [socket, fetchInventory, loadDaily]);
 
   const handleWalletClick = () => {
     setModalMsg('');
@@ -451,6 +474,19 @@ const Header = ({ balance, socket }) => {
       </div>
 
       <div className="header-right">
+        {/* The daily bonus lives in the header because it is time-based and the
+            player has to be able to find it again after closing it. A dot marks
+            it when it is claimable. */}
+        <button
+          type="button"
+          className={`daily-bonus-trigger ${dailyBonus?.canClaim ? 'is-ready' : ''}`}
+          onClick={() => setDailyOpen(true)}
+          aria-label={`Daily bonus${dailyBonus?.canClaim ? ', ready to claim' : dailyBonus ? `, claimed, next in ${Math.round((dailyBonus.msUntilNext || 0) / 60000)} minutes` : ''}`}
+          title={dailyBonus?.canClaim ? `Claim ${Number(dailyBonus.reward || 0).toLocaleString()} AMP` : 'Daily bonus'}
+        >
+          <Icon name="jackpot" size={16} />
+          {dailyBonus?.canClaim && <span className="daily-bonus-dot" aria-hidden="true" />}
+        </button>
         <button
           type="button"
           className="settings-trigger"
@@ -721,6 +757,12 @@ const Header = ({ balance, socket }) => {
         </ModalPortal>
         );
       })()}</ErrorBoundary>}
+
+      {dailyOpen && (
+        <ErrorBoundary label="The daily bonus" onClose={() => setDailyOpen(false)}>
+          <DailyBonus open={dailyOpen} onClose={() => setDailyOpen(false)} />
+        </ErrorBoundary>
+      )}
 
       {tradeModal && (
         <ModalPortal>

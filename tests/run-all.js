@@ -16,7 +16,8 @@ const PORT = 5000;
 
 const SUITES = [
   { file: 'api.js', label: 'games API' },
-  { file: 'progress.js', label: 'progression' }
+  { file: 'progress.js', label: 'progression' },
+  { file: 'dailybonus.js', label: 'daily bonus' }
 ];
 
 let child = null;

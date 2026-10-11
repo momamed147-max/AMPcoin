@@ -652,6 +652,53 @@ textarea:focus-visible,
   transform: scale(0.94);
 }
 
+/* ── daily bonus trigger ─────────────────────────────────────────────────────
+   Sized and shaped like .settings-trigger so the header row stays even, and the
+   dot is what says "claimable" - not colour alone, so it nudges as well. */
+.daily-bonus-trigger {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  place-items: center;
+  color: var(--mut);
+  border: 1px solid var(--line-soft);
+  border-radius: 10px;
+  background: rgba(15, 23, 36, 0.65);
+  cursor: pointer;
+  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.12s ease;
+}
+.daily-bonus-trigger:hover { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
+.daily-bonus-trigger:active { transform: scale(0.94); }
+.daily-bonus-trigger:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
+
+.daily-bonus-trigger.is-ready {
+  color: var(--gold);
+  border-color: color-mix(in srgb, var(--gold) 42%, transparent);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+
+.daily-bonus-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--grn);
+  border: 1.5px solid var(--panel);
+  animation: daily-nudge 2.2s var(--ease-1) infinite;
+}
+@keyframes daily-nudge {
+  0%, 76%, 100% { transform: scale(1); }
+  84% { transform: scale(1.35); }
+  92% { transform: scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .daily-bonus-dot { animation: none; }
+}
+
 .sound-toggle {
   position: relative;
   display: grid;

@@ -417,6 +417,20 @@ body {
 @keyframes logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 
 /* ─── API offline banner ─── */
+/* ─── the 404 page, on the shared primitive ─── */
+.request-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-10) var(--sp-6);
+  text-align: center;
+  color: var(--dim);
+}
+.request-state p { margin: 0; font-size: var(--fs-lg); font-weight: 800; color: var(--txt); }
+.request-state-sub { font-size: var(--fs-sm) !important; font-weight: 600 !important; color: var(--mut) !important; }
+.request-state-actions { display: flex; gap: var(--sp-3); flex-wrap: wrap; justify-content: center; margin-top: var(--sp-3); }
+
 .api-down-banner {
   display: flex; align-items: center; justify-content: center; gap: 12px;
   background: #1a1214; border-bottom: 1px solid rgba(248,81,73,.35);

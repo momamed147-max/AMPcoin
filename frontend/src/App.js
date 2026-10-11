@@ -12,6 +12,8 @@ import ValueChecker from './components/ValueChecker';
 import AuthProvider, { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
+import ToastProvider, { useToast } from './components/Toasts';
+import CommandPalette from './components/CommandPalette';
 import Icon from './components/Icon';
 import { API_BASE } from './apiConfig';
 import { installGlobalSoundEffects, playError } from './sound';
@@ -56,11 +58,17 @@ const socket = io(BACKEND_URL, {
 function AppContent() {
   const { user, loading } = useAuth();
   const location = useLocation();
+  // Toasts are declared here but rendered at the end, so they sit above every
+  // modal and survive navigation.
+  const toast = useToast();
   const [balance, setBalance] = useState(0);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   const [apiDown, setApiDown] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const apiDownRef = useRef(false);
+  const toastRef = useRef(null);
+  toastRef.current = toast;
 
   // Backend reachability canary — shows a banner instead of silent failures
   const checkApi = async () => {
@@ -72,7 +80,16 @@ function AppContent() {
       apiDownRef.current = false;
       setApiDown(false);
     } catch (_) {
-      if (!apiDownRef.current) playError();
+      if (!apiDownRef.current) {
+        playError();
+        // Worth saying out loud, not only as a strip at the top of the page
+        // that may be scrolled off screen.
+        toastRef.current?.push({
+          tone: 'error', icon: 'warn', title: 'Game server unreachable',
+          body: 'You will not be able to bet until it comes back.', duration: 9000,
+          key: 'api:down'
+        });
+      }
       apiDownRef.current = true;
       setApiDown(true);
     } finally {
@@ -85,6 +102,25 @@ function AppContent() {
     const t = setInterval(checkApi, 30000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Ctrl+K / Cmd+K opens the command palette from anywhere. Registered once,
+  // at the app level, so it works on every page and in the login form too.
+  useEffect(() => {
+    const onKey = (event) => {
+      const k = event.key;
+      if (k !== 'k' && k !== 'K') return;
+      if (!(event.ctrlKey || event.metaKey)) return;
+      // Inside a text field, Ctrl+K should stay the browser's own shortcut
+      // rather than stealing it.
+      const el = event.target;
+      const tag = el && el.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || (el && el.isContentEditable)) return;
+      event.preventDefault();
+      setPaletteOpen((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
   useEffect(() => installGlobalSoundEffects(), []);
@@ -166,6 +202,7 @@ function AppContent() {
           <button onClick={checkApi}>Retry</button>
         </div>
       )}
+      
       {user && <Sidebar />}
       <div className="layout-columns">
         {user && (
@@ -204,12 +241,17 @@ function AppContent() {
               <Route path="/admin" element={<ProtectedRoute staffOnly={true}><AdminPanel /></ProtectedRoute>} />
               <Route path="*" element={(
                 <div className="request-state">
-                  <Icon name="search" size={26} />
-                  <strong>Page not found</strong>
-                  <span>The page you requested does not exist or has moved.</span>
-                  <button type="button" className="btn btn-primary" onClick={() => window.location.assign('/coinflip')}>
-                    Return to Coinflip
-                  </button>
+                  <Icon name="search" size={30} />
+                  <p>Page not found</p>
+                  <p className="request-state-sub">That page does not exist, or it has moved.</p>
+                  <div className="request-state-actions">
+                    <button type="button" className="ui-btn ui-btn-primary" onClick={() => window.location.assign('/coinflip')}>
+                      Go to Coinflip
+                    </button>
+                    <button type="button" className="ui-btn" onClick={() => window.history.back()}>
+                      Go back
+                    </button>
+                  </div>
                 </div>
               )} />
             </Routes>
@@ -229,6 +271,7 @@ function AppContent() {
         </button>
       )}
       <ValueChecker isOpen={valuesOpen} onClose={() => setValuesOpen(false)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );
 }
@@ -237,7 +280,11 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        {/* Toasts live OUTSIDE the router so a notification raised on one page
+            is not destroyed by navigating to another. */}
+        <ToastProvider socket={socket}>
+          <AppContent />
+        </ToastProvider>
       </AuthProvider>
     </Router>
   );
