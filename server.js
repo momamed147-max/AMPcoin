@@ -25,11 +25,20 @@ const allowedOrigins = [
   'https://ampcoin.co.uk',
   'https://ampcoin.pages.dev',
   'https://ampcoin-4v8.pages.dev',
-  'http://localhost:3000',
   'https://ampcoin.b-cdn.net',
   'https://ampcoin.co.uk.b-cdn.net',
-  'https://ampcoin-50q9kxt9.b4a.run'
-].filter(Boolean);
+  'https://ampcoin-50q9kxt9.b4a.run',
+  // Loopback in every spelling. "localhost" and "127.0.0.1" are DIFFERENT
+  // origins to the browser, and the dev server serves both, so a page opened
+  // on one while only the other was allowed had every request blocked by CORS
+  // - the app loads and then silently cannot log in or load any data.
+  ...(process.env.NODE_ENV === 'production' ? [] : [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+    'http://localhost:5000',
+    'http://127.0.0.1:5000'
+  ])
+].filter(Boolean).map((o) => String(o).replace(/\/+$/, ''));
 
 const io = socketIo(server, {
   cors: {

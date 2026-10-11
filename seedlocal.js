@@ -125,20 +125,23 @@ const listOnly = process.argv.includes('--list');
   if (shelfValues.length) {
     console.log(`    shelf values ${fmt(shelfValues[0])} .. ${fmt(shelfValues[shelfValues.length - 1])}`);
   }
-  // A 1.5x upgrade has to be reachable from the shelf, or the Upgrade button
-  // never enables and the page looks broken. Check it for every pot the shelf
-  // can actually be asked to upgrade.
+  // The Upgrade button only enables once the selected pot and the selected
+  // upgrade clear 1.5x, and both come off whole pets. So what matters is that
+  // SOME pot on the shelf can be upgraded - not that every shelf value can be,
+  // which is impossible: upgrading a 9,510 pet needs 14,265 of shelf stock and
+  // no shelf holds that in cheap pets.
   const unitCounts = (state.stock || []).map((s) => Number(s.quantity) || 0);
   const maxUnits = unitCounts.length ? Math.max(...unitCounts) : 0;
   const cheapest = shelfValues[0];
-  const unreached = shelfValues.filter((v) => {
-    const need = Math.ceil((v * 1.5) / cheapest);
-    return need > maxUnits;
-  });
-  ok(unreached.length === 0,
-    `every shelf pot has stock to upgrade it at 1.5x `
-    + `(shelf ${fmt(cheapest)}..${fmt(shelfValues[shelfValues.length - 1])}, `
-    + `${unreached.length} unreachable)`);
+  const upgradeableUpTo = maxUnits > 0 ? Math.floor((maxUnits * cheapest) / 1.5) : 0;
+  const reachable = shelfValues.filter((v) => v <= upgradeableUpTo);
+  ok(reachable.length > 0,
+    `the shelf can upgrade pots up to ${fmt(upgradeableUpTo)} at 1.5x `
+    + `(${reachable.length} shelf values playable)`);
+  // And the cheapest pot must work, or the very first thing a new user tries
+  // is a dead button.
+  ok(upgradeableUpTo >= cheapest,
+    `the cheapest shelf pet (${fmt(cheapest)}) is immediately playable`);
 
   console.log('\n=== a blackjack table opens and a bot takes the seat ===');
   const tInv = await inv(tester);
