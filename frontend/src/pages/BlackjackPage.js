@@ -7,6 +7,10 @@ import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
 import { useAuth } from '../context/AuthContext';
 import { playBetPlaced, playCoinflipJoin } from '../sound';
+// The shared betting shell - topbar, lobby row, join/view modals. Blackjack
+// renders it, so Blackjack has to load it; these rules used to live in
+// CoinflipPage.css, which this page never imported.
+import '../ui/lobby.css';
 import './BlackjackPage.css';
 
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -300,14 +304,14 @@ const BlackjackPage = ({ socket }) => {
       </div>
 
       {error && (
-        <div className="rps-error" role="alert">
+        <div className="bj-error" role="alert">
           <Icon name="warn" size={15} /><span>{error}</span>
           <button type="button" onClick={refresh}>Retry</button>
         </div>
       )}
 
       {myTable && (
-        <div className="rps-active-note">
+        <div className="bj-active-note">
           <Icon name="target" size={14} />
           <span>
             You have a table open &mdash; you are the {myTable.viewerIsCreator ? 'dealer' : 'player'}.

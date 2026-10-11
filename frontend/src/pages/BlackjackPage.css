@@ -270,3 +270,62 @@
   font-weight: 900; cursor: pointer; line-height: 1; padding: 3px 7px; border-radius: 7px;
 }
 .bj-modal-x:hover { background: var(--panel3); color: var(--txt); }
+
+/* ─── Active-table notice ───────────────────────────────────────────────────
+   Blackjack renders the same two strips RPS does - an error banner and an
+   "you already have a table open" note - but borrowed RPS's class names for
+   them. The rules live in RpsPage.css, which this page does not load, so both
+   rendered completely unstyled. They are now blackjack-prefixed and owned here.
+   ─────────────────────────────────────────────────────────────────────────── */
+.bj-active-note {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  background: var(--acc-soft);
+  border: 1px solid rgba(47, 129, 247, 0.35);
+  border-radius: var(--r-sm);
+  color: var(--acc);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.bj-active-note button {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: var(--acc);
+  border: 1px solid rgba(47, 129, 247, 0.7);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.bj-active-note button:hover { filter: brightness(1.12); }
+
+/* ─── Error strip ────────────────────────────────────────────────────────── */
+.bj-error {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 10px;
+  padding: 9px 12px;
+  background: rgba(248, 81, 73, 0.08);
+  border: 1px solid rgba(248, 81, 73, 0.35);
+  border-radius: var(--r-sm);
+  color: #ff7b72;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.bj-error button {
+  margin-left: auto;
+  padding: 4px 10px;
+  background: rgba(248, 81, 73, 0.14);
+  border: 1px solid rgba(248, 81, 73, 0.4);
+  border-radius: 6px;
+  color: #ff7b72;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.bj-error button:hover { filter: brightness(1.12); }

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+// Shared with LoginPage - both render the auth-step list and the same form
+// layout. Without this the whole page rendered unstyled.
+import './AuthPage.css';
 
 const RegisterPage = () => {
   const [step, setStep] = useState(1); // 1: credentials, 2: is this u?, 3: bio code
@@ -107,80 +110,75 @@ const RegisterPage = () => {
   }
 
   return (
-    <div className="auth-container">
-      <div className="auth-form">
-        <h2>Register</h2>
+    <div className="auth-page">
+      <div className="auth-card">
+        <h2 className="auth-title">Register</h2>
+        <p className="auth-sub">Create an account to start betting.</p>
         <div className="auth-steps">
           <span className={step >= 1 ? 'active' : ''}>1. Account</span>
           <span className={step >= 2 ? 'active' : ''}>2. Is this u?</span>
           <span className={step >= 3 ? 'active' : ''}>3. Verify</span>
         </div>
 
-        {error && <div className="error-message" style={{ color: '#ff4d4d', marginBottom: '15px' }}>{error}</div>}
+        {error && <div className="auth-error" role="alert">{error}</div>}
 
         {step === 1 && (
           <form onSubmit={handleLookup}>
-            <div className="form-group">
-              <label htmlFor="robloxUsername" className="form-label">Roblox Username</label>
+        <label htmlFor="robloxUsername" className="auth-label">Roblox Username</label>
               <input
                 type="text"
                 id="robloxUsername"
                 name="robloxUsername"
                 value={formData.robloxUsername}
                 onChange={handleChange}
-                className="form-control"
+                className="auth-input"
                 placeholder="Enter your Roblox username"
                 required
               />
-            </div>
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">Password</label>
+        <label htmlFor="password" className="auth-label">Password</label>
               <input
                 type="password"
                 id="password"
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="form-control"
+                className="auth-input"
                 placeholder="Enter your password"
                 required
               />
-            </div>
-            <div className="form-group">
-              <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
+        <label htmlFor="confirmPassword" className="auth-label">Confirm Password</label>
               <input
                 type="password"
                 id="confirmPassword"
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="form-control"
+                className="auth-input"
                 placeholder="Confirm your password"
                 required
               />
-            </div>
-            <button type="submit" className="btn btn-primary" disabled={loading}>
+            <button type="submit" className="auth-btn" disabled={loading}>
               {loading ? 'Looking up...' : 'Continue'}
             </button>
           </form>
         )}
 
         {step === 2 && account && (
-          <div className="verify-identity">
-            <h3>Is this u?</h3>
+          <div>
+            <h3 className="auth-title">Is this u?</h3>
             <img
               src={account.avatar || '/default-avatar.png'}
               alt="Roblox avatar"
-              className="verify-avatar"
+              className="auth-logo"
               onError={(e) => { e.target.src = '/default-avatar.png'; }}
             />
-            <div className="verify-display-name">{account.displayName}</div>
-            <div className="verify-username">@{account.robloxUsername}</div>
-            <div className="verify-actions">
-              <button className="btn btn-secondary" onClick={() => setStep(1)} disabled={loading}>
+            <div className="auth-title">{account.displayName}</div>
+            <div className="auth-sub">@{account.robloxUsername}</div>
+            <div className="auth-form">
+              <button className="auth-btn-secondary" onClick={() => setStep(1)} disabled={loading}>
                 Back
               </button>
-              <button className="btn btn-primary" onClick={handleConfirmAccount} disabled={loading}>
+              <button className="auth-btn" onClick={handleConfirmAccount} disabled={loading}>
                 {loading ? 'Please wait...' : 'Confirm'}
               </button>
             </div>
@@ -188,24 +186,24 @@ const RegisterPage = () => {
         )}
 
         {step === 3 && (
-          <div className="verify-code-step">
-            <h3>Prove it's you</h3>
-            <p className="verify-instructions">
+          <div>
+            <h3 className="auth-title">Prove it's you</h3>
+            <p className="auth-sub">
               Put this code in your Roblox bio (profile description), then press Verify.
             </p>
-            <div className="verify-code-box">{code}</div>
-            <div className="verify-actions">
-              <button className="btn btn-secondary" onClick={() => setStep(2)} disabled={loading}>
+            <div className="auth-code-box">{code}</div>
+            <div className="auth-form">
+              <button className="auth-btn-secondary" onClick={() => setStep(2)} disabled={loading}>
                 Back
               </button>
-              <button className="btn btn-primary" onClick={handleVerify} disabled={loading}>
+              <button className="auth-btn" onClick={handleVerify} disabled={loading}>
                 {loading ? 'Checking bio...' : 'Verify'}
               </button>
             </div>
           </div>
         )}
 
-        <div className="auth-links">
+        <div className="auth-sub">
           <p>
             Already have an account? <Link to="/login">Login</Link>
           </p>

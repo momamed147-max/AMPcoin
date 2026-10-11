@@ -13,6 +13,11 @@ import { API_BASE } from '../apiConfig';
 import { playBetPlaced, playCoinflipJoin } from '../sound';
 import '../components/CoinChip.css';
 import '../components/ModBadges.css';
+// The shared betting shell - topbar, lobby row, join/view modals. Loaded
+// before this page's own overrides so the page specialises the shared base
+// rather than fighting it. Blackjack, RPS and Trading render the same shell and
+// import this file too.
+import '../ui/lobby.css';
 import './CoinflipPage.css';
 
 /* ── Rarity badge color helper ── */

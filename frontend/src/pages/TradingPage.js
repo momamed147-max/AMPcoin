@@ -6,6 +6,10 @@ import ModalPortal from '../components/ModalPortal';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
 import '../components/ModBadges.css';
+// The shared betting shell - topbar, lobby row, join modal. Trading renders it,
+// so Trading has to load it; these rules used to live in CoinflipPage.css,
+// which this page never imported.
+import '../ui/lobby.css';
 import './TradingPage.css';
 
 const authHeaders = (json) => ({

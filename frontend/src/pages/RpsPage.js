@@ -10,6 +10,8 @@ import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
 import { playButtonClick, playCoinflipJoin } from '../sound';
 import './CoinflipPage.css';
+
+import '../ui/lobby.css';
 import '../components/ModBadges.css';
 import './RpsPage.css';
 

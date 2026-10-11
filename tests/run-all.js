@@ -17,7 +17,10 @@ const PORT = 5000;
 const SUITES = [
   { file: 'api.js', label: 'games API' },
   { file: 'progress.js', label: 'progression' },
-  { file: 'dailybonus.js', label: 'daily bonus' }
+  { file: 'dailybonus.js', label: 'daily bonus' },
+  // Static: walks the frontend import graph. Needs no server, so it runs first
+  // and a broken build fails fast before anything hits the API rate limit.
+  { file: 'css-reachability.js', label: 'css reachability', server: false }
 ];
 
 let child = null;
@@ -101,7 +104,9 @@ const run = (file) => spawnSync('node', [path.join(__dirname, file)], {
     // second one would fail on the port and only mask the fact that a working
     // server is already there. If nothing is up, own the server for the run.
     let serverOurs = false;
-    if (!(await portIsUp())) {
+    if (suite.server === false) {
+      // Static suite - no server needed, and none should be started for it.
+    } else if (!(await portIsUp())) {
       await stopServer();
       try {
         await startServer();

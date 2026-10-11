@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../apiConfig';
+// This page renders the leaderboard row markup itself (player-info,
+// player-avatar, rank-badge) while the rules live with the modal that renders
+// the same rows. Importing the modal's stylesheet is what makes both match.
+import '../components/LeaderboardModal.css';
 
 const DEFAULT_AVATAR = '/default-avatar.png';
 
