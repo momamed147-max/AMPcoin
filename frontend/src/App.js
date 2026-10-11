@@ -24,7 +24,7 @@ const RpsPage = lazy(() => import('./pages/RpsPage'));
 const UpgraderPage = lazy(() => import('./pages/UpgraderPage'));
 const BlackjackPage = lazy(() => import('./pages/BlackjackPage'));
 const TradingPage = lazy(() => import('./pages/TradingPage'));
-const StatsPage = lazy(() => import('./pages/StatsPage'));
+const StatsPage = lazy(() => import('./pages/StatsPageV2'));
 const ProvablyFairPage = lazy(() => import('./pages/ProvablyFairPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));

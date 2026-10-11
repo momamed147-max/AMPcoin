@@ -3,19 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <script>
-      try {
-        var themeKey = 'ampcoin-theme';
-        var legacyThemeKey = 'ampbet-theme';
-        var savedTheme = localStorage.getItem(themeKey) || localStorage.getItem(legacyThemeKey);
-        if (['default', 'mikayla', 'pitch-dark', 'verity'].includes(savedTheme)) {
-          document.documentElement.dataset.theme = savedTheme;
-          if (!localStorage.getItem(themeKey)) localStorage.setItem(themeKey, savedTheme);
-        } else {
-          document.documentElement.dataset.theme = 'default';
+      // Applies the saved theme before first paint so there is no flash.
+      //
+      // This deliberately does NOT validate the id against a hardcoded list.
+      // That list silently drifted out of sync with theme.js and rejected any
+      // theme it was missing, so picking that theme and reloading snapped back
+      // to Default. theme.js is the single source of truth and corrects an
+      // invalid id a moment later; an unknown id is harmless, a rejected good
+      // one is not.
+      (function () {
+        var root = document.documentElement;
+        var stored = null;
+        try {
+          stored = localStorage.getItem('ampcoin-theme') || localStorage.getItem('ampbet-theme');
+        } catch (error) {
+          stored = null;
         }
-      } catch (error) {
-        document.documentElement.dataset.theme = 'default';
-      }
+        if (stored && /^[a-z0-9-]{1,32}$/i.test(stored)) {
+          root.setAttribute('data-theme', stored);
+        } else if (!root.getAttribute('data-theme')) {
+          root.setAttribute('data-theme', 'default');
+        }
+      })();
     </script>
     <link rel="icon" type="image/png" sizes="192x192" href="%PUBLIC_URL%/logo192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

@@ -1,0 +1,79 @@
+/* ══ Aurora ══════════════════════════════════════════════════════════════════
+   The first LIGHT theme. Every other theme is a dark ground, so a light-mode
+   preference had nowhere to go. Aurora is a cold white/blue paper with a violet
+   accent, so the same components read as paper rather than as "the dark theme,
+   inverted". */
+:root[data-theme='aurora'],
+:root[data-theme='aurora'] .jackpot-page,
+:root[data-theme='aurora'] .tr-page,
+:root[data-theme='aurora'] .wm-modal,
+:root[data-theme='aurora'] .vc-modal {
+  --bg0: #f4f6fb;
+  --bg1: #ffffff;
+  --panel: #ffffff;
+  --panel2: #f2f4fa;
+  --panel3: #e6eaf4;
+  --line: rgba(23, 32, 56, 0.13);
+  --line-soft: rgba(23, 32, 56, 0.07);
+  --txt: #141b2d;
+  --mut: #4d5a75;
+  --dim: #7b879f;
+  --acc: #6d4aff;
+  --acc-bright: #8b6dff;
+  --acc-soft: rgba(109, 74, 255, 0.10);
+  --grn: #0f9d58;
+  --red: #d92d20;
+  --gold: #b54708;
+  --orange: #e8590c;
+  /* Shadows have to be much stronger on a light ground or panels vanish into
+     the background, so this theme leans on the line colour instead. */
+  --theme-nav: rgba(255, 255, 255, 0.92);
+  --theme-header: rgba(255, 255, 255, 0.86);
+  --theme-chat: rgba(247, 248, 252, 0.92);
+  --theme-panel: #ffffff;
+  --theme-grid: rgba(23, 32, 56, 0.012);
+  --theme-glow-a: rgba(109, 74, 255, 0.12);
+  --theme-glow-b: rgba(56, 132, 255, 0.09);
+  --theme-accent-2: #3884ff;
+  --theme-chat-accent: rgba(109, 74, 255, 0.08);
+  --theme-on-accent: #ffffff;
+}
+
+/* ══ Inferno ════════════════════════════════════════════════════════════════
+   A deliberately high-contrast theme: near-black ground, hot red accent, and
+   text lifted well clear of the usual muted grey. The two reds are separated by
+   LIGHTNESS as well as hue, so "loss" never reads as "action" - which is the
+   usual reason a high-contrast theme turns into a colour soup. */
+:root[data-theme='inferno'],
+:root[data-theme='inferno'] .jackpot-page,
+:root[data-theme='inferno'] .tr-page,
+:root[data-theme='inferno'] .wm-modal,
+:root[data-theme='inferno'] .vc-modal {
+  --bg0: #000000;
+  --bg1: #0c0708;
+  --panel: #150c0e;
+  --panel2: #211315;
+  --panel3: #2f1a1d;
+  --line: rgba(255, 138, 128, 0.26);
+  --line-soft: rgba(255, 138, 128, 0.13);
+  --txt: #fff5f4;
+  --mut: #e3bdb9;
+  --dim: #b08e8a;
+  --acc: #ff4438;
+  --acc-bright: #ff7a70;
+  --acc-soft: rgba(255, 68, 56, 0.18);
+  --grn: #38e08a;
+  --red: #ff9d5c;
+  --gold: #ffd166;
+  --orange: #ff8c42;
+  --theme-nav: rgba(12, 6, 7, 0.94);
+  --theme-header: rgba(18, 10, 11, 0.9);
+  --theme-chat: rgba(14, 8, 9, 0.92);
+  --theme-panel: #150c0e;
+  --theme-grid: rgba(255, 68, 56, 0.018);
+  --theme-glow-a: rgba(255, 68, 56, 0.18);
+  --theme-glow-b: rgba(255, 140, 66, 0.10);
+  --theme-accent-2: #ff8c42;
+  --theme-chat-accent: rgba(255, 68, 56, 0.16);
+  --theme-on-accent: #ffffff;
+}

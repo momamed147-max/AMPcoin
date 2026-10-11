@@ -216,7 +216,12 @@ const SettingsModal = ({ isOpen, onClose, initialNotice = '' }) => {
                       <i /><i /><i />
                     </span>
                     <span className="theme-option-copy">
-                      <strong>{theme.name}</strong>
+                      <strong>
+                        {theme.name}
+                        {/* Almost every theme is dark, so a light one needs
+                            saying out loud or it reads as a broken swatch. */}
+                        {theme.dark === false && <em className="theme-light-tag">light</em>}
+                      </strong>
                       <small>{theme.description}</small>
                     </span>
                     <span className="theme-check"><Icon name="check" size={13} /></span>

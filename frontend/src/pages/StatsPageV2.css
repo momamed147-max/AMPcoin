@@ -1,0 +1,167 @@
+/* StatsPageV2.css - the stats + achievements screen.
+   Everything here reads from the token layer, so it repaints with the theme. */
+
+.sp2 {
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding: var(--page-gutter);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+}
+
+.sp2-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  flex-wrap: wrap;
+}
+.sp2-head h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+.sp2-sub {
+  margin: var(--sp-2) 0 0;
+  color: var(--mut);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  max-width: 62ch;
+}
+
+.sp2-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--sp-4);
+}
+
+/* ── label / value rows ─────────────────────────────────────────────────── */
+.sp2-rows { display: flex; flex-direction: column; }
+.sp2-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: var(--fs-md);
+}
+.sp2-row:last-child { border-bottom: none; }
+.sp2-row > span:first-child { color: var(--mut); }
+
+/* ── next achievement ───────────────────────────────────────────────────── */
+.sp2-next { display: flex; flex-direction: column; gap: var(--sp-3); }
+.sp2-next-head { display: flex; align-items: center; gap: var(--sp-3); }
+.sp2-next-copy { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.sp2-next-copy strong { font-size: var(--fs-md); }
+.sp2-next-copy span { font-size: var(--fs-xs); color: var(--mut); }
+.sp2-next-foot { font-size: var(--fs-xs); color: var(--dim); }
+
+/* The medal is the tier colour, so a gold achievement is recognisable at a
+   glance without reading the badge. */
+.sp2-medal {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px; height: 38px;
+  border-radius: var(--r-md);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  color: var(--mut);
+}
+.sp2-medal.tier-bronze { color: #cd7f32; border-color: color-mix(in srgb, #cd7f32 38%, transparent); background: color-mix(in srgb, #cd7f32 12%, transparent); }
+.sp2-medal.tier-silver { color: #b8c4d4; border-color: color-mix(in srgb, #b8c4d4 38%, transparent); background: color-mix(in srgb, #b8c4d4 10%, transparent); }
+.sp2-medal.tier-gold { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 42%, transparent); background: color-mix(in srgb, var(--gold) 14%, transparent); }
+.sp2-medal.tier-diamond { color: var(--acc); border-color: color-mix(in srgb, var(--acc) 42%, transparent); background: var(--acc-soft); }
+
+/* ── per game ───────────────────────────────────────────────────────────── */
+.sp2-game-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--sp-4);
+}
+.sp2-game { display: flex; flex-direction: column; gap: var(--sp-4); }
+.sp2-game-head {
+  display: flex; align-items: center; gap: var(--sp-3);
+  color: var(--mut);
+}
+.sp2-game-head strong { color: var(--txt); font-size: var(--fs-lg); font-family: var(--font-display); }
+.sp2-game-head .ui-badge { margin-left: auto; }
+.sp2-game-bar { margin-top: auto; }
+
+/* ── achievements grid ──────────────────────────────────────────────────── */
+.sp2-ach-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--sp-3);
+}
+.sp2-ach {
+  display: flex; align-items: flex-start; gap: var(--sp-3);
+  padding: var(--sp-4);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  /* A locked achievement is dimmed rather than hidden, so the page shows what
+     is still available instead of only what is done. */
+  opacity: 0.72;
+}
+.sp2-ach.is-unlocked {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--grn) 34%, var(--line));
+  background: color-mix(in srgb, var(--grn) 6%, var(--panel));
+}
+.sp2-ach-copy { display: flex; flex-direction: column; gap: 5px; min-width: 0; flex: 1; }
+.sp2-ach-head { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; }
+.sp2-ach-head strong { font-size: var(--fs-md); }
+.sp2-ach-desc { font-size: var(--fs-xs); color: var(--mut); line-height: var(--lh-body); }
+.sp2-ach-done {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: var(--fs-xs); font-weight: 800; color: var(--grn);
+}
+.sp2-ach-bar { margin-top: 2px; }
+
+/* ── history ────────────────────────────────────────────────────────────── */
+.sp2-history { display: flex; flex-direction: column; }
+.sp2-hrow {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.sp2-hrow:last-child { border-bottom: none; }
+.sp2-hdot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--mut);
+}
+.sp2-hrow.is-win .sp2-hdot { background: var(--grn); }
+.sp2-hrow.is-loss .sp2-hdot { background: var(--red); }
+.sp2-hbody { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.sp2-hid {
+  font-family: var(--font-mono); font-size: var(--fs-xs);
+  color: var(--mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.sp2-hres { font-size: var(--fs-xs); color: var(--dim); text-transform: capitalize; }
+.sp2-htime { font-size: var(--fs-xs); color: var(--dim); white-space: nowrap; }
+.sp2-hstake { font-size: var(--fs-sm); color: var(--mut); white-space: nowrap; }
+.sp2-hprofit { min-width: 82px; text-align: right; }
+
+/* ── footer note ────────────────────────────────────────────────────────── */
+.sp2-foot {
+  display: flex; align-items: center; gap: var(--sp-4); flex-wrap: wrap;
+  padding-top: var(--sp-3);
+  font-size: var(--fs-xs); color: var(--dim);
+}
+.sp2-link { color: var(--acc); text-decoration: none; font-weight: 700; }
+.sp2-link:hover { text-decoration: underline; }
+.sp2-foot-sep { width: 1px; height: 12px; background: var(--line); }
+.sp2-foot-note { color: var(--dim); }
+
+@media (max-width: 560px) {
+  .sp2-hrow { grid-template-columns: 8px minmax(0, 1fr) auto; }
+  .sp2-htime { display: none; }
+}

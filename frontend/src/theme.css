@@ -164,6 +164,11 @@
   --theme-on-accent: #04100e;
 }
 
+/* V2 themes. Kept in their own file so the original five stay untouched and
+   the new ones are easy to remove or compare. Loaded after theme.css so they
+   win over anything defined above. */
+@import './theme-new.css';
+
 html[data-theme] body {
   background:
     radial-gradient(900px 520px at 18% -12%, var(--theme-glow-a), transparent 66%),

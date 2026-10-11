@@ -318,11 +318,31 @@
 }
 
 .theme-option-copy strong {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   overflow: hidden;
   color: var(--txt);
   font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Marks the one light theme, so it does not read as a broken swatch next to
+   six dark ones. */
+.theme-light-tag {
+  flex: 0 0 auto;
+  padding: 0 5px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--acc) 34%, transparent);
+  background: var(--acc-soft);
+  color: var(--acc);
+  font-size: 0.55rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  line-height: 1.6;
 }
 
 .theme-option-copy small {

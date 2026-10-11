@@ -31,7 +31,23 @@ export const THEMES = {
     id: 'haetae',
     name: 'Haetae',
     description: 'Orange + teal + white',
-    swatches: ['#f97316', '#0f2e2e', '#14b8a6']
+    swatches: ['#f97316', '#0f2e2e', '#14b8a6'],
+    dark: true
+  },
+  // V2: the first light theme, and a high-contrast one.
+  aurora: {
+    id: 'aurora',
+    name: 'Aurora',
+    description: 'Light paper + violet',
+    swatches: ['#6d4aff', '#ffffff', '#3884ff'],
+    dark: false
+  },
+  inferno: {
+    id: 'inferno',
+    name: 'Inferno',
+    description: 'High contrast + ember',
+    swatches: ['#ff4438', '#000000', '#ff9d5c'],
+    dark: true
   }
 };
 
@@ -57,19 +73,39 @@ export function getTheme() {
   return THEMES[readTheme()] || THEMES[DEFAULT_THEME];
 }
 
+export function listThemes() {
+  return Object.values(THEMES);
+}
+
+export function nextThemeId(current) {
+  const ids = Object.keys(THEMES);
+  const i = ids.indexOf(current);
+  return ids[(i + 1 + ids.length) % ids.length];
+}
+
 export function applyTheme(themeId, persist = true) {
   const id = Object.prototype.hasOwnProperty.call(THEMES, themeId) ? themeId : DEFAULT_THEME;
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.theme = id;
     const metaTheme = document.querySelector('meta[name="theme-color"]');
     if (metaTheme) {
+      // The browser chrome has to match the ground, or the address bar reads as
+      // a separate bar sitting above the page.
       const THEME_COLORS = {
         'pitch-dark': '#030305',
         verity: '#100c04',
         mikayla: '#120817',
-        haetae: '#07100f'
+        haetae: '#07100f',
+        aurora: '#f4f6fb',
+        inferno: '#000000'
       };
       metaTheme.setAttribute('content', THEME_COLORS[id] || '#060910');
+    }
+    // Lets CSS react to a light theme: a few surfaces hardcode a dark scrim or
+    // a dark scrollbar thumb and are unreadable on white.
+    if (document.documentElement) {
+      const isDark = THEMES[id]?.dark !== false;
+      document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
     }
   }
   if (persist && typeof window !== 'undefined') {

@@ -73,10 +73,15 @@ global.fetch = async (url, opts = {}) => {
     || (/inventory/.test(u) ? { body: { items: INVENTORY } }
       : /\/tables/.test(u) ? { body: { tables: [], myTable: null } }
         : { body: [] });
+  const body = next.body || {};
+  // apiFetch reads .text() first so an empty body does not blow up on JSON
+  // parse, so the stub has to implement the same shape a real Response has.
+  const text = async () => (Object.keys(body).length ? JSON.stringify(body) : '');
   return {
     ok: next.status === undefined ? true : next.status < 400,
     status: next.status || 200,
-    json: async () => next.body || {}
+    text,
+    json: async () => body
   };
 };
 
@@ -124,6 +129,7 @@ const { act } = require(path.join(FRONTEND, 'node_modules', 'react-dom', 'test-u
 const { MemoryRouter } = require(path.join(FRONTEND, 'node_modules', 'react-router-dom'));
 
 const { default: BlackjackPage } = require(path.join(FRONTEND, 'src', 'pages', 'BlackjackPage.js'));
+const { default: StatsPageV2 } = require(path.join(FRONTEND, 'src', 'pages', 'StatsPageV2.js'));
 const { default: TradingPage } = require(path.join(FRONTEND, 'src', 'pages', 'TradingPage.js'));
 const { default: UpgraderPage } = require(path.join(FRONTEND, 'src', 'pages', 'UpgraderPage.js'));
 const { default: QtyStepper } = require(path.join(FRONTEND, 'src', 'components', 'QtyStepper.js'));
@@ -446,6 +452,153 @@ const INVENTORY = [
       // have inputs if the inventory rendered.
       ok(rows.length > 0, 'rows rendered (stock may be empty in this fixture)');
     }
+  }
+
+  section('the V2 primitives render and behave');
+  {
+    const B = require(path.join(FRONTEND, 'src', 'ui', 'primitives.js'));
+    // Every primitive must render, or the whole design layer is dead weight.
+    const samples = [
+      ['Button', B.Button, { children: 'Go' }],
+      ['Panel', B.Panel, { title: 'Title', subtitle: 'Sub', children: 'body' }],
+      ['EmptyState', B.EmptyState, { title: 'Nothing', message: 'here' }],
+      ['ErrorState', B.ErrorState, { message: 'boom' }],
+      ['Skeleton', B.Skeleton, { w: 40 }],
+      ['Badge', B.Badge, { children: 'new' }],
+      ['StatTile', B.StatTile, { label: 'Played', value: 12 }],
+      ['StatGrid', B.StatGrid, { children: null }],
+      ['Tabs', B.Tabs, { value: 'a', onChange: () => {}, items: [{ id: 'a', label: 'A' }] }],
+      ['Progress', B.Progress, { value: 5, max: 10, label: 'p' }],
+      ['Amount', B.Amount, { value: -1234 }],
+      ['Field', B.Field, { label: 'Name', hint: 'h' }]
+    ];
+    for (const [name, Comp, props] of samples) {
+      let err = null;
+      try { await render(React.createElement(Comp, props)); } catch (e) { err = e; }
+      ok(!err && $$('*').length > 0, `${name} renders${err ? `: ${err.message}` : ''}`);
+    }
+
+    // Loading a Button must actually disable it, not just look different.
+    let clicked = 0;
+    await render(React.createElement(B.Button, { loading: true, onClick: () => { clicked++; }, children: 'Save' }));
+    const lb = $('button.ui-btn');
+    ok(lb && lb.disabled, 'a loading Button is disabled');
+    ok(lb && lb.className.includes('is-loading'), 'and marked is-loading');
+    await click(lb);
+    ok(clicked === 0, 'clicking it does nothing while it is in flight');
+
+    // Progress must clamp rather than overflow its track.
+    await render(React.createElement(B.Progress, { value: 999, max: 100 }));
+    const bar = $('.ui-progress');
+    ok(bar && bar.getAttribute('aria-valuenow') === '100', 'an over-100 progress clamps to 100');
+    await render(React.createElement(B.Progress, { value: -5, max: 100 }));
+    ok($('.ui-progress').getAttribute('aria-valuenow') === '0', 'a negative progress clamps to 0');
+
+    // Amount signs and tone.
+    await render(React.createElement(B.Amount, { value: 2500, sign: true, compact: true }));
+    ok($('.ui-amount').textContent === '+2.5K', `a positive Amount is signed and compact (${$('.ui-amount').textContent})`);
+    ok($('.ui-amount').className.includes('ui-amount-pos'), 'and toned positive');
+    await render(React.createElement(B.Amount, { value: -2500, sign: true }));
+    ok($('.ui-amount').textContent === '-2,500', 'a negative Amount keeps its minus and is not prefixed');
+
+    // The token layer must be present in the stylesheets.
+    ok(/--sp-5\s*:/.test(cssText), 'the spacing scale is defined');
+    ok(/--ctl-h\s*:/.test(cssText), 'control heights are defined');
+    ok(/--z-modal\s*:/.test(cssText), 'z-index bands are defined');
+    ok(/--dur-2\s*:/.test(cssText), 'motion durations are defined');
+  }
+
+  section('the V2 stats page renders a real summary');
+  {
+    const summary = {
+      totals: {
+        played: 12, wins: 8, losses: 4, winRate: 66.7,
+        staked: 50000, profit: 1234, biggestWin: 900, biggestLoss: 300,
+        biggestStake: 9510, distinctOpponents: 3
+      },
+      games: {
+        coinflip: { played: 5, wins: 3, losses: 2, pushes: 0, winRate: 60, staked: 100, profit: 50, biggestWin: 40, biggestLoss: 10 },
+        blackjack: { played: 4, wins: 3, losses: 1, pushes: 0, winRate: 75, staked: 200, profit: 900, biggestWin: 900, biggestLoss: 0 },
+        rps: { played: 3, wins: 2, losses: 1, pushes: 0, winRate: 66.7, staked: 50, profit: 284, biggestWin: 40, biggestLoss: 10 },
+        upgrader: { played: 0, wins: 0, losses: 0, pushes: 0, winRate: 0, staked: 0, profit: 0, biggestWin: 0, biggestLoss: 0 }
+      },
+      achievements: {
+        unlocked: 2, total: 4,
+        next: { id: 'b', name: 'Getting Serious', tier: 'bronze', icon: 'target', description: 'Play 100 bets.', unlocked: false, value: 12, goal: 100, percent: 12 },
+        list: [
+          { id: 'a', name: 'First Bet', tier: 'bronze', icon: 'coin', description: 'Place your first bet.', unlocked: true, value: 1, goal: 1, percent: 100 },
+          { id: 'b', name: 'Getting Serious', tier: 'bronze', icon: 'target', description: 'Play 100 bets.', unlocked: false, value: 12, goal: 100, percent: 12 },
+          { id: 'c', name: 'Veteran', tier: 'silver', icon: 'flag', description: 'Play 500 bets.', unlocked: false, value: 12, goal: 500, percent: 2 },
+          { id: 'd', name: 'Whale', tier: 'gold', icon: 'jackpot', description: 'Win 1,000,000 net.', unlocked: false, value: 1234, goal: 1000000, percent: 0 }
+        ]
+      },
+      history: [
+        { id: 'h1', won: true, staked: 9510, profit: 900, at: new Date().toISOString(), result: 'win' },
+        { id: 'h2', won: false, staked: 2465, profit: -2465, at: new Date().toISOString(), result: 'bust' }
+      ]
+    };
+    fetchQueue.length = 0;
+    fetchQueue.push({ body: summary });
+
+    let threw = null;
+    try {
+      await render(React.createElement(
+        MemoryRouter,
+        null,
+        React.createElement(
+          AuthContext.Provider,
+          { value: { user: TEST_USER, loading: false } },
+          React.createElement(StatsPageV2)
+        )
+      ));
+    } catch (e) { threw = e; }
+    ok(!threw, `the stats page renders${threw ? `: ${threw.message}` : ''}`);
+    // The summary arrives over the stubbed fetch, so the promise has to settle
+    // before the populated render is asserted.
+    await act(async () => { await new Promise((r) => setTimeout(r, 40)); });
+
+    ok(!!$('.sp2'), 'the page shell rendered');
+    const bodyText = document.body.textContent;
+    ok(bodyText.includes('12'), 'shows the total bets played');
+    ok(bodyText.includes('66.7'), 'shows the win rate');
+    ok(bodyText.includes('Getting Serious'), 'surfaces the next achievement to chase');
+    ok(!!$('.ui-tabs'), 'uses the shared Tabs primitive');
+
+    const classes = new Set();
+    document.querySelectorAll('*').forEach((n) => {
+      if (typeof n.className === 'string') n.className.split(/\s+/).forEach((c) => c && classes.add(c));
+    });
+    const unknown = [...classes].filter((c) => !cssText.includes(`.${c}`));
+    ok(unknown.length === 0,
+      `every class the page renders exists in CSS${unknown.length ? ` (missing: ${unknown.join(', ')})` : ''}`);
+
+    // The achievements tab must list them all, locked ones included.
+    const tabs = $$('.ui-tab');
+    const achTab = tabs.find((t) => /Achievements/i.test(t.textContent));
+    await click(achTab);
+    ok($$('.sp2-ach').length === 4, `the achievements tab lists all four (${$$('.sp2-ach').length})`);
+    ok($$('.sp2-ach.is-unlocked').length === 1, 'and marks the unlocked one');
+
+    const gamesTab = tabs.find((t) => /By game/i.test(t.textContent));
+    await click(gamesTab);
+    ok($$('.sp2-game').length === 5, `the by-game tab shows all five games (${$$('.sp2-game').length})`);
+    ok(document.body.textContent.includes('Not played yet'), 'and says so for a game with no records');
+
+    // A failed load must offer a retry rather than rendering nothing.
+    fetchQueue.length = 0;
+    fetchQueue.push({ status: 500, body: { message: 'Server error' } });
+    await render(React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(
+        AuthContext.Provider,
+        { value: { user: TEST_USER, loading: false } },
+        React.createElement(StatsPageV2)
+      )
+    ));
+    await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
+    ok(!!$('.ui-error'), 'a failed load renders an error state');
+    ok(!!$('.ui-empty-action button'), 'with a retry button');
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);
