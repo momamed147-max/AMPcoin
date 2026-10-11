@@ -11,6 +11,7 @@ import ChatPanel from './components/ChatPanel';
 import ValueChecker from './components/ValueChecker';
 import AuthProvider, { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 import Icon from './components/Icon';
 import { API_BASE } from './apiConfig';
 import { installGlobalSoundEffects, playError } from './sound';
@@ -181,6 +182,10 @@ function AppContent() {
         <div className="main-content">
           {user && <Header balance={balance} setBalance={setBalance} socket={socket} />}
           <div className="page-content" key={location.pathname}>
+            {/* keying on the path remounts the boundary on navigation, so a
+                page that crashed cannot leave its error showing after you
+                navigate away. */}
+            <ErrorBoundary key={location.pathname} label="This page">
             <Suspense fallback={<RouteFallback />}>
             <Routes>
               <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/coinflip" />} />
@@ -209,6 +214,7 @@ function AppContent() {
               )} />
             </Routes>
             </Suspense>
+            </ErrorBoundary>
           </div>
         </div>
       </div>

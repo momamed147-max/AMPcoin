@@ -130,6 +130,7 @@ const { MemoryRouter } = require(path.join(FRONTEND, 'node_modules', 'react-rout
 
 const { default: BlackjackPage } = require(path.join(FRONTEND, 'src', 'pages', 'BlackjackPage.js'));
 const { default: StatsPageV2 } = require(path.join(FRONTEND, 'src', 'pages', 'StatsPageV2.js'));
+const { default: ErrorBoundary } = require(path.join(FRONTEND, 'src', 'components', 'ErrorBoundary.js'));
 const { default: TradingPage } = require(path.join(FRONTEND, 'src', 'pages', 'TradingPage.js'));
 const { default: UpgraderPage } = require(path.join(FRONTEND, 'src', 'pages', 'UpgraderPage.js'));
 const { default: QtyStepper } = require(path.join(FRONTEND, 'src', 'components', 'QtyStepper.js'));
@@ -599,6 +600,49 @@ const INVENTORY = [
     await act(async () => { await new Promise((r) => setTimeout(r, 30)); });
     ok(!!$('.ui-error'), 'a failed load renders an error state');
     ok(!!$('.ui-empty-action button'), 'with a retry button');
+  }
+
+  section('the error boundary recovers instead of staying broken');
+  {
+    // A boundary that has caught once used to stay caught for the rest of the
+    // session, so every later visit to the panel showed the same error even
+    // after the cause was gone - which reads as a permanently broken page.
+    let shouldThrow = true;
+    const Boom = () => {
+      if (shouldThrow) throw new Error('kaboom');
+      return React.createElement('span', { className: 'recovered' }, 'recovered');
+    };
+    await render(React.createElement(ErrorBoundary, { label: 'The widget' },
+      React.createElement(Boom)));
+
+    ok(!!$('.eb-fallback'), 'a thrown render shows the fallback instead of a blank page');
+    ok(document.body.textContent.includes('kaboom'), 'and surfaces the actual message');
+    ok(!!$('.eb-fallback-actions button'), 'the fallback offers actions');
+    const retry = $$('.eb-fallback-actions button').find((b) => /try again/i.test(b.textContent));
+    ok(!!retry, 'one of them is Try again');
+
+    shouldThrow = false;
+    await click(retry);
+    ok(!!$('.recovered'), 'clicking Try again remounts and renders the children again');
+    ok(!$('.eb-fallback'), 'and the fallback is gone');
+
+    // The close button only appears when the caller supplied a handler.
+    shouldThrow = true;
+    let closed = false;
+    await render(React.createElement(ErrorBoundary, { label: 'X', onClose: () => { closed = true; } },
+      React.createElement(Boom)));
+    const close = $$('.eb-fallback-actions button').find((b) => /close/i.test(b.textContent));
+    ok(!!close, 'a close button appears when onClose is supplied');
+    await click(close);
+    ok(closed === true, 'and it calls onClose');
+  }
+
+  section('the removed pages are genuinely gone');
+  {
+    const fsx = require('fs');
+    for (const dead of ['pages/StatsPage.js', 'pages/StatsPage.css', 'pages/WalletPage.js', 'pages/WalletPage.css']) {
+      ok(!fsx.existsSync(path.join(FRONTEND, 'src', dead)), `${dead} was deleted`);
+    }
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

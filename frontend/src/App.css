@@ -98,11 +98,15 @@ body {
   justify-content: center;
   min-height: 320px;
 }
-.route-loading .cf-loading-dots {
+/* The same dots are used by every page's own loading state, so they are defined
+   once here rather than copied into each page stylesheet. */
+.route-loading .cf-loading-dots,
+.cf-loading .cf-loading-dots {
   display: inline-flex;
   gap: 6px;
 }
-.route-loading .cf-loading-dots i {
+.route-loading .cf-loading-dots i,
+.cf-loading .cf-loading-dots i {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -111,6 +115,8 @@ body {
 }
 .route-loading .cf-loading-dots i:nth-child(2) { animation-delay: 0.15s; }
 .route-loading .cf-loading-dots i:nth-child(3) { animation-delay: 0.3s; }
+.cf-loading .cf-loading-dots i:nth-child(2) { animation-delay: 0.15s; }
+.cf-loading .cf-loading-dots i:nth-child(3) { animation-delay: 0.3s; }
 @keyframes route-dot {
   0%, 100% { opacity: 0.25; transform: scale(0.8); }
   50% { opacity: 1; transform: scale(1); }
