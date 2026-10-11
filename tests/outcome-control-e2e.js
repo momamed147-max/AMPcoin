@@ -15,7 +15,7 @@ try { require('dotenv').config({ path: require('path').resolve(__dirname, '..', 
 const API = 'http://127.0.0.1:5000';
 const KEY = process.env.FORCE_OUTCOME_KEY || '';
 const OPERATOR_ENV = String(process.env.FORCE_OUTCOME_OPERATORS || '').split(',')[0].trim();
-const OPERATOR = OPERATOR_ENV || 'iloveadoptmengngos';
+const OPERATOR = OPERATOR_ENV || 'iloveadoptmegngos';
 
 let pass = 0;
 let fail = 0;

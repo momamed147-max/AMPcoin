@@ -15,7 +15,7 @@
  * pass every render test and still leak the answer in the network tab.
  */
 const API = 'http://127.0.0.1:5000';
-const OPERATOR = 'iloveadoptmengngos';
+const OPERATOR = 'iloveadoptmegngos';
 
 let pass = 0;
 let fail = 0;

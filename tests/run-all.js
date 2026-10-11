@@ -14,6 +14,38 @@ const fs = require('fs');
 const ROOT = path.resolve(__dirname, '..');
 const PORT = 5000;
 
+// ─── Refuse to run against a live database ────────────────────────────
+//
+// The suites create accounts, grant admin, bet and settle. A stray DATABASE_URL
+// in .env is enough to point all of that at production, and the write looks
+// exactly like ordinary traffic: no error, no prompt, real rows created.
+//
+// That is not hypothetical. A test run did this, wrote twelve accounts into the
+// live database, and a follow-up cleanup that guessed the blob's shape wrong
+// emptied the users table outright.
+//
+// So the guard is here rather than in the suites: it runs first, it names the
+// host it found, and it takes an explicit flag to override.
+(function guardAgainstProductionDatabase() {
+  const url = String(process.env.DATABASE_URL || '');
+  if (!url) return;
+  const host = (() => {
+    try { return new URL(url).hostname; } catch { return url.replace(/^.*@/, '').split(':')[0]; }
+  })();
+  const isLocal = /^(localhost|127\.0\.0\.1|::1|0\.0\.0\.0)$/.test(host);
+  if (isLocal || process.env.ALLOW_PRODUCTION_TESTS === '1') return;
+
+  console.error('\n  REFUSING TO RUN: DATABASE_URL points at a live database.\n');
+  console.error(`    host: ${host}\n`);
+  console.error('  These suites create accounts, grant admin and settle bets.');
+  console.error('  Against production that writes real rows with no warning.\n');
+  console.error('  To use the local JSON sandbox instead:');
+  console.error('    set LOCAL_JSON_MODE=true   (and unset DATABASE_URL)\n');
+  console.error('  Only override if you genuinely intend to test against it:');
+  console.error('    set ALLOW_PRODUCTION_TESTS=1\n');
+  process.exit(1);
+})();
+
 const SUITES = [
   { file: 'api.js', label: 'games API' },
   { file: 'progress.js', label: 'progression' },
