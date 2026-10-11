@@ -12,6 +12,10 @@ import './ui/ui.css';
 // The always-on chrome: background, scrollbars, focus, panel surfaces. Loaded
 // last so it settles everything the shared layers above it left open.
 import './ui/shell.css';
+// v3: the visual language. Palette, elevation, type scale, controls and
+// surfaces, redefined site-wide. Loaded last of all so it wins over every
+// older stylesheet while themes still override the colour variables.
+import './ui/v3.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

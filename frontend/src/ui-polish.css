@@ -652,34 +652,11 @@ textarea:focus-visible,
   transform: scale(0.94);
 }
 
-/* ── daily bonus trigger ─────────────────────────────────────────────────────
-   Sized and shaped like .settings-trigger so the header row stays even, and the
-   dot is what says "claimable" - not colour alone, so it nudges as well. */
-.daily-bonus-trigger {
-  position: relative;
-  display: grid;
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  place-items: center;
-  color: var(--mut);
-  border: 1px solid var(--line-soft);
-  border-radius: 10px;
-  background: rgba(15, 23, 36, 0.65);
-  cursor: pointer;
-  transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.12s ease;
-}
-.daily-bonus-trigger:hover { color: var(--gold); border-color: color-mix(in srgb, var(--gold) 40%, transparent); }
-.daily-bonus-trigger:active { transform: scale(0.94); }
-.daily-bonus-trigger:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
-
-.daily-bonus-trigger.is-ready {
-  color: var(--gold);
-  border-color: color-mix(in srgb, var(--gold) 42%, transparent);
-  background: color-mix(in srgb, var(--gold) 12%, transparent);
-}
-
-.daily-bonus-dot {
+/* ── notifications dot ────────────────────────────────────────────────────────
+   Replaces the daily-bonus trigger, which was removed. Same job - marking an
+   unread state on a header icon - so it takes over that slot in the header. */
+.notifications.has-unread .notification-icon::after {
+  content: '';
   position: absolute;
   top: 4px;
   right: 4px;
@@ -688,15 +665,15 @@ textarea:focus-visible,
   border-radius: 50%;
   background: var(--grn);
   border: 1.5px solid var(--panel);
-  animation: daily-nudge 2.2s var(--ease-1) infinite;
+  animation: notif-nudge 2.2s var(--ease-1) infinite;
 }
-@keyframes daily-nudge {
+@keyframes notif-nudge {
   0%, 76%, 100% { transform: scale(1); }
   84% { transform: scale(1.35); }
   92% { transform: scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .daily-bonus-dot { animation: none; }
+  .notifications.has-unread .notification-icon::after { animation: none; }
 }
 
 .sound-toggle {
@@ -1126,21 +1103,41 @@ textarea:focus,
   outline: none !important;
 }
 
-/* Game lobby */
+/* Game lobby
+
+   The !important cascade here was a trap. It pinned the row's padding,
+   radius, background and shadow to hardcoded values that no theme or redesign
+   could reach, which is why restyling .cf-row appeared to do nothing - the
+   rule in ui/lobby.css and the one in ui/v3.css both lost to this.
+
+   Position and overflow are kept (the accent rail needs them). Everything
+   visual now reads from the design tokens so it can actually be changed. */
 .cf-row {
   position: relative;
   overflow: hidden;
   min-height: 70px;
   margin-bottom: 9px;
-  padding: 13px 15px !important;
-  border-color: var(--line-soft) !important;
-  border-radius: 13px !important;
+  padding: 14px 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
   background:
-    linear-gradient(105deg, rgba(76, 141, 255, 0.025), transparent 24%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 50%),
-    var(--panel) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
-  transition: border-color 0.17s ease, background 0.17s ease, box-shadow 0.17s ease, transform 0.17s ease !important;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 45%),
+    var(--bg2);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition:
+    border-color var(--dur-2) var(--ease-1),
+    background var(--dur-2) var(--ease-1),
+    box-shadow var(--dur-2) var(--ease-1),
+    transform var(--dur-2) var(--ease-1);
+}
+
+.cf-row:hover {
+  border-color: color-mix(in srgb, var(--acc) 42%, var(--line));
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%),
+    var(--panel2);
+  box-shadow: var(--elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  transform: translateY(-2px);
 }
 
 .cf-row::before {

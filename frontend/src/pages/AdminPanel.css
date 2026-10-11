@@ -1,12 +1,10 @@
 /* Admin console — refined professional dark design */
-:root {
-  --bg0:#070a11; --bg1:#0b0f17; --panel:#0e141d; --panel2:#121924;
-  --line:rgba(148,163,184,.12); --line-soft:rgba(148,163,184,.07);
-  --txt:#eef2f7; --mut:#8b96a8; --dim:#525d70;
-  --acc:#2f81f7; --acc-soft:rgba(47,129,247,.12);
-  --grn:#3fb950; --red:#f85149; --gold:#d29922; --orange:#ec7f24;
-  --r-sm:8px; --r-md:10px; --r-lg:14px;
-}
+/* Legacy fallback palette, removed.
+   This file ships inside a lazy page chunk, so its :root loaded AFTER the
+   app-level palette in ui/v3.css and reverted the whole site to the old
+   colours the moment this route opened. The values live in v3.css now, with
+   per-theme overrides on top. */
+
 
 .admin-panel {
   padding: 22px;

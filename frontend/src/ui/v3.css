@@ -1,0 +1,578 @@
+/**
+ * v3.css — the whole visual language, replaced.
+ *
+ * This is a deliberate redesign rather than an adjustment. The previous look
+ * built every surface from the same near-black panel at the same radius with
+ * the same 1px border, so panels, modals, rows and inputs were all the same
+ * shade of the same grey. That is why the site read as unfinished no matter
+ * which page you were on: there was nothing to separate the layers.
+ *
+ * The change here is contrast and depth, not decoration:
+ *
+ *   - three distinct surface levels instead of one (bg / raised / overlay)
+ *   - real elevation, so a card sits above the page rather than being cut from it
+ *   - one accent ramp with a hot and a cool end, used consistently
+ *   - a larger type scale, because 0.69rem micro-labels were everywhere
+ *   - rounded, confident controls instead of small chamfered chips
+ *
+ * Loaded last, after theme.css, tokens.css, ui.css and shell.css, so it settles
+ * everything beneath it. Themes still override the colour variables, which are
+ * declared at the top here - so a theme changes the palette and this file keeps
+ * shaping it.
+ */
+
+/* ══ 1. Palette ═══════════════════════════════════════════════════════════════
+   Only the structural colours. Themes set their own --acc / --grn / --red /
+   --gold afterwards and win, because they are more specific. */
+
+:root {
+  /* Surfaces, darkest to lightest. The old app had one panel colour for
+     everything; this is the single biggest reason the layers now read. */
+  --bg0: #05070c;          /* page floor */
+  --bg1: #0a0e16;          /* chrome: header, chat rail */
+  --bg2: #10151f;          /* raised: cards, rows */
+  --panel: #141b27;        /* overlay: modals, popovers */
+  --panel2: #1b2432;       /* hovered / nested surface */
+  --panel3: #222d3d;       /* pressed, selected */
+
+  --line: rgba(148, 168, 200, 0.14);
+  --line-soft: rgba(148, 168, 200, 0.08);
+  --line-strong: rgba(148, 168, 200, 0.26);
+
+  --txt: #f2f6fc;
+  --mut: #9aa8bd;
+  --dim: #63718a;
+
+  /* Accent ramp. A single hue used at four strengths, so emphasis is
+     consistent everywhere instead of every screen inventing its own blue. */
+  --acc-100: #e8f1ff;
+  --acc-300: #7fb0ff;
+  --acc: #3b82f6;
+  --acc-600: #2563eb;
+  --acc-700: #1d4ed8;
+  --acc-soft: rgba(59, 130, 246, 0.14);
+  --acc-glow: rgba(59, 130, 246, 0.32);
+
+  --grn: #22c55e;
+  --grn-soft: rgba(34, 197, 94, 0.14);
+  --red: #f43f5e;
+  --red-soft: rgba(244, 63, 94, 0.14);
+  --gold: #fbbf24;
+  --gold-soft: rgba(251, 191, 36, 0.14);
+  --orange: #fb923c;
+  --violet: #a78bfa;
+  --pink: #f472b6;
+  --cyan: #22d3ee;
+
+  /* Bigger, more generous radii. The old 8/10/14 was too tight for cards. */
+  --r-xs: 6px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-full: 999px;
+
+  /* Real elevation. Each step is visible, where before they were almost
+     identical and the layering was invisible. */
+  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --elev-2: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --elev-3: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
+  --elev-4: 0 32px 80px rgba(0, 0, 0, 0.65), 0 8px 20px rgba(0, 0, 0, 0.4);
+
+  /* Type. The old scale bottomed out at 0.69rem, which is unreadable on a
+     laptop and impossible on a phone. */
+  --fs-xs: 0.75rem;
+  --fs-sm: 0.84rem;
+  --fs-md: 0.95rem;
+  --fs-lg: 1.05rem;
+  --fs-xl: 1.3rem;
+  --fs-2xl: 1.6rem;
+  --fs-3xl: 2.1rem;
+
+  --ctl-h: 40px;
+  --ctl-h-sm: 32px;
+  --ctl-h-lg: 48px;
+}
+
+/* ══ 2. The page ══════════════════════════════════════════════════════════════ */
+
+.app {
+  background:
+    radial-gradient(90% 60% at 50% -8%, rgba(59, 130, 246, 0.16), transparent 60%),
+    radial-gradient(60% 50% at 100% 100%, rgba(167, 139, 250, 0.07), transparent 65%),
+    linear-gradient(180deg, #0b1120 0%, var(--bg0) 55%, #04060a 100%);
+  background-attachment: fixed;
+}
+
+/* ══ 3. Header ═══════════════════════════════════════════════════════════════ */
+
+.header {
+  height: 64px;
+  background: rgba(10, 14, 22, 0.92);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03), 0 8px 24px rgba(0, 0, 0, 0.4);
+  padding: 0 var(--sp-5);
+  gap: var(--sp-4);
+}
+
+.layout-columns { margin-top: 64px; min-height: calc(100vh - 64px); }
+
+/* Nav pills: the active page is a filled accent chip, not a subtle shade. */
+.header nav a,
+.header .nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--r-full);
+  color: var(--mut);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: color var(--dur-1) var(--ease-1),
+              background var(--dur-1) var(--ease-1),
+              transform var(--dur-1) var(--ease-1);
+}
+
+.header nav a:hover,
+.header .nav-link:hover {
+  color: var(--txt);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.header nav a.active,
+.header .nav-link.active,
+.header nav a[aria-current='page'] {
+  color: #fff;
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
+  box-shadow: 0 4px 14px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+
+.header nav a:active { transform: scale(0.97); }
+
+/* Every icon button in the header shares one look. */
+.settings-trigger,
+.sound-toggle,
+.notification-icon,
+.mobile-chat-fab {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--mut);
+  transition: color var(--dur-1) var(--ease-1),
+              background var(--dur-1) var(--ease-1),
+              border-color var(--dur-1) var(--ease-1),
+              transform var(--dur-1) var(--ease-1);
+}
+.settings-trigger:hover,
+.sound-toggle:hover,
+.notification-icon:hover {
+  color: var(--txt);
+  background: var(--panel2);
+  border-color: var(--line-strong);
+}
+.settings-trigger:active,
+.sound-toggle:active,
+.notification-icon:active { transform: scale(0.94); }
+
+/* Balance and inventory read as the two numbers that matter most on the site. */
+.balance-pill {
+  height: 40px;
+  padding: 0 14px;
+  border-radius: var(--r-full);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  box-shadow: var(--elev-1), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  transition: border-color var(--dur-1) var(--ease-1), transform var(--dur-1) var(--ease-1);
+}
+.balance-pill:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.balance-pill .balance-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  color: var(--dim);
+}
+.balance-pill .balance-total {
+  font-size: var(--fs-md);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.header-wallet-btn {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--r-full);
+  font-weight: 800;
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
+  border: 1px solid var(--acc-700);
+  color: #fff;
+  box-shadow: 0 4px 16px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  transition: transform var(--dur-1) var(--ease-1), box-shadow var(--dur-1) var(--ease-1);
+}
+.header-wallet-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 24px var(--acc-glow); }
+.header-wallet-btn:active { transform: translateY(0) scale(0.98); }
+
+/* ══ 4. Page header ═══════════════════════════════════════════════════════════ */
+
+.header-page-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--acc-soft);
+  border: 1px solid color-mix(in srgb, var(--acc) 34%, transparent);
+  color: var(--acc-300);
+}
+.header-left h2 {
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.header-title-copy > span {
+  font-size: var(--fs-xs);
+  color: var(--dim);
+  font-weight: 600;
+}
+
+/* ══ 5. Chat ═════════════════════════════════════════════════════════════════ */
+
+.chat-column {
+  width: 330px;
+  min-width: 330px;
+  max-width: 330px;
+  background: var(--bg1);
+  border-right: 1px solid var(--line);
+}
+
+.chat-panel {
+  background: var(--bg1);
+}
+.chat-header {
+  padding: var(--sp-4) var(--sp-5);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg2);
+}
+.chat-messages { padding: var(--sp-4); gap: var(--sp-3); }
+.chat-message {
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  border: 1px solid var(--line-soft);
+  padding: var(--sp-3) var(--sp-4);
+}
+.chat-message:hover { border-color: var(--line); }
+.chat-input,
+.chat-footer input {
+  border-radius: var(--r-full) !important;
+  background: var(--bg2) !important;
+  border: 1px solid var(--line) !important;
+  color: var(--txt);
+  padding: 0 var(--sp-5);
+  height: var(--ctl-h);
+  transition: border-color var(--dur-1) var(--ease-1), box-shadow var(--dur-1) var(--ease-1);
+}
+.chat-input:focus,
+.chat-footer input:focus {
+  border-color: var(--acc) !important;
+  box-shadow: 0 0 0 3px var(--acc-soft) !important;
+  outline: none !important;
+}
+
+/* ══ 6. Buttons ══════════════════════════════════════════════════════════════ */
+
+button,
+.btn,
+.ui-btn {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  transition: transform var(--dur-1) var(--ease-1),
+              background var(--dur-1) var(--ease-1),
+              border-color var(--dur-1) var(--ease-1),
+              box-shadow var(--dur-1) var(--ease-1),
+              color var(--dur-1) var(--ease-1);
+}
+button:active:not(:disabled) { transform: scale(0.97); }
+
+.btn-primary,
+.ui-btn-primary,
+.cf-join-btn,
+.cf-confirm-btn,
+.cf-topbar-btn-gold {
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
+  border: 1px solid var(--acc-700);
+  color: #fff;
+  box-shadow: 0 4px 16px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.btn-primary:hover:not(:disabled),
+.ui-btn-primary:hover:not(:disabled),
+.cf-join-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 26px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.cf-bot-btn,
+.btn-secondary {
+  background: var(--grn-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--grn) 44%, transparent) !important;
+  color: var(--grn) !important;
+}
+
+.cf-cancel-btn,
+.btn-danger {
+  background: var(--red-soft) !important;
+  border: 1px solid color-mix(in srgb, var(--red) 44%, transparent) !important;
+  color: var(--red) !important;
+}
+
+/* The neutral toolbar buttons. */
+.cf-topbar-btn,
+.cf-view-btn,
+.cf-history-view,
+.cf-provably-btn,
+.cf-view-provably {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--mut);
+}
+.cf-topbar-btn:hover,
+.cf-view-btn:hover {
+  background: var(--panel2);
+  border-color: var(--line-strong);
+  color: var(--txt);
+}
+
+/* ══ 7. Surfaces ═════════════════════════════════════════════════════════════ */
+
+.cf-topbar,
+.cf-lobby > *,
+.cf-view-panel,
+.ui-panel {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* The lobby row is the most-repeated object on the site.
+   NOTE: lobby.css ships in a lazy page chunk, which loads AFTER this file, so
+   an equal-specificity rule here would lose. These selectors carry an extra
+   element for that reason - see the note in the tool that writes v3. */
+html body .cf-row {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 45%), var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 14px 18px;
+  gap: 16px;
+}
+html body .cf-row:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%), var(--panel2);
+  border-color: color-mix(in srgb, var(--acc) 42%, var(--line));
+  transform: translateY(-2px);
+  box-shadow: var(--elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+html body .cf-row::before {
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
+  width: 3px;
+  top: 12px;
+  bottom: 12px;
+}
+
+html body .cf-row-value {
+  min-width: 120px;
+  font-size: var(--fs-md);
+  gap: 3px;
+}
+html body .cf-row-total { font-size: var(--fs-lg); font-weight: 800; }
+html body .cf-row-range { font-size: var(--fs-xs); color: var(--dim); }
+
+html body .cf-empty {
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 10%, transparent), transparent 70%), var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+html body .cf-empty-icon {
+  background: var(--acc-soft);
+  border-color: color-mix(in srgb, var(--acc) 36%, transparent);
+  color: var(--acc-300);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--acc) 5%, transparent);
+}
+
+/* ══ 8. Inputs ══════════════════════════════════════════════════════════════ */
+
+input[type='text'],
+input[type='password'],
+input[type='number'],
+input[type='search'],
+select,
+textarea {
+  background: var(--bg0);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--txt);
+  padding: 0 var(--sp-4);
+  height: var(--ctl-h);
+  transition: border-color var(--dur-1) var(--ease-1), box-shadow var(--dur-1) var(--ease-1);
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-soft);
+  outline: none;
+}
+input::placeholder, textarea::placeholder { color: var(--dim); }
+
+/* ══ 9. Modals ═══════════════════════════════════════════════════════════════ */
+
+.cf-modal-overlay,
+.ui-overlay,
+.cp-overlay,
+.db-overlay {
+  background: rgba(3, 5, 10, 0.72);
+  backdrop-filter: blur(8px);
+}
+
+.cf-view-modal,
+.cf-join-modal,
+.cf-history-modal,
+.cp,
+.auth-card,
+.ui-modal {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: var(--txt);
+}
+
+.cf-modal-close,
+.modal-close-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--r-full);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  color: var(--mut);
+  transition: background var(--dur-1) var(--ease-1),
+              color var(--dur-1) var(--ease-1),
+              transform var(--dur-1) var(--ease-1);
+}
+.cf-modal-close:hover {
+  background: var(--red-soft);
+  border-color: color-mix(in srgb, var(--red) 45%, transparent);
+  color: var(--red);
+  transform: rotate(90deg);
+}
+
+/* ══ 10. Tabs ════════════════════════════════════════════════════════════════ */
+
+.cf-topbar-tabs,
+.jp-tabs,
+.tr-tabs {
+  background: var(--bg0);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-full);
+  padding: 4px;
+  gap: 2px;
+}
+.cf-tab,
+.jp-tab,
+.tr-tab {
+  border-radius: var(--r-full) !important;
+  border-bottom: none !important;
+  padding: 8px 16px;
+  font-weight: 700;
+  color: var(--mut);
+  min-height: var(--ctl-h-sm);
+}
+.cf-tab:hover { background: rgba(255, 255, 255, 0.05); color: var(--txt); }
+.cf-tab-active,
+.jp-tab.active,
+.tr-tab.active {
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600)) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 12px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+.cf-tab-count {
+  background: rgba(255, 255, 255, 0.14) !important;
+  border-radius: var(--r-full);
+  padding: 1px 7px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+.cf-tab-active .cf-tab-count { background: rgba(0, 0, 0, 0.28) !important; }
+
+/* ══ 11. Badges, pills and micro-labels ═════════════════════════════════════ */
+
+.cf-topbar-stat,
+.jp-stat,
+.tr-stat {
+  background: var(--bg2);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-full);
+  padding: 6px 12px;
+}
+.cf-topbar-stat .cf-topbar-stat-label,
+.cf-stat-label {
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.cf-row-range,
+.cf-row-cap {
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+.cf-row-cap {
+  background: var(--gold-soft);
+  border: 1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  color: var(--gold);
+  border-radius: var(--r-full);
+  padding: 2px 10px;
+}
+
+/* ══ 12. Avatars and thumbnails ══════════════════════════════════════════════ */
+
+.cf-row-avatar-ring,
+.cf-view-avatar-ring {
+  border-width: 2.5px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+.ring-heads { border-color: var(--orange) !important; box-shadow: 0 0 0 3px var(--gold-soft); }
+.ring-tails { border-color: var(--acc) !important; box-shadow: 0 0 0 3px var(--acc-soft); }
+.ring-winner { border-color: var(--grn) !important; box-shadow: 0 0 0 3px var(--grn-soft), 0 0 18px rgba(34, 197, 94, 0.4); }
+
+.cf-row-thumb {
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  box-shadow: var(--elev-1);
+  transition: transform var(--dur-2) var(--ease-out);
+}
+.cf-row-thumb-wrap:hover .cf-row-thumb { transform: scale(1.08); }
+
+/* ══ 13. Scrollbars ══════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar { width: 12px; height: 12px; }
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 168, 200, 0.22);
+  border: 4px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-full);
+}
+::-webkit-scrollbar-thumb:hover { background: rgba(148, 168, 200, 0.4); background-clip: content-box; }
+
+/* ══ 14. Small screens ═══════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .chat-column { width: 100%; min-width: 0; max-width: 100%; }
+  .header { padding: 0 var(--sp-4); }
+  .cf-topbar { padding: var(--sp-3); }
+}

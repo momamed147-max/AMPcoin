@@ -145,7 +145,6 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/progression', require('./backend/routes/progressionApi'));
-app.use('/api/daily-bonus', require('./backend/routes/dailyBonus'));
 app.use('/api/rps', require('./backend/routes/rps'));
 
 // Serve frontend for all other routes — AFTER API routes

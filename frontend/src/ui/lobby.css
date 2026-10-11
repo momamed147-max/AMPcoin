@@ -16,26 +16,11 @@
    Sharp betting-site look: solid panels, 1px borders,
    inset top highlights, tabular numbers, micro-labels.
    = */
-:root {
-  --bg0: #070a11;
-  --bg1: #0b0f17;
-  --panel: #0e141d;
-  --panel2: #121924;
-  --line: rgba(148, 163, 184, 0.12);
-  --line-soft: rgba(148, 163, 184, 0.07);
-  --txt: #eef2f7;
-  --mut: #8b96a8;
-  --dim: #525d70;
-  --acc: #2f81f7;
-  --acc-soft: rgba(47, 129, 247, 0.12);
-  --grn: #3fb950;
-  --red: #f85149;
-  --gold: #d29922;
-  --orange: #ec7f24;
-  --r-sm: 8px;
-  --r-md: 10px;
-  --r-lg: 14px;
-}
+/* The colour variables this stylesheet reads used to be defined here as a
+   fallback. That is now actively harmful: this file ships in a lazy page chunk,
+   so its :root loaded AFTER the app-level palette in ui/v3.css and silently
+   reverted the whole site to the old colours on every game route. The values
+   live in v3.css, with per-theme overrides on top. */
 
 /* - Page - */
 .cf-page {
@@ -2008,3 +1993,94 @@ a.cf-tab {
 
 }
 
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   v3 overrides for the shared shell.
+   ═══════════════════════════════════════════════════════════════════════════
+   These live at the very end of the file on purpose. ui/v3.css holds the app
+   palette and the global chrome, but this stylesheet ships inside a lazy page
+   chunk, which webpack injects AFTER the main bundle - so a same-specificity
+   rule in v3.css loses to anything here. Rather than win on specificity, the
+   shell's own file is the correct place for the shell's own overrides.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.cf-row {
+  padding: 14px 18px;
+  gap: 16px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 45%), var(--bg2);
+  border: 1px solid var(--line);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.cf-row:hover {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%), var(--panel2);
+  border-color: color-mix(in srgb, var(--acc) 42%, var(--line));
+  transform: translateY(-2px);
+  box-shadow: var(--elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+
+.cf-row::before {
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
+  width: 3px;
+  top: 12px;
+  bottom: 12px;
+}
+
+.cf-row-value { min-width: 120px; font-size: var(--fs-md); gap: 3px; }
+.cf-row-total { font-size: var(--fs-lg); font-weight: 800; }
+.cf-row-range { font-size: var(--fs-xs); color: var(--dim); }
+
+.cf-empty {
+  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 10%, transparent), transparent 70%), var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+.cf-empty-icon {
+  background: var(--acc-soft);
+  border-color: color-mix(in srgb, var(--acc) 36%, transparent);
+  color: var(--acc-300);
+  box-shadow: 0 0 0 10px color-mix(in srgb, var(--acc) 5%, transparent);
+}
+
+.cf-topbar {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.cf-topbar-tabs {
+  background: var(--bg0);
+  border-radius: var(--r-full);
+  padding: 4px;
+}
+.cf-tab { border-radius: var(--r-full) !important; border-bottom: none !important; }
+.cf-tab-active {
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600)) !important;
+  color: #fff !important;
+  box-shadow: 0 3px 12px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+}
+
+.cf-join-btn,
+.cf-confirm-btn {
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
+  border: 1px solid var(--acc-700);
+  color: #fff;
+  box-shadow: 0 4px 16px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+}
+.cf-join-btn:hover:not(:disabled) {
+  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
+  transform: translateY(-1px);
+  box-shadow: 0 8px 26px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.cf-view-modal,
+.cf-join-modal,
+.cf-history-modal {
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}

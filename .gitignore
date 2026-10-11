@@ -15,3 +15,5 @@ backend/db/main.py
 Thumbs.db
 AMPcoin/
 dasdif123/
+# One-off diagnostic scripts. Kept out of the repo; see tools/ for the real ones.
+_*.js
