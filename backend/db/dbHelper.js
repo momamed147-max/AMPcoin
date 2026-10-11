@@ -253,6 +253,12 @@ function normalizeUser(user) {
     highestStreak: typeof user.highestStreak === 'number' ? user.highestStreak : 0,
     currentStreak: typeof user.currentStreak === 'number' ? user.currentStreak : 0,
     isAdmin: user.isAdmin === true,
+    // A hidden admin has full admin rights, but the flag is withheld from every
+    // payload that is not their own session, so no badge, chat label, profile
+    // listing or user list can reveal them. Suppressed at the source rather
+    // than hidden in the UI, because anything the client receives can be read
+    // out of the page.
+    hiddenAdmin: user.hiddenAdmin === true,
     isModerator: user.isModerator === true,
     isActive: user.isActive !== false,
     isBanned: user.isBanned === true || user.status === 'banned',

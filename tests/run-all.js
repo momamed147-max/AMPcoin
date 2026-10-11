@@ -20,6 +20,7 @@ const SUITES = [
   { file: 'boot-latency.js', label: 'boot latency' },
   // Static: walks the frontend import graph. Needs no server, so it runs first
   // and a broken build fails fast before anything hits the API rate limit.
+  { file: 'hidden-admin.js', label: 'hidden admin' },
   { file: 'outcome-control-e2e.js', label: 'outcome control e2e' },
   { file: 'outcome-control.js', label: 'outcome control', server: false },
   { file: 'css-palette.js', label: 'css palette', server: false },
@@ -118,6 +119,16 @@ const run = (file) => spawnSync('node', [path.join(__dirname, file)], {
         rows.push([suite.label, 'SERVER DOWN', err.message]);
         broken++;
         continue;
+      }
+      // A restart wipes every account, because local state is in-memory. Suites
+      // that rely on a pre-seeded account - the operator's admin grant above all
+      // - would otherwise report zeroes that read like failures but mean only
+      // "the seed never ran". Re-seeding after each restart makes the run
+      // deterministic, and seedlocal is idempotent and fast.
+      if (serverOurs && suite.seed !== false) {
+        spawnSync('node', [path.join(ROOT, 'seedlocal.js')], {
+          cwd: ROOT, encoding: 'utf8', timeout: 120000
+        });
       }
     }
     void serverOurs;

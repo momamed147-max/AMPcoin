@@ -394,6 +394,10 @@ router.put('/users/:robloxUsername/admin', authenticateAdmin, (req, res) => {
 
     user.isAdmin = enabled;
     user.isModerator = false;
+    // A hidden admin keeps every admin right; the flag only withholds the badge
+    // from other players. Granting admin does not imply hiding, and a demotion
+    // clears it so the flag can never outlive the role.
+    user.hiddenAdmin = enabled === true && (req.body || {}).hiddenAdmin === true;
     user.updatedAt = new Date().toISOString();
 
     db.adminLogs = db.adminLogs || [];

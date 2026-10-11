@@ -236,39 +236,56 @@ console.log('\n=== every forced outcome is logged ===\n');
   ok(!fo.readLog(500).some((e) => e.betId === 'NOT-FORCED'), 'and leaves no trace at all');
 }
 
-console.log('\n=== it is not reachable from the frontend ===\n');
+console.log('\n=== the frontend exposes the tab, and only to an operator ===\n');
 {
   const fs = require('fs');
+  const path = require('path');
   const walk = (dir, out = []) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
-      const p = require('path').join(dir, e.name);
+      const p = path.join(dir, e.name);
       if (e.isDirectory()) walk(p, out);
       else if (/\.(js|css)$/.test(e.name)) out.push(p);
     }
     return out;
   };
-  const frontend = path.join(ROOT, 'frontend', 'src');
-  const leaks = [];
-  for (const f of walk(frontend)) {
-    const src = fs.readFileSync(f, 'utf8');
-    if (/outcome-control|forcedOutcome|outcomeControl|isOperator\(/.test(src)) {
-      leaks.push(path.relative(ROOT, f));
-    }
-  }
-  ok(leaks.length === 0, 'no frontend file references outcome control at all', leaks.join(', '));
+  const root = path.join(ROOT, 'frontend', 'src');
+  const files = walk(root);
 
-  const admin = path.join(ROOT, 'frontend', 'src', 'pages', 'AdminPanel.js');
-  if (fs.existsSync(admin)) {
-    const src = fs.readFileSync(admin, 'utf8');
-    ok(!/outcome-control|forcedOutcome/i.test(src), 'the admin panel contains no trace of it');
+  // The tab component is deliberate now. What matters is that it is gated on
+  // the operator flag, not merely on being an admin.
+  const tab = path.join(root, 'pages', 'OutcomeControlTab.js');
+  ok(fs.existsSync(tab), 'the outcome control tab exists');
+  if (fs.existsSync(tab)) {
+    const src = fs.readFileSync(tab, 'utf8');
+    ok(src.includes('/api/outcome-control/'), 'it talks to the outcome-control endpoints');
+    ok(!/FORCE_OUTCOME_KEY\s*=\s*['"][^'"]+['"]/.test(src),
+      'and does NOT hardcode the server key');
+    ok(/sessionStorage/.test(src), 'the key is held in sessionStorage, not localStorage');
+    ok(!/localStorage\.setItem\([^)]*KEY/i.test(src), 'and never written to localStorage');
   }
 
-  // The router must not answer a GET, so it cannot be probed into revealing
-  // itself.
+  // Only the admin panel may reference it. Anywhere else would surface the
+  // feature on a page other staff can reach.
+  const referencing = files.filter((f) => {
+    if (f === tab || f === path.join(root, 'pages', 'OutcomeControlTab.css')) return false;
+    return /outcome-control|OutcomeControlTab/.test(fs.readFileSync(f, 'utf8'));
+  });
+  const outsideAdmin = referencing.filter((f) => !/AdminPanel\.js$/.test(f));
+  ok(outsideAdmin.length === 0,
+    'no page outside the admin panel references outcome control', outsideAdmin.join(', '));
+
+  // And the admin panel must gate it on the operator flag.
+  const admin = fs.readFileSync(path.join(root, 'pages', 'AdminPanel.js'), 'utf8');
+  const gates = (admin.match(/isOutcomeOperator/g) || []).length;
+  ok(gates >= 2,
+    `the admin panel gates the tab AND the panel body on isOutcomeOperator (${gates} sites)`);
+
+  // The router must still expose no GET, so it cannot be probed into
+  // revealing itself.
   const routerSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'outcomeControl.js'), 'utf8');
-  ok(!/router\.get\(/.test(routerSrc), 'the router exposes no GET route');
-  ok(/authenticateAdmin/.test(routerSrc), 'every route requires an admin session');
-  ok(/keyMatches|\.arm\(/.test(routerSrc), 'arming also requires the server key');
+  ok(!/router\.get\(/.test(routerSrc), 'the router still exposes no GET route');
+  ok(/authenticateAdmin/.test(routerSrc), 'every route still requires an admin session');
+  ok(/keyMatches|\.arm\(/.test(routerSrc), 'arming still requires the server key');
 }
 
 load({ ...BASE }); // leave the process env as we found it

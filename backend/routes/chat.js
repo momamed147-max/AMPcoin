@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateToken, authenticateAdmin, authenticateModerator } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
+const { revealableAdmin } = require('../visibility');
 const { emitToUser } = require('../realtime');
 // Roblox lookups live in one module now: they used to be copy-pasted here,
 // in chat.js and in users.js, and all three blocked the browser's boot path
@@ -26,7 +27,7 @@ function canModerateTarget(actor, target) {
   return true;
 }
 
-function serializeMuteUser(user) {
+function serializeMuteUser(user, viewerId) {
   return {
     id: user.id,
     robloxUsername: user.robloxUsername || '',
@@ -34,7 +35,7 @@ function serializeMuteUser(user) {
     customDisplayName: user.customDisplayName || null,
     displayName: user.customDisplayName || user.displayName || user.robloxDisplayName || user.robloxUsername || 'Anonymous',
     avatar: user.avatar || '',
-    isAdmin: user.isAdmin === true,
+    isAdmin: revealableAdmin(user, viewerId),
     isModerator: user.isModerator === true,
     isActive: user.isActive !== false,
     isBanned: user.isBanned === true,
@@ -273,7 +274,7 @@ router.post('/send', authenticateToken, async (req, res) => {
       robloxDisplayName: profile.robloxDisplayName || user.robloxDisplayName || null,
       avatar: avatar,
       robloxUserId: profile.robloxUserId || user.robloxUserId || null,
-      isAdmin: user.isAdmin === true,
+      isAdmin: revealableAdmin(user, user.id),
       isModerator: user.isModerator === true,
       message: message.trim(),
       timestamp: new Date().toISOString(),
@@ -293,6 +294,8 @@ router.post('/send', authenticateToken, async (req, res) => {
 
     // Real-time: broadcast message to ALL connected users
     const { emitToAll } = require('../realtime');
+
+
     emitToAll('chatMessage', chatMessage);
 
     res.status(201).json(chatMessage);
@@ -351,7 +354,7 @@ router.put('/mute/:userId', authenticateModerator, (req, res) => {
       return res.status(403).json({ message: 'You cannot mute this account' });
     }
     if (targetUser.isMuted === true) {
-      return res.json({ message: 'User is already muted', user: serializeMuteUser(targetUser), unchanged: true });
+      return res.json({ message: 'User is already muted', user: serializeMuteUser(targetUser, req.user && req.user.userId), unchanged: true });
     }
     if (isModerationRateLimited(req.user.userId, userId)) {
       res.set('Retry-After', '1');
@@ -395,7 +398,7 @@ router.put('/mute/:userId', authenticateModerator, (req, res) => {
     dbManager.saveUsersDb();
     dbManager.saveMainDb();
 
-    res.json({ message: 'User muted successfully', user: serializeMuteUser(targetUser) });
+    res.json({ message: 'User muted successfully', user: serializeMuteUser(targetUser, req.user && req.user.userId) });
   } catch (error) {
     console.error('Error muting user:', error);
     res.status(500).json({ message: 'Server error' });
@@ -418,7 +421,7 @@ router.put('/unmute/:userId', authenticateModerator, (req, res) => {
       return res.status(403).json({ message: 'You cannot unmute this account' });
     }
     if (targetUser.isMuted !== true) {
-      return res.json({ message: 'User is already unmuted', user: serializeMuteUser(targetUser), unchanged: true });
+      return res.json({ message: 'User is already unmuted', user: serializeMuteUser(targetUser, req.user && req.user.userId), unchanged: true });
     }
     if (isModerationRateLimited(req.user.userId, userId)) {
       res.set('Retry-After', '1');
@@ -459,7 +462,7 @@ router.put('/unmute/:userId', authenticateModerator, (req, res) => {
     dbManager.saveUsersDb();
     dbManager.saveMainDb();
 
-    res.json({ message: 'User unmuted successfully', user: serializeMuteUser(targetUser) });
+    res.json({ message: 'User unmuted successfully', user: serializeMuteUser(targetUser, req.user && req.user.userId) });
   } catch (error) {
     console.error('Error unmuting user:', error);
     res.status(500).json({ message: 'Server error' });

@@ -631,7 +631,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
       robloxUsername: msg.robloxUsername || '',
       customDisplayName: resolved?.customDisplayName || msg.customDisplayName || null,
       robloxDisplayName: resolved?.robloxDisplayName || msg.robloxDisplayName || '',
-      isAdmin: !!(resolved?.isAdmin || msg.isAdmin),
+      isAdmin: resolved ? !!resolved.isAdmin : !!msg.isAdmin,
       isModerator: !!(resolved?.isModerator || msg.isModerator),
       displayName: resolved?.displayName || msg.displayName || msg.username || msg.robloxUsername || 'Anonymous',
       avatar: resolved?.avatar || msg.avatar || '',

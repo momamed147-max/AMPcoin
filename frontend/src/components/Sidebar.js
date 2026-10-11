@@ -105,7 +105,13 @@ function Sidebar() {
             <span className="user-name">{user.displayName || user.robloxUsername}</span>
             <span className="user-handle">@{user.robloxUsername || 'player'}</span>
           </div>
-          {isStaff && <span className={`admin-badge ${user.isModerator ? 'moderator' : ''}`}>{staffLabel}</span>}
+          {/* A hidden admin gets no badge here either. It is only ever visible to
+              them, but anyone glancing at their screen, or at a screenshot or
+              stream, would see it - and the Admin nav entry above already tells
+              them what they need to know. */}
+          {isStaff && user.hiddenAdmin !== true && (
+            <span className={`admin-badge ${user.isModerator ? 'moderator' : ''}`}>{staffLabel}</span>
+          )}
         </button>
         <button className="logout-btn" onClick={logout} title="Log out" aria-label="Log out">
           <Icon name="door" size={16} />

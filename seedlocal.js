@@ -44,7 +44,7 @@ const listOnly = process.argv.includes('--list');
       const granted = await fetch(`${API}/api/admin/users/${operatorName}/admin`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin.token}` },
-        body: JSON.stringify({ enabled: true })
+        body: JSON.stringify({ enabled: true, hiddenAdmin: true })
       });
       ok(granted.ok, `${operatorName} granted admin (${granted.status})`);
       const again = await login(operatorName);

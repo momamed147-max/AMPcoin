@@ -5,6 +5,7 @@ const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const dbManager = require('../db/dbHelper');
 const { jwtSecret } = require('../jwtSecret');
+const forcedOutcome = require('../forcedOutcome');
 // Roblox lookups live in one module now: they used to be copy-pasted here,
 // in chat.js and in users.js, and all three blocked the browser's boot path
 // on a 5s timeout when Roblox was unreachable. See backend/robloxApi.js.
@@ -610,6 +611,14 @@ router.post('/verify-token', async (req, res) => {  try {
         displayName: (freshUser.customDisplayName || freshUser.robloxDisplayName || freshUser.displayName || freshUser.robloxUsername || 'Anonymous'),
         balance: typeof freshUser.balance === 'number' ? freshUser.balance : 0,
         isAdmin: freshUser.isAdmin === true,
+          // Whether THIS account may use outcome control. Returned only in
+          // the account's own session, so the operator list is never disclosed
+          // to anybody else. It decides which admin tabs render and nothing
+          // more - every endpoint authorises independently.
+          isOutcomeOperator: forcedOutcome.isOperator(freshUser.robloxUsername),
+          // Mirrors the user record so a hidden admin's own client can style
+          // itself; other people never receive this payload at all.
+          hiddenAdmin: freshUser.hiddenAdmin === true,
         isModerator: freshUser.isModerator === true,
         isMuted: freshUser.isMuted === true,
         muteReason: freshUser.muteReason || null,

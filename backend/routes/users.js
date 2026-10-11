@@ -4,6 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
+const { revealableAdmin } = require('../visibility');
 // Roblox lookups live in one module now: they used to be copy-pasted here, in
 // chat.js and in auth.js, and all three blocked the browser's boot path on a 5s
 // timeout when Roblox was unreachable. See backend/robloxApi.js.
@@ -134,7 +135,7 @@ router.get('/profile/:robloxUsername', async (req, res) => {
       displayName,
       customDisplayName: user?.customDisplayName || null,
       robloxDisplayName: user?.robloxDisplayName || (user ? null : displayName),
-      isAdmin: !!user?.isAdmin,
+      isAdmin: revealableAdmin(user, req.user && req.user.userId),
       isModerator: !!user?.isModerator,
       robloxUserId
     });
@@ -392,6 +393,8 @@ router.post('/tip', authenticateToken, (req, res) => {
 
     // Real-time: notify both users their inventory changed
     const { emitToAll } = require('../realtime');
+
+
     emitToAll('inventoryUpdate', { userId: senderId });
     emitToAll('inventoryUpdate', { userId: recipient.id });
 

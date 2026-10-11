@@ -1,0 +1,236 @@
+/* Outcome control tab.
+   Deliberately styled like the rest of the admin panel rather than given its
+   own look - a distinctive treatment would draw more attention to the tab's
+   existence, which is the opposite of what it is for. */
+
+.oc-tab { letter-spacing: 0.01em; }
+
+.outcome-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  padding: var(--sp-6);
+  max-width: 900px;
+}
+
+.oc-head h3 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--txt);
+}
+
+.oc-head p {
+  margin: 0;
+  font-size: var(--fs-sm);
+  color: var(--mut);
+  line-height: var(--lh-body);
+  max-width: 62ch;
+}
+
+/* ── the key ── */
+.oc-key-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+
+.oc-key-label {
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.oc-key-input {
+  flex: 1 1 260px;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+}
+
+.oc-note {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--dim);
+  line-height: var(--lh-body);
+  max-width: 68ch;
+}
+
+.oc-status {
+  padding: 9px 13px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.oc-status.ok {
+  background: var(--grn-soft);
+  border: 1px solid color-mix(in srgb, var(--grn) 40%, transparent);
+  color: var(--grn);
+}
+.oc-status.error {
+  background: var(--red-soft);
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  color: var(--red);
+}
+
+/* ── the game cards ── */
+.oc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: var(--sp-4);
+}
+
+.oc-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  box-shadow: var(--elev-1);
+  transition: border-color var(--dur-2) var(--ease-1);
+}
+
+.oc-card.is-armed {
+  border-color: color-mix(in srgb, var(--gold) 52%, transparent);
+  box-shadow: var(--elev-1), 0 0 0 1px color-mix(in srgb, var(--gold) 22%, transparent);
+}
+
+.oc-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.oc-card-name {
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: 800;
+  color: var(--txt);
+}
+
+.oc-pill {
+  padding: 3px 11px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.oc-pill.off { background: var(--panel3); color: var(--dim); }
+.oc-pill.win { background: var(--grn-soft); color: var(--grn); }
+.oc-pill.lose { background: var(--red-soft); color: var(--red); }
+
+.oc-card-blurb {
+  margin: 0;
+  flex: 1;
+  font-size: var(--fs-sm);
+  color: var(--mut);
+  line-height: var(--lh-body);
+}
+
+.oc-card-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.oc-card-actions .btn { flex: 1 1 auto; min-width: 96px; }
+
+/* ── the audit log ── */
+.oc-log-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line-soft);
+}
+.oc-log-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--txt);
+}
+.oc-log-head span { font-size: var(--fs-xs); color: var(--dim); font-weight: 700; }
+
+.oc-log-empty {
+  margin: 0;
+  padding: var(--sp-5);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line);
+  font-size: var(--fs-sm);
+  color: var(--dim);
+  line-height: var(--lh-body);
+}
+
+.oc-log {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: var(--sp-2);
+  border-radius: var(--r-md);
+  background: var(--bg0);
+  border: 1px solid var(--line-soft);
+}
+
+.oc-log-row {
+  display: grid;
+  grid-template-columns: 78px 54px 1fr auto;
+  gap: var(--sp-3);
+  align-items: center;
+  padding: 7px 9px;
+  border-radius: var(--r-xs);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+.oc-log-row:nth-child(odd) { background: rgba(255, 255, 255, 0.02); }
+
+.oc-log-game {
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--acc-300);
+}
+.oc-log-game.rps { color: var(--violet); }
+.oc-log-game.jackpot { color: var(--gold); }
+
+.oc-log-mode {
+  font-weight: 800;
+  color: var(--mut);
+}
+.oc-log-detail {
+  color: var(--mut);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oc-log-at { color: var(--dim); white-space: nowrap; }
+
+.oc-foot {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: var(--r-sm);
+  background: var(--gold-soft);
+  border: 1px solid color-mix(in srgb, var(--gold) 32%, transparent);
+  color: var(--gold);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-body);
+}
+
+@media (max-width: 700px) {
+  .outcome-control { padding: var(--sp-4); }
+  .oc-log-row { grid-template-columns: 68px 44px 1fr; }
+  .oc-log-at { display: none; }
+}

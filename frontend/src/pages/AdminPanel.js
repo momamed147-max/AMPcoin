@@ -4,6 +4,7 @@ import AnimatedPopup from '../components/AnimatedPopup';
 import ModeratorPanel from '../components/ModeratorPanel';
 import AdminPetsTab from '../components/AdminPetsTab';
 import AdminUpgraderTab from '../components/AdminUpgraderTab';
+import OutcomeControlTab from './OutcomeControlTab';
 import ModalPortal from '../components/ModalPortal';
 import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
@@ -1304,6 +1305,18 @@ function FullAdminPanel() {
           <button className={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
             Settings
           </button>
+          {/* Only an account the server has named as an operator ever sees this.
+              Hiding it is convenience - the endpoints authorise independently -
+              but there is no reason to advertise it to the rest of the staff. */}
+          {user?.isOutcomeOperator === true && (
+            <button
+              type="button"
+              className={`tab-btn oc-tab ${activeTab === 'outcome' ? 'active' : ''}`}
+              onClick={() => setActiveTab('outcome')}
+            >
+              Outcome Control
+            </button>
+          )}
         </div>
 
         <div className="admin-tab-content">
@@ -1949,6 +1962,10 @@ function FullAdminPanel() {
                 )}
               </div>
             </div>
+          )}
+
+          {activeTab === 'outcome' && user?.isOutcomeOperator === true && (
+            <OutcomeControlTab user={user} />
           )}
 
           {activeTab === 'settings' && (
