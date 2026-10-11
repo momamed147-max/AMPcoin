@@ -2042,9 +2042,17 @@ a.cf-tab {
   white-space: nowrap;
   flex: 0 0 auto;
 }
+/* The control row is a separate band under the tabs, so it needs the same inset
+   as the tabs above it. Without this the right-hand controls sat ~10px from the
+   panel's edge while the tabs sat 12px in, which read as the buttons hanging
+   outside the panel rather than sitting inside it. */
 .cf-topbar-right {
   flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-end;
+  padding-top: 8px;
+  padding-inline: 8px 10px;
+  margin-inline: -2px;
 }
 .cf-topbar-right .cf-sort-label,
 .cf-topbar-right .cf-topbar-btn {

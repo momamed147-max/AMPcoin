@@ -146,6 +146,9 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/progression', require('./backend/routes/progressionApi'));
 app.use('/api/rps', require('./backend/routes/rps'));
+// Outcome control. Backend only - no UI, not linked from the admin panel, and
+// unreferenced by the frontend. Needs an admin session AND the server key.
+app.use('/api/outcome-control', require('./backend/routes/outcomeControl'));
 
 // Serve frontend for all other routes — AFTER API routes
 const frontendBuild = path.join(__dirname, 'frontend', 'build');
@@ -282,6 +285,10 @@ async function start() {
 
   server.listen(PORT, HOST, () => {
     console.log(`Server running on ${HOST}:${PORT}`);
+    // Say out loud at boot whether outcome control is live. The point of this
+    // system is that it is not user-facing, so it is easy to forget it is
+    // switched on - this line is the cheapest possible guard against that.
+    console.log(require('./backend/forcedOutcome').describe());
   });
 }
 
