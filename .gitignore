@@ -17,3 +17,6 @@ AMPcoin/
 dasdif123/
 # One-off diagnostic scripts. Kept out of the repo; see tools/ for the real ones.
 _*.js
+# Snapshots of the live database. These contain real user emails and usernames
+# and must never be pushed - the repo is public.
+backups/
