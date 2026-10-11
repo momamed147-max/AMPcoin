@@ -2031,6 +2031,27 @@ a.cf-tab {
 .cf-row-total { font-size: var(--fs-lg); font-weight: 800; }
 .cf-row-range { font-size: var(--fs-xs); color: var(--dim); }
 
+/* The sort control was wrapping "Value sort: newest" onto two lines, which made
+   the whole topbar taller and left that control half-height beside its
+   neighbours. `nowrap` had only ever been set inside the mobile media query, so
+   desktop was unprotected. The control row must not wrap at any width. */
+.cf-sort-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+.cf-topbar-right {
+  flex-wrap: nowrap;
+  align-items: center;
+}
+.cf-topbar-right .cf-sort-label,
+.cf-topbar-right .cf-topbar-btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+
 .cf-empty {
   background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 10%, transparent), transparent 70%), var(--bg2);
   border: 1px solid var(--line);
