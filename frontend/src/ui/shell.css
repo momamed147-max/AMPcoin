@@ -1,0 +1,148 @@
+/**
+ * shell.css — the always-on chrome, applied to every route.
+ *
+ * Loaded last, after tokens.css and ui.css, so it can settle the things every
+ * screen shares without any page having to opt in: the background, the scroll
+ * gutter, focus rings, and the surfaces that panels are cut from.
+ *
+ * The background was the single biggest thing making the app read as unfinished.
+ * A flat #070a11 across a 1600px viewport leaves the lower two thirds of most
+ * screens as dead space with no depth cue at all.
+ */
+
+/* ── the app background ────────────────────────────────────────────────────────
+   A vertical lift plus a soft accent bloom behind the content column. Both are
+   fixed, so they do not scroll or repaint. */
+.app {
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      120% 70% at 50% -10%,
+      color-mix(in srgb, var(--acc) 9%, transparent),
+      transparent 62%
+    ),
+    linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 46%, color-mix(in srgb, var(--bg0) 92%, #000) 100%);
+  background-attachment: fixed;
+}
+
+/* Keep the chat rail and header reading as solid surfaces above that gradient
+   rather than transparent windows onto it.
+
+   Solid rather than translucent with a backdrop-filter: on a near-black page a
+   blur buys nothing visually, it costs a compositing layer on every scroll, and
+   it rendered the nav contents unreadable in headless Chrome. */
+.header,
+.chat-column {
+  background: var(--bg1);
+}
+
+.header {
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* ── scrollbars ────────────────────────────────────────────────────────────
+   One treatment for every scrollable region. The default Chrome scrollbar is a
+   bright grey block on a near-black page and draws more attention than the
+   content it is scrolling. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--mut) 38%, transparent) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--mut) 30%, transparent);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--mut) 52%, transparent);
+  background-clip: content-box;
+}
+
+/* ── focus ──────────────────────────────────────────────────────────────────
+   Keyboard focus must be obvious everywhere, and a mouse click must not leave
+   a ring behind. :focus-visible gives both. */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-radius: var(--r-sm);
+}
+
+/* ── surfaces ────────────────────────────────────────────────────────────────
+   A panel is the base unit of every screen. Give it one definition so a card
+   on Trading lines up with one on Blackjack. */
+.ui-panel,
+.cf-topbar,
+.cf-view-modal,
+.cf-join-modal,
+.cf-history-modal {
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--line);
+  box-shadow: var(--elev-1), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+/* ── selection ──────────────────────────────────────────────────────────────
+   The default selection is system blue, which clashes with every theme. */
+::selection {
+  background: color-mix(in srgb, var(--acc) 42%, transparent);
+  color: var(--txt);
+}
+
+/* ── the nav ─────────────────────────────────────────────────────────────────
+   The active page needs to read at a glance. The existing active tab is a
+   subtle background shift; this gives it an accent underline as well, so the
+   current page is obvious without hunting for the lighter chip. */
+.header a.nav-link[aria-current='page'],
+.header a.active {
+  color: var(--txt);
+  background: var(--acc-soft);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 40%, transparent);
+}
+
+/* ── reduced motion ────────────────────────────────────────────────────────
+   A blanket rule: anything still animating under this preference is decorative. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── small screens ──────────────────────────────────────────────────────────
+   The page title was being squeezed to "Coi..." because the balance and
+   inventory chips beside it claim their content width first. Give the title a
+   floor so it stays readable, and drop the subtitle rather than the name. */
+@media (max-width: 640px) {
+  .header-left {
+    flex: 1 1 96px;
+    min-width: 96px;
+  }
+
+  .header-left h2 {
+    font-size: 0.86rem;
+  }
+
+  /* The subtitle repeats what the title already says, and it is the first
+     thing to go when there is no room. It is a bare <span> inside
+     .header-title-copy, not a classed element. */
+  .header-title-copy > span {
+    display: none;
+  }
+}

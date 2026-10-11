@@ -39,7 +39,7 @@
 
 /* - Page - */
 .cf-page {
-  max-width: 1200px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 0;
   color: var(--txt);
@@ -75,10 +75,23 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--bg1);
+  background: var(--bg0);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
   padding: 3px;
+}
+
+/* The tabs sit on their own row below 1600px, so the topbar is two bands.
+   Tighten both so the lobby starts higher on the page - the previous padding
+   spent 114px on controls before showing a single bet. */
+.cf-topbar-tabs .cf-tab {
+  padding: 7px 14px;
+  min-height: 32px;
+}
+
+.cf-topbar-right {
+  padding-top: 6px;
+  gap: var(--sp-2);
 }
 
 .cf-tab {
@@ -256,28 +269,68 @@ a.cf-tab {
   line-height: 1;
 }
 
-/* - Coinflip Row - */
+/* ─── Lobby row ───
+   The row is the most-repeated object on the site, so it carries most of the
+   visual weight. It gets a real surface: a gradient body, a hairline top
+   highlight for the "lit from above" edge, real elevation on hover, and a
+   left accent rail that only appears when the row means something (you are in
+   it, or it is yours). */
 .cf-row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 12px 16px;
-  background: var(--panel);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent 40%);
+  gap: var(--sp-5);
+  padding: var(--sp-4) var(--sp-6);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%),
+    var(--panel);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  margin-bottom: 8px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  animation: cf-row-in 0.32s ease both;
+  border-radius: var(--r-lg);
+  margin-bottom: var(--sp-3);
+  box-shadow: var(--elev-1), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  animation: cf-row-in var(--dur-3) var(--ease-out) both;
   max-height: 500px;
-  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s, background 0.15s;
+  transition:
+    border-color var(--dur-2) var(--ease-1),
+    transform var(--dur-2) var(--ease-1),
+    box-shadow var(--dur-2) var(--ease-1),
+    background-color var(--dur-2) var(--ease-1);
+}
+
+.cf-row::before {
+  /* An accent rail on the left edge, hidden until the row is hovered or the
+     row is one of yours. It is how a player finds "my bet" in a full lobby. */
+  content: '';
+  position: absolute;
+  left: -1px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--acc);
+  opacity: 0;
+  transform: scaleY(0.4);
+  transform-origin: center;
+  transition: opacity var(--dur-2) var(--ease-1), transform var(--dur-2) var(--ease-out);
 }
 
 .cf-row:hover {
-  border-color: rgba(148, 163, 184, 0.26);
+  border-color: color-mix(in srgb, var(--acc) 34%, var(--line));
   background-color: var(--panel2);
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 18px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.cf-row:hover::before { opacity: 1; transform: scaleY(1); }
+
+/* Keyboard focus gets the site's standard ring rather than the hover lift. */
+.cf-row:focus-within {
+  border-color: color-mix(in srgb, var(--acc) 50%, var(--line));
+  box-shadow: var(--elev-2), var(--focus-ring-inset);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cf-row, .cf-row::before { transition: none; }
+  .cf-row:hover { transform: none; }
 }
 
 .cf-row-done {
@@ -589,29 +642,69 @@ a.cf-tab {
   color: #ff7b72;
 }
 
-/* - Empty / Loading - */
+/* ─── Empty state ───
+   An empty lobby is the first thing a new player sees on four of the six game
+   pages, so it is a screen rather than a placeholder. It gets a proper surface
+   and a framed icon instead of a dashed void, and it is vertically centred so a
+   short page does not leave the message stranded at the top. */
 .cf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  min-height: 320px;
+  padding: var(--sp-9) var(--sp-6);
   text-align: center;
-  padding: 72px 20px;
   color: var(--mut);
-  background: var(--panel);
-  border: 1px dashed var(--line);
+  background:
+    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--acc) 6%, transparent), transparent 70%),
+    var(--panel);
+  border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
-  font-size: 0.95rem;
-  font-weight: 600;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-.cf-empty-icon, .cf-empty .icon {
-  font-size: 2.6rem;
-  margin-bottom: 12px;
-  display: block;
+.cf-empty p {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 700;
+  color: var(--txt);
+  letter-spacing: -0.01em;
 }
+
+.cf-empty-icon,
+.cf-empty .icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: var(--sp-3);
+  border-radius: var(--r-full);
+  font-size: 2.6rem;
+  color: var(--acc);
+  background: var(--acc-soft);
+  border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent);
+  box-shadow: 0 0 0 8px color-mix(in srgb, var(--acc) 4%, transparent);
+}
+
+/* Trading renders a literal "?" here rather than an icon. */
+.cf-empty-icon:empty,
+.cf-empty .icon:empty { display: none; }
 
 .cf-empty-sub {
-  font-size: 0.85rem;
-  font-weight: 400;
-  color: var(--dim);
-  margin-top: 6px;
+  font-family: var(--font-body) !important;
+  font-size: var(--fs-md) !important;
+  font-weight: 500 !important;
+  color: var(--mut) !important;
+  max-width: 38ch;
+}
+
+/* The call to action gets breathing room from the copy above it. */
+.cf-empty .cf-topbar-btn,
+.cf-empty button {
+  margin-top: var(--sp-4);
 }
 
 .cf-loading {
@@ -1726,11 +1819,39 @@ a.cf-tab {
     font-size: 0.8rem;
   }
 
+  /* The secondary controls used to wrap into a 2-column grid, which on a phone
+     put Jump to / Value sort / Bet Items / History on four separate full-width
+     rows - roughly 300px of controls before a single bet was visible. One
+     horizontally scrollable strip keeps them all on a single line. */
   .cf-topbar-right {
     margin-left: 0;
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-wrap: nowrap;
+    gap: var(--sp-2);
     width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+    /* Bleed to the edges so it reads as a strip rather than a boxed column. */
+    padding-bottom: 2px;
+    scroll-snap-type: x proximity;
+  }
+  .cf-topbar-right::-webkit-scrollbar { display: none; }
+
+  .cf-topbar-right .cf-topbar-btn,
+  .cf-topbar-right .cf-sort-label {
+    width: auto;
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+    /* The strip scrolls, so controls must stay on one line. "Value sort:
+       newest" was wrapping to three lines and setting the height of the
+       whole bar. */
+    white-space: nowrap;
+  }
+
+  /* ui-polish.css forces these to full width inside a grid on small screens;
+     that grid is what produced the stacked rows, so undo both. */
+  .cf-topbar-right {
+    display: flex;
+    grid-template-columns: none;
   }
 
   .cf-topbar-btn {

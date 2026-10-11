@@ -9,6 +9,9 @@ import './theme.css';
 // tokens.css because every rule in it reads those custom properties.
 import './ui/tokens.css';
 import './ui/ui.css';
+// The always-on chrome: background, scrollbars, focus, panel surfaces. Loaded
+// last so it settles everything the shared layers above it left open.
+import './ui/shell.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
