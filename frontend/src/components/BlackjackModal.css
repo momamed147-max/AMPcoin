@@ -48,14 +48,21 @@
 .bjm-empty { grid-column: 1 / -1; color: var(--dim); font-size: .82rem; text-align: center; padding: 22px 0; }
 
 .bjm-tile {
-  display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start;
-  padding: 7px; border-radius: 10px; cursor: pointer; text-align: left;
+  display: flex; flex-direction: column; gap: 5px;
+  padding: 6px; border-radius: 10px; text-align: left;
   background: var(--bg1); border: 1px solid var(--line);
-  font-family: inherit; color: var(--txt);
   transition: border-color .12s ease, background .12s ease;
 }
 .bjm-tile:hover { border-color: var(--acc); }
 .bjm-tile.picked { border-color: var(--acc); background: var(--panel2); }
+
+/* The whole unit grid is one click target: click a tile to add one, click the
+   last picked unit to drop back to that many. */
+.bjm-tile-hit {
+  display: flex; flex-wrap: wrap; gap: 3px; align-content: flex-start;
+  padding: 0; border: none; background: none; cursor: pointer;
+  font-family: inherit; color: var(--txt); text-align: left; width: 100%;
+}
 
 .bjm-unit {
   width: 22px; height: 22px; border-radius: 6px; overflow: hidden;
@@ -76,6 +83,8 @@
   display: inline-flex; align-items: center; gap: 3px;
   font-size: .65rem; color: var(--mut); font-weight: 700;
 }
+
+.bjm-tile-qty { display: flex; justify-content: flex-start; }
 
 /* ── totals and the range warning ── */
 .bjm-total {

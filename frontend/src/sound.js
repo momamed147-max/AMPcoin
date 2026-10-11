@@ -5,6 +5,9 @@ export const SOUND_CHANGE_EVENT = 'ampcoin:soundchange';
 let enabled = readEnabled();
 let audioContext = null;
 let masterGain = null;
+// One place for the output level. The per-sound gains below are all small
+// fractions of this, and the compressor tames the peaks.
+const MASTER_GAIN = 0.28;
 let compressor = null;
 let noiseBuffer = null;
 let resumePromise = null;
@@ -38,7 +41,7 @@ function ensureAudio() {
       return null;
     }
     masterGain = audioContext.createGain();
-    masterGain.gain.value = enabled ? 0.28 : 0;
+    masterGain.gain.value = enabled ? MASTER_GAIN : 0;
 
     compressor = audioContext.createDynamicsCompressor();
     compressor.threshold.value = -20;
@@ -69,7 +72,7 @@ function ensureAudio() {
       } catch (_) { /* private browsing can deny storage */ }
       enabled = nextValue !== 'false';
       if (masterGain && audioContext) {
-        masterGain.gain.setTargetAtTime(enabled ? 0.28 : 0, audioContext.currentTime, 0.015);
+        masterGain.gain.setTargetAtTime(enabled ? MASTER_GAIN : 0, audioContext.currentTime, 0.015);
       }
     });
   }
@@ -83,7 +86,26 @@ function resumeAudio() {
   if (context.state === 'running') return Promise.resolve(true);
   if (!resumePromise) {
     resumePromise = context.resume()
-      .then(() => true)
+      .then(() => {
+        // A context can resolve resume() and still report itself suspended -
+        // some browsers need a tick, and Chrome reports 'interrupted' on a
+        // context that another tab or an autoplay policy is holding. Playing
+        // into a suspended context is silent, so only treat it as ready once
+        // it actually says it is running.
+        if (context.state === 'running') return true;
+        return new Promise((resolve) => {
+          const check = () => {
+            if (context.state === 'running') { resolve(true); return; }
+            if (context.state === 'closed' || context.state === 'suspended') {
+              // Give up after a short grace period rather than hanging.
+              if (++tries > 20) { resolve(false); return; }
+            }
+            setTimeout(check, 16);
+          };
+          let tries = 0;
+          check();
+        });
+      })
       .catch(() => false)
       .finally(() => { resumePromise = null; });
   }
@@ -98,8 +120,17 @@ function withAudio(callback) {
     callback(context);
     return;
   }
+  // The context is suspended - the normal state before the first user gesture.
+  // Resume it, and only play if it really came up. Playing into a suspended
+  // context schedules nodes that are never heard, which is how every sound on
+  // the site used to silently do nothing.
   resumeAudio().then((ready) => {
-    if (ready && enabled) callback(context);
+    if (ready && enabled && context.state === 'running') {
+      // Re-arm the master gain: a context that was muted while suspended can
+      // come back up with the wrong level.
+      if (masterGain) masterGain.gain.setValueAtTime(enabled ? MASTER_GAIN : 0, context.currentTime);
+      callback(context);
+    }
   });
 }
 
@@ -183,7 +214,7 @@ export function setSoundEnabled(nextEnabled) {
   } catch (_) { /* storage can be unavailable in private browsing */ }
 
   if (masterGain && audioContext) {
-    masterGain.gain.setTargetAtTime(enabled ? 0.28 : 0, audioContext.currentTime, 0.015);
+    masterGain.gain.setTargetAtTime(enabled ? MASTER_GAIN : 0, audioContext.currentTime, 0.015);
   }
   window.dispatchEvent(new CustomEvent(SOUND_CHANGE_EVENT, { detail: { enabled } }));
 }
@@ -352,6 +383,10 @@ export function installGlobalSoundEffects() {
     return target.closest(selector);
   };
 
+  // Browsers only allow audio to start inside a user gesture, so prime the
+  // context on the earliest possible event. touchstart is registered as well as
+  // pointerdown because Safari does not always fire pointer events for a tap,
+  // and a page whose only sound is the first tap would otherwise stay silent.
   const primeAudio = () => { unlockAudio(); };
   const handleClick = (event) => {
     const control = getInteractive(event.target);
@@ -367,12 +402,14 @@ export function installGlobalSoundEffects() {
   };
 
   document.addEventListener('pointerdown', primeAudio, true);
+  document.addEventListener('touchstart', primeAudio, { capture: true, passive: true });
   document.addEventListener('keydown', primeAudio, true);
   document.addEventListener('click', handleClick, true);
   document.addEventListener('pointerover', handleHover, true);
 
   return () => {
     document.removeEventListener('pointerdown', primeAudio, true);
+    document.removeEventListener('touchstart', primeAudio, true);
     document.removeEventListener('keydown', primeAudio, true);
     document.removeEventListener('click', handleClick, true);
     document.removeEventListener('pointerover', handleHover, true);

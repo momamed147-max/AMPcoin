@@ -1,0 +1,58 @@
+.qt {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--panel3);
+  flex: 0 0 auto;
+}
+
+.qt button {
+  width: 26px;
+  border: none;
+  background: var(--panel2);
+  color: var(--txt);
+  font-size: 0.95rem;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+  padding: 5px 0;
+  transition: background 0.12s ease, color 0.12s ease;
+  user-select: none;
+}
+.qt button:hover:not(:disabled) { background: var(--acc); color: #fff; }
+.qt button:disabled { opacity: 0.32; cursor: not-allowed; }
+
+.qt-input {
+  width: 42px;
+  min-width: 0;
+  border: none;
+  border-left: 1px solid var(--line);
+  border-right: 1px solid var(--line);
+  background: var(--bg1);
+  color: var(--txt);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 5px 2px;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.qt-input::-webkit-outer-spin-button,
+.qt-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.qt-input:focus {
+  outline: none;
+  background: var(--panel2);
+  color: var(--acc);
+}
+.qt-input:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Slightly larger variant for the pet picker tiles. */
+.qt.lg button { width: 30px; font-size: 1.05rem; }
+.qt.lg .qt-input { width: 52px; font-size: 0.9rem; }

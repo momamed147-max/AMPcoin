@@ -5,6 +5,8 @@ import '../components/CoinChip.css';
 import Icon from '../components/Icon';
 import ModBadges from '../components/ModBadges';
 import '../components/ModBadges.css';
+import QtyStepper from '../components/QtyStepper';
+import '../components/QtyStepper.css';
 import { API_BASE } from '../apiConfig';
 import { playBetPlaced } from '../sound';
 import './UpgraderPage.css';
@@ -33,11 +35,10 @@ function landingPoint(chance, won) {
 // Quantity lives in the PARENT, not here. Holding it locally meant the parent
 // never learned what was picked, so the pot stayed at zero and the Upgrade
 // button never became usable.
-function ItemRow({ item, value, max, onChange, dimmed }) {
+function ItemRow({ item, value, onChange, dimmed }) {
   const avail = Number(item.quantity) || 1;
   const id = item.itemId || item.id;
   const qty = Math.min(Number(value) || 0, avail);
-  const step = (n) => onChange(id, Math.max(0, Math.min(avail, qty + n)));
   return (
     <div className={`ug-item ${qty > 0 ? 'picked' : ''} ${dimmed ? 'dimmed' : ''}`}>
       <img
@@ -51,11 +52,14 @@ function ItemRow({ item, value, max, onChange, dimmed }) {
         <span className="ug-item-val"><Icon name="diamond" size={11} /> {(Number(item.value) || 0).toLocaleString()} each</span>
         <ModBadges mods={item.mods || item.variantMods} />
       </div>
-      <div className="ug-stepper">
-        <button type="button" onClick={() => step(-1)} disabled={qty <= 0} aria-label="fewer">-</button>
-        <span className={qty > 0 ? 'on' : ''}>{qty}</span>
-        <button type="button" onClick={() => step(1)} disabled={qty >= avail} aria-label="more">+</button>
-      </div>
+      <QtyStepper
+        value={qty}
+        min={0}
+        max={avail}
+        onChange={(n) => onChange(id, n)}
+        className={qty > 0 ? 'on' : ''}
+        ariaLabel={`${item.name || item.itemName} quantity`}
+      />
       {qty > 0 && (
         <button type="button" className="ug-item-clear" onClick={() => onChange(id, 0)} aria-label="clear">x</button>
       )}
@@ -363,7 +367,7 @@ const UpgraderPage = ({ socket }) => {
               {inventory.map((i) => (
                 <ItemRow
                   key={i.itemId || i.id} item={i}
-                  value={potSel[i.itemId || i.id] || 0} max={Number(i.quantity) || 1}
+                  value={potSel[i.itemId || i.id] || 0}
                   onChange={setQty(setPotSel)}
                 />
               ))}
@@ -387,7 +391,7 @@ const UpgraderPage = ({ socket }) => {
               {stock.map((i) => (
                 <ItemRow
                   key={i.itemId} item={i}
-                  value={upSel[i.itemId] || 0} max={Number(i.quantity) || 1}
+                  value={upSel[i.itemId] || 0}
                   onChange={setQty(setUpSel)}
                 />
               ))}

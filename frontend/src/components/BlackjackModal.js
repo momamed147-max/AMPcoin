@@ -2,9 +2,11 @@ import React, { useState, useMemo } from 'react';
 import AnimatedPopup from './AnimatedPopup';
 import ModBadges from './ModBadges';
 import ModalPortal from './ModalPortal';
+import QtyStepper from './QtyStepper';
 import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
 import './ModBadges.css';
+import './QtyStepper.css';
 import './BlackjackModal.css';
 
 // Create or join a blackjack bet, in the same shape as every other bet on the
@@ -145,34 +147,51 @@ const BlackjackModal = ({ mode, table, userInventory, onClose, onDone }) => {
               const avail = stackQtyOf(i);
               const picked = sel[key] || 0;
               return (
-                <button
-                  type="button"
-                  key={key}
-                  className={`bjm-tile ${picked > 0 ? 'picked' : ''}`}
-                  onClick={() => toggle(key, picked)}
-                  title={`${i.name || i.itemName} - ${i.value} each`}
-                >
-                  {Array.from({ length: avail }, (_, n) => (
-                    <span
-                      key={n}
-                      className={`bjm-unit ${n < picked ? 'on' : ''}`}
-                      role="presentation"
-                    >
-                      <img
-                        src={i.image || i.imageUrl || '/default-item.png'}
-                        alt=""
-                        onError={(e) => { e.target.style.visibility = 'hidden'; }}
-                      />
+                // A div, not a button: the quantity stepper is a real control and
+                // nesting interactive elements inside a <button> is invalid and
+                // breaks keyboard focus.
+                <div key={key} className={`bjm-tile ${picked > 0 ? 'picked' : ''}`}>
+                  <button
+                    type="button"
+                    className="bjm-tile-hit"
+                    onClick={() => toggle(key, picked)}
+                    title={`${i.name || i.itemName} - ${i.value} each`}
+                  >
+                    {Array.from({ length: avail }, (_, n) => (
+                      <span
+                        key={n}
+                        className={`bjm-unit ${n < picked ? 'on' : ''}`}
+                        role="presentation"
+                      >
+                        <img
+                          src={i.image || i.imageUrl || '/default-item.png'}
+                          alt=""
+                          onError={(e) => { e.target.style.visibility = 'hidden'; }}
+                        />
+                      </span>
+                    ))}
+                    <span className="bjm-tile-meta">
+                      <span className="bjm-tile-name">{i.name || i.itemName}</span>
+                      <span className="bjm-tile-val">
+                        <Icon name="diamond" size={9} /> {(Number(i.value) || 0).toLocaleString()}
+                      </span>
+                      <ModBadges mods={i.mods || i.variantMods} />
                     </span>
-                  ))}
-                  <span className="bjm-tile-meta">
-                    <span className="bjm-tile-name">{i.name || i.itemName}</span>
-                    <span className="bjm-tile-val">
-                      <Icon name="diamond" size={9} /> {(Number(i.value) || 0).toLocaleString()}
-                    </span>
-                    <ModBadges mods={i.mods || i.variantMods} />
-                  </span>
-                </button>
+                  </button>
+                  <div className="bjm-tile-qty">
+                    <QtyStepper
+                      value={picked}
+                      min={0}
+                      max={avail}
+                      onChange={(n) => setSel((prev) => {
+                        const next = { ...prev };
+                        if (n > 0) next[key] = n; else delete next[key];
+                        return next;
+                      })}
+                      ariaLabel={`${i.name || i.itemName} quantity`}
+                    />
+                  </div>
+                </div>
               );
             })}
           </div>

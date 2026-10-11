@@ -1,9 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_BASE } from '../apiConfig';
 
-const AuthContext = createContext();
+const AuthContextDefault = createContext();
 const DEFAULT_AVATAR = '/default-avatar.png';
 
+// Exported so a test can supply a user without standing up the whole provider.
+// createContext() is called with no default, so useAuth() outside a provider
+// returns undefined and every consumer that destructures it throws.
+export const AuthContext = AuthContextDefault;
 export const useAuth = () => useContext(AuthContext);
 
 function getFallbackAvatar(user) {
