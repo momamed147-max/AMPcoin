@@ -1580,6 +1580,85 @@ a.cf-tab {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 0 1px rgba(47, 129, 247, 0.3);
 }
 
+/* RPS move picker in the create/join bet modal.
+ *
+ * These had no styles at all, so they fell back to the browser's default grey
+ * button chrome - which is what made them look broken rather than plain. They
+ * now mirror .rps-move-btn in the in-match picker so the two RPS controls read
+ * as the same control, including the per-move tint. */
+.cf-rps-side-select-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.cf-rps-side-btn {
+  --move-tint: var(--acc-300);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 11px 6px 10px;
+  color: var(--mut);
+  font-family: var(--font-display);
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.16s var(--ease-1), background 0.16s var(--ease-1),
+              color 0.16s var(--ease-1), transform 0.12s var(--ease-1),
+              box-shadow 0.16s var(--ease-1);
+}
+.cf-rps-side-btn[data-move='rock'] { --move-tint: #f59e0b; }
+.cf-rps-side-btn[data-move='paper'] { --move-tint: #38bdf8; }
+.cf-rps-side-btn[data-move='scissors'] { --move-tint: #a78bfa; }
+
+.cf-rps-side-btn svg {
+  flex: 0 0 auto;
+  color: var(--move-tint);
+  transition: color 0.16s var(--ease-1), transform 0.16s var(--ease-1);
+}
+
+.cf-rps-side-btn span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cf-rps-side-btn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--move-tint) 55%, transparent);
+  color: var(--txt);
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+.cf-rps-side-btn:hover:not(:disabled) svg { transform: scale(1.08); }
+
+/* Presses IN. A button you push should go down, not jump up. */
+.cf-rps-side-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.cf-rps-side-btn.active {
+  border-color: var(--move-tint);
+  background: color-mix(in srgb, var(--move-tint) 16%, var(--bg2));
+  color: var(--txt);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--move-tint) 35%, transparent),
+              0 0 20px color-mix(in srgb, var(--move-tint) 26%, transparent);
+}
+.cf-rps-side-btn.active svg {
+  color: var(--move-tint);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--move-tint) 55%, transparent));
+}
+
 .cf-create-filters {
   display: flex;
   gap: 8px;

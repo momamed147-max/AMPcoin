@@ -372,8 +372,10 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                     <button
                       key={move}
                       type="button"
+                      data-move={move}
                       className={`cf-rps-side-btn ${rpsSide === move ? 'active' : ''}`}
                       onClick={() => setRpsSide(move)}
+                      aria-pressed={rpsSide === move}
                     >
                       <Icon name={`rps${move.charAt(0).toUpperCase() + move.slice(1)}`} size={28} />
                       <span>{move.charAt(0).toUpperCase() + move.slice(1)}</span>
