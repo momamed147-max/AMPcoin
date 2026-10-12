@@ -64,7 +64,9 @@ const CoinflipPage = ({ socket, setBalance }) => {
   const [historyItems, setHistoryItems] = useState([]);
   const [historyPage, setHistoryPage] = useState(1);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [sortBy, setSortBy] = useState('newest');
+  // The lobby is newest-first. There is no sort control any more, so this is not
+// user state - it is just the order the list is requested in.
+const [sortBy] = useState('newest');
   const [loading, setLoading] = useState(true);
   const [lobbyError, setLobbyError] = useState('');
   const [userInventory, setUserInventory] = useState([]);
@@ -117,8 +119,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
 
   const closePopup = () => setShowPopup(false);
 
-  // Sort filter state
-  const [sortDropdown, setSortDropdown] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Fetch coinflips
@@ -609,13 +609,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
             <span className="cf-tab-count">{jackpotCount}</span>
           </Link>
           <Link to="/rps" className="cf-tab"><span className="cf-tab-label"><Icon name="rpsScissors" size={12} /> RPS</span><span className="cf-tab-count">{rpsCount}</span></Link>
-          <span className="cf-tab-divider" />
-          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon">
-            <span className="cf-tab-label"><Icon name="shop" size={12} /> Market</span>
-          </button>
-          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon">
-            <span className="cf-tab-label"><Icon name="flag" size={12} /> Race</span>
-          </button>
         </div>
         <div className="cf-topbar-right">
           {/* The palette is global, but a visible trigger is what tells anyone
@@ -631,27 +624,6 @@ const CoinflipPage = ({ socket, setBalance }) => {
             <span className="cp-trigger-label">Jump to</span>
             <kbd className="cp-kbd">Ctrl K</kbd>
           </button>
-          <div className="cf-sort-wrap">
-            <button
-              type="button"
-              className="cf-sort-label"
-              onClick={() => setSortDropdown((open) => !open)}
-              aria-expanded={sortDropdown}
-            >
-              <Icon name="sort" size={13} />
-              Value sort: {sortBy === 'value_low' ? 'low to high' : sortBy === 'newest' ? 'newest' : sortBy === 'oldest' ? 'oldest' : 'high to low'}
-              <Icon name="chevron" size={12} className={sortDropdown ? 'sort-chevron asc' : 'sort-chevron'} />
-            </button>
-            {sortDropdown && (
-              <div className="cf-sort-dropdown" onClick={(e) => e.stopPropagation()}>
-                {['newest', 'oldest', 'value_high', 'value_low'].map((s) => (
-                  <button key={s} className={`cf-sort-option ${sortBy === s ? 'active' : ''}`} onClick={() => { setSortBy(s); setSortDropdown(false); }}>
-                    {s.replace('_', ' ')}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
           <div className="cf-topbar-stat">
             <span className="cf-dice-icon"><Icon name="dice" size={12} /></span>
             <span>{visibleGames.length}</span>
@@ -754,16 +726,24 @@ const CoinflipPage = ({ socket, setBalance }) => {
                   {meta.thumbs.length > 8 && (
                     <span className="cf-row-more">+{meta.thumbs.length - 8}</span>
                   )}
-                  {meta.isCompleted && (
-                    <span className="cf-row-chip" title={`Landed ${meta.resultSide}`}>
-                      {anim && anim.phase === 'flipping' ? (
-                        <CoinFlipAnimation result={anim.side} size={46} />
-                      ) : (
-                        <CoinChip side={meta.resultSide} size={46} />
-                      )}
-                    </span>
-                  )}
                 </div>
+
+                {/* The landed coin.
+                    This used to sit inside .cf-row-items, after the
+                    thumbnails. That container is overflow:hidden and the pet
+                    count varies per bet, so the coin drifted right as pets
+                    were added and was clipped away entirely on the wider rows.
+                    It is its own fixed slot now, always in the same place
+                    immediately after the divider. */}
+                {meta.isCompleted && (
+                  <div className="cf-row-landed" title={`Landed ${meta.resultSide}`}>
+                    {anim && anim.phase === 'flipping' ? (
+                      <CoinFlipAnimation result={anim.side} size={46} />
+                    ) : (
+                      <CoinChip side={meta.resultSide} size={46} />
+                    )}
+                  </div>
+                )}
 
                 {/* Value */}
                 <div className="cf-row-value">

@@ -436,6 +436,19 @@ a.cf-tab {
   overflow: hidden;
 }
 
+/* The landed coin's own slot.
+   It sits outside .cf-row-items on purpose. That container is flex + clipped,
+   so anything appended to it moves with the pet count - which is why the coin
+   used to drift right as bets got larger and vanish entirely on the wider
+   ones. Own flex item, own divider, never moves. */
+.cf-row-landed {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding-left: var(--sp-4);
+  border-left: 1px solid var(--line);
+}
+
 .cf-row-thumb-wrap {
   position: relative;
   flex-shrink: 0;

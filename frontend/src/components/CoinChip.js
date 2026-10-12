@@ -33,11 +33,22 @@ function ChipBase({ size = 120, rim, spots, gradFrom, gradTo, letter, gradientId
             <stop offset="0%" stopColor={gradFrom} />
             <stop offset="100%" stopColor={gradTo} />
           </radialGradient>
+          {/* Rim shading, so the chip reads as a solid disc rather than a flat
+              circle of colour with a letter on it. */}
+          <radialGradient id={`${gradientId}-rim`} cx="34%" cy="28%" r="78%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.22" />
+            <stop offset="55%" stopColor="#ffffff" stopOpacity="0" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.4" />
+          </radialGradient>
+          <linearGradient id={`${gradientId}-edge`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity="0.3" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="0.45" />
+          </linearGradient>
         </defs>
 
         {/* Outer rim */}
         <circle cx="100" cy="100" r="98" fill={rim} />
-        <circle cx="100" cy="100" r="98" fill="none" stroke="rgba(0,0,0,0.4)" strokeWidth="2" />
+        <circle cx="100" cy="100" r="98" fill={`url(#${gradientId}-rim)`} />
 
         {/* 8 edge spots around the rim */}
         {spotRects.map((angle) => (
@@ -45,6 +56,9 @@ function ChipBase({ size = 120, rim, spots, gradFrom, gradTo, letter, gradientId
             <rect x="85" y="8" width="30" height="34" rx="7" fill={spots} />
           </g>
         ))}
+
+        {/* Bright ring on the rim edge - the milled edge catching light */}
+        <circle cx="100" cy="100" r="97" fill="none" stroke={`url(#${gradientId}-edge)`} strokeWidth="2" />
 
         {/* White middle ring */}
         <circle cx="100" cy="100" r="70" fill="#ffffff" />
@@ -154,6 +168,9 @@ export function CoinFlipAnimation({ result = 'heads', size = 120, onDone }) {
 
   return (
     <div className="coin-flip-scene" style={{ width: dim, height: dim }}>
+      {/* Ground shadow. It scales with how high the coin is, which is what sells
+          the toss - without it the coin just spins on the spot. */}
+      <span className="coin-flip-shadow" aria-hidden="true" />
       <div
         key={normalized}
         className={`coin-flip-inner coin-spinning ${isHeads ? 'land-heads' : 'land-tails'}`}

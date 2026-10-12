@@ -421,9 +421,6 @@ const RpsPage = ({ socket }) => {
           <Link to="/coinflip" className="cf-tab"><span className="cf-tab-label"><Icon name="coin" size={12} /> Coinflip</span></Link>
           <Link to="/jackpot" className="cf-tab"><span className="cf-tab-label"><Icon name="jackpot" size={12} /> Jackpot</span></Link>
           <button className="cf-tab cf-tab-active"><span className="cf-tab-label"><Icon name="rpsScissors" size={12} /> RPS</span><span className="cf-tab-count">{lobby.matches.length}</span></button>
-          <span className="cf-tab-divider" />
-          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon"><span className="cf-tab-label"><Icon name="shop" size={12} /> Market</span></button>
-          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon"><span className="cf-tab-label"><Icon name="flag" size={12} /> Race</span></button>
         </div>
         <div className="cf-topbar-right">
           <div className="cf-topbar-stat"><span className="cf-dice-icon"><Icon name="rpsScissors" size={13} /></span><span>{waitingCount} open</span></div>

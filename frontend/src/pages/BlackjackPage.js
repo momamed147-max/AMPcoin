@@ -281,9 +281,6 @@ const BlackjackPage = ({ socket }) => {
           <Link to="/jackpot" className="cf-tab"><span className="cf-tab-label"><Icon name="jackpot" size={12} /> Jackpot</span></Link>
           <Link to="/rps" className="cf-tab"><span className="cf-tab-label"><Icon name="rpsScissors" size={12} /> RPS</span></Link>
           <button className="cf-tab cf-tab-active"><span className="cf-tab-label"><Icon name="card" size={12} /> Blackjack</span><span className="cf-tab-count">{lobby.activeCount}</span></button>
-          <span className="cf-tab-divider" />
-          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon"><span className="cf-tab-label"><Icon name="shop" size={12} /> Market</span></button>
-          <button className="cf-tab cf-tab-disabled" disabled title="Coming soon"><span className="cf-tab-label"><Icon name="flag" size={12} /> Race</span></button>
         </div>
         <div className="cf-topbar-right">
           <div className="cf-topbar-stat"><span className="cf-dice-icon"><Icon name="card" size={13} /></span><span>{waiting.length} open</span></div>

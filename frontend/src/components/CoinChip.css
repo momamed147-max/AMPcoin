@@ -18,6 +18,7 @@
 /* ---------- 3D flip container ---------- */
 
 .coin-flip-scene {
+  position: relative;
   display: inline-block;
   background: transparent;
   perspective: 900px;
@@ -25,18 +26,53 @@
   line-height: 0;
 }
 
+/* The coin is thrown, not spun on the spot. This ellipse tracks its height:
+   wide and dark on the ground, tight and faint at the top of the arc. */
+.coin-flip-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 74%;
+  height: 10px;
+  margin-left: -37%;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 70%);
+  animation: coin-shadow 1.5s ease-in-out;
+  transform-origin: center;
+}
+
 .coin-flip-inner {
   position: relative;
+  z-index: 1;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
   /* Final rotation is supplied inline via --coin-landing (e.g. 1800deg / 1980deg) */
   --coin-landing: 1800deg;
 }
 
-/* Spinning state: rapid rotateY with ease-out over ~2.5s, winner hidden mid-spin */
+/* 1.5s: away fast, apex early, easing into a small settle. The previous 2.5s
+   of near-constant rotation read as a loading spinner rather than a coin. */
 .coin-flip-inner.coin-spinning {
-  animation: coin-spin 2.5s cubic-bezier(0.15, 0.6, 0.25, 1) forwards;
-  -webkit-animation: coin-spin 2.5s cubic-bezier(0.15, 0.6, 0.25, 1) forwards;
+  animation: coin-spin 1.5s cubic-bezier(0.22, 0.68, 0.25, 1) forwards;
+  -webkit-animation: coin-spin 1.5s cubic-bezier(0.22, 0.68, 0.25, 1) forwards;
+}
+
+@keyframes coin-shadow {
+  0%   { transform: scaleX(1);    opacity: 0.5; }
+  16%  { transform: scaleX(0.5);  opacity: 0.16; }
+  55%  { transform: scaleX(0.78); opacity: 0.28; }
+  82%  { transform: scaleX(1.04); opacity: 0.55; }
+  90%  { transform: scaleX(0.94); opacity: 0.4; }
+  100% { transform: scaleX(1);    opacity: 0.5; }
+}
+
+@-webkit-keyframes coin-shadow {
+  0%   { -webkit-transform: scaleX(1);    transform: scaleX(1);    opacity: 0.5; }
+  16%  { -webkit-transform: scaleX(0.5);  transform: scaleX(0.5);  opacity: 0.16; }
+  55%  { -webkit-transform: scaleX(0.78); transform: scaleX(0.78); opacity: 0.28; }
+  82%  { -webkit-transform: scaleX(1.04); transform: scaleX(1.04); opacity: 0.55; }
+  90%  { -webkit-transform: scaleX(0.94); transform: scaleX(0.94); opacity: 0.4; }
+  100% { -webkit-transform: scaleX(1);    transform: scaleX(1);    opacity: 0.5; }
 }
 
 /* Landing helpers — component also sets --coin-landing inline via style prop */
@@ -57,24 +93,24 @@
   transform: rotateY(1980deg);
 }
 
+/* The arc is the point. A coin that only rotates never reads as being thrown,
+   and without the translateY there is nothing for the shadow to track. */
 @keyframes coin-spin {
-  from {
-    transform: rotateY(0deg);
-  }
-  to {
-    transform: rotateY(var(--coin-landing, 1800deg));
-  }
+  0%   { transform: translateY(0) rotateY(0deg); }
+  16%  { transform: translateY(-30%) rotateY(520deg); }
+  55%  { transform: translateY(-11%) rotateY(1420deg); }
+  82%  { transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
+  90%  { transform: translateY(-5%) rotateY(var(--coin-landing, 1800deg)); }
+  100% { transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
 }
 
 @-webkit-keyframes coin-spin {
-  from {
-    -webkit-transform: rotateY(0deg);
-    transform: rotateY(0deg);
-  }
-  to {
-    -webkit-transform: rotateY(var(--coin-landing, 1800deg));
-    transform: rotateY(var(--coin-landing, 1800deg));
-  }
+  0%   { -webkit-transform: translateY(0) rotateY(0deg); transform: translateY(0) rotateY(0deg); }
+  16%  { -webkit-transform: translateY(-30%) rotateY(520deg); transform: translateY(-30%) rotateY(520deg); }
+  55%  { -webkit-transform: translateY(-11%) rotateY(1420deg); transform: translateY(-11%) rotateY(1420deg); }
+  82%  { -webkit-transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
+  90%  { -webkit-transform: translateY(-5%) rotateY(var(--coin-landing, 1800deg)); transform: translateY(-5%) rotateY(var(--coin-landing, 1800deg)); }
+  100% { -webkit-transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
 }
 
 /* ---------- Faces ---------- */
