@@ -139,6 +139,47 @@ const ok = (c, l) => { c ? pass++ : fail++; console.log(`  ${c ? 'PASS' : 'FAIL'
     }
   }
 
+  console.log('\n=== the RPS lobby must list other people\'s open bets ===');
+  {
+    // Regression. The lobby route used to spread the public lobby - which
+    // carries every open bet under `matches` - and then set `matches` again to
+    // only the requester's own. Every player therefore saw an empty lobby and
+    // could join nothing.
+    const creator = await mk(`lobbyA${stamp}`, 4);
+    const joiner = await mk(`lobbyB${stamp}`, 4);
+    const cInv = await inv(creator);
+    const jInv = await inv(joiner);
+    const cItem = cInv.find((i) => Number(i.value) > 0);
+    const jItem = jInv.find((i) => Number(i.value) > 0);
+
+    const posted = await (await fetch(`${API}/api/rps`, {
+      method: 'POST', headers: auth(creator.token),
+      body: JSON.stringify({ selectedItems: [{ itemId: cItem.itemId, quantity: 1 }], side: 'rock' })
+    })).json();
+
+    ok(Boolean(posted.match), 'the creator posted an open bet');
+
+    // The OTHER player must see it, or it cannot be joined.
+    const otherLobby = await (await fetch(`${API}/api/rps/lobby`, { headers: auth(joiner.token) })).json();
+    const visible = (otherLobby.matches || []).some((m) => m.id === posted.match.id);
+    ok(visible, 'another player sees that open bet in the lobby');
+    ok(!(otherLobby.myMatches || []).some((m) => m.id === posted.match.id),
+      'and it is not listed as one of their own matches');
+
+    // A spectator must not be able to read anyone's pick before the bet settles.
+    const seen = (otherLobby.matches || []).find((m) => m.id === posted.match.id);
+    if (seen) {
+      ok(seen.playerOne?.choice == null,
+        "the creator's pick is not readable by another player");
+    }
+
+    // Clean up so this does not leak into later assertions.
+    await fetch(`${API}/api/rps/matches/${posted.match.id}/cancel`, {
+      method: 'POST', headers: auth(creator.token)
+    });
+    void jItem;
+  }
+
   console.log('\n=== the summary adds all four up ===');
   const s = await (await fetch(`${API}/api/progression/summary`, { headers: auth(me.token) })).json();
   console.log(`  totals: played=${s.totals.played} wins=${s.totals.wins} staked=${s.totals.staked} profit=${s.totals.profit}`);

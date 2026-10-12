@@ -224,7 +224,9 @@ const RpsPage = ({ socket }) => {
       const data = await response.json();
       applyLobby(data);
       setMyMatches((current) => {
-        const mine = data.matches || [];
+        // myMatches, not matches - `matches` is the public list of every open
+        // bet, and that is what the lobby renders.
+        const mine = data.myMatches || [];
         // Keep just-finished matches readable instead of snapping shut.
         const finished = current.filter((m) =>
           m.status === 'completed'
@@ -593,12 +595,13 @@ const RpsPage = ({ socket }) => {
                         <button
                           type="button"
                           key={move.id}
+                          data-move={move.id}
                           className={`rps-move-btn ${myChoice === move.id ? 'selected' : ''}`}
                           onClick={() => chooseMove(move.id)}
                           disabled={!!myChoice || busy === move.id}
                           aria-pressed={myChoice === move.id}
                         >
-                          <Icon name={move.icon} size={30} />
+                          <span className="rps-move-icon"><Icon name={move.icon} size={30} /></span>
                           <span>{move.label}</span>
                           {myChoice === move.id && <em><Icon name="check" size={11} /></em>}
                         </button>

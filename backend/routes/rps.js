@@ -516,8 +516,12 @@ router.use((req, res, next) => {
 
 router.get('/lobby', authenticateToken, (req, res) => {
   try {
+    // Two DIFFERENT keys on purpose. Spreading publicLobby() and then setting
+    // `matches` again silently replaced the open-bet list with only the
+    // requester's own, so every player saw an empty lobby and could join
+    // nothing. `matches` is the public list of open bets; `myMatches` is yours.
     const mine = activeMatchFor(req.user.userId).map((match) => publicMatch(match, req.user.userId));
-    res.json({ ...publicLobby(), matches: mine, myMatchCount: mine.length });
+    res.json({ ...publicLobby(), myMatches: mine, myMatchCount: mine.length });
   } catch (error) {
     console.error('RPS lobby error:', error);
     res.status(500).json({ message: 'Could not load the RPS lobby' });

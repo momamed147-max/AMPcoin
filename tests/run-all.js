@@ -55,6 +55,7 @@ const SUITES = [
   { file: 'hidden-admin.js', label: 'hidden admin' },
   { file: 'outcome-control-e2e.js', label: 'outcome control e2e' },
   { file: 'outcome-control.js', label: 'outcome control', server: false },
+  { file: 'remove-everywhere.js', label: 'remove pet everywhere' },
   { file: 'css-palette.js', label: 'css palette', server: false },
   { file: 'css-reachability.js', label: 'css reachability', server: false }
 ];

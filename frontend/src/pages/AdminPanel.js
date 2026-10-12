@@ -86,10 +86,12 @@ function FullAdminPanel() {
   const [moderatorActions, setModeratorActions] = useState({});
   const [muteActions, setMuteActions] = useState({});
   const [selectedPetIds, setSelectedPetIds] = useState([]);
-  const [giveMods, setGiveMods] = useState([]);
+  
   const [editDisplayName, setEditDisplayName] = useState('');
   const [savingName, setSavingName] = useState(false);
-  const [addUserQty, setAddUserQty] = useState(1);
+  const [giveQtys, setGiveQtys] = useState({});
+  const [giveModsById, setGiveModsById] = useState({});
+  const [wipingItemId, setWipingItemId] = useState(null);
   const [addUserBusy, setAddUserBusy] = useState(false);
   const [modBusyId, setModBusyId] = useState(null);
   const [purgeBusy, setPurgeBusy] = useState(false);
@@ -664,30 +666,122 @@ function FullAdminPanel() {
     });
   };
 
-  const toggleGiveMod = (mod) => {
-    setGiveMods((prev) => {
-      let next;
-      if (prev.includes(mod)) {
-        next = prev.filter((m) => m !== mod);
-        if (mod === 'M' || mod === 'N') next = next.filter((m) => m !== 'F' && m !== 'R');
-      } else if (mod === 'M') {
-        next = [...prev.filter((m) => m !== 'N'), 'M', 'F', 'R'];
-      } else if (mod === 'N') {
-        next = [...prev.filter((m) => m !== 'M'), 'N', 'F', 'R'];
-      } else {
-        next = [...prev, mod];
+  const petKey = (pet) => String(pet.id || pet.itemId);
+
+  const qtyFor = (id) => Math.max(1, parseInt(giveQtys[id] || 1, 10) || 1);
+  const modsFor = (id) => (giveModsById[id] || []).filter(Boolean);
+
+  const setQtyFor = (id, value) => {
+    const next = Math.max(1, parseInt(value || 1, 10) || 1);
+    setGiveQtys((prev) => ({ ...prev, [id]: next }));
+  };
+
+  // M (Mega) and N (Neon) are tiers, not standalone flags. The catalog prices
+  // them only as mega/neon WITH fly + ride - see variantCellFor, where the grid
+  // has a `flyRide` cell and no bare `base` cell for either tier. So asking for
+  // M alone has no price to look up, and the server would silently widen it to
+  // MFR anyway.
+  //
+  // Rather than let that happen invisibly - which is what made this read as a
+  // glitch - the pairing is applied here too and shown on screen. F and R lock
+  // on while M or N is active instead of appearing from nowhere.
+  const toggleModFor = (id, mod) => {
+    setGiveModsById((prev) => {
+      const current = prev[id] || [];
+
+      // F and R are implied by a tier and cannot be toggled on their own.
+      if ((mod === 'M' || mod === 'N') && current.includes(mod)) {
+        const next = current.filter((m) => m !== mod && m !== 'F' && m !== 'R');
+        return { ...prev, [id]: next };
       }
-      return [...new Set(next)];
+      if (mod === 'F' || mod === 'R') {
+        const tierActive = current.includes('M') || current.includes('N');
+        return tierActive ? prev : { ...prev, [id]: current.includes(mod) ? current.filter((m) => m !== mod) : [...current, mod] };
+      }
+
+      const base = current.filter((m) => m !== 'M' && m !== 'N');
+      if (current.includes(mod)) {
+        return { ...prev, [id]: base };
+      }
+      // Picking a tier drops the other tier and bundles fly + ride.
+      return { ...prev, [id]: [mod, 'F', 'R'] };
     });
   };
 
-  // Preview: first selected pet's value with give-mods applied
-  const givePreview = (() => {
-    if (!selectedPetIds || selectedPetIds.length === 0 || giveMods.length === 0) return null;
-    const pet = (items || []).find((p) => String(p.id) === String(selectedPetIds[0]));
-    if (!pet) return null;
-    return { name: pet.name, value: moddedValue(petBaseOf(pet), giveMods) };
-  })();
+  const modsLockedByTier = (id) => {
+    const current = giveModsById[id] || [];
+    return current.includes('M') || current.includes('N');
+  };
+
+  const togglePetSelection = (pet) => {
+    const id = petKey(pet);
+    const on = selectedPetIds.includes(id);
+    setSelectedPetIds((current) => (on ? current.filter((x) => x !== id) : [...current, id]));
+    if (on) {
+      setGiveModsById((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    }
+  };
+
+  // What the bundle actually sends, per pet.
+  const giveBundle = selectedPetIds
+    .map((id) => {
+      const pet = items.find((candidate) => petKey(candidate) === id);
+      if (!pet) return null;
+      const mods = modsFor(id);
+      return {
+        id,
+        pet,
+        quantity: qtyFor(id),
+        mods,
+        name: mods.length ? `${pet.name || pet.itemName} (${mods.join('')})` : (pet.name || pet.itemName),
+        value: mods.length ? moddedValue(petBaseOf(pet), mods) : Number(pet.value || 0)
+      };
+    })
+    .filter(Boolean);
+
+  const giveTotalUnits = giveBundle.reduce((sum, entry) => sum + entry.quantity, 0);
+
+  const handleRemoveEverywhere = async (pet) => {
+    const id = petKey(pet);
+    const label = pet.name || pet.itemName;
+    const count = giveQtys[id] && parseInt(giveQtys[id], 10) > 1 ? ` and any quantity of it` : '';
+    if (!window.confirm(`Remove "${label}"${count} from EVERY player's inventory?\n\nThis cannot be undone.`)) return;
+    setWipingItemId(id);
+    try {
+      const response = await retryRequest(() =>
+        fetch(`${API_BASE}/api/admin/items/${encodeURIComponent(id)}/remove-everywhere`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        })
+      );
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || 'Could not remove that pet');
+      showCustomPopup(
+        `Removed ${data.purgedStacks || 0} stack${(data.purgedStacks || 0) === 1 ? '' : 's'} of "${data.name || label}" from ${data.affectedUsers || 0} player${(data.affectedUsers || 0) === 1 ? '' : 's'}.`,
+        'success'
+      );
+      if (selectedUser) {
+        const fresh = await fetch(`${API_BASE}/api/users/${selectedUser.robloxUsername || selectedUser.id}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+        });
+        if (fresh.ok) {
+          const freshData = await fresh.json();
+          setUserPets(freshData.user?.inventory?.items || freshData.inventory?.items || []);
+        }
+      }
+    } catch (err) {
+      setError(`Error removing pet from everyone: ${err.message}`);
+    } finally {
+      setWipingItemId(null);
+    }
+  };
 
   const handleRemovePet = async (petId) => {    try {
       const response = await retryRequest(() =>
@@ -791,8 +885,8 @@ function FullAdminPanel() {
     setSelectedUser(usr);
     setEditDisplayName(usr.customDisplayName || '');
     setSelectedPetIds([]);
-    setGiveMods([]);
-    setAddUserQty(1);
+    setGiveModsById({});
+    setGiveQtys({});
     setAddUserPetSearch('');
     try {
       const response = await retryRequest(() =>
@@ -866,7 +960,11 @@ function FullAdminPanel() {
       setError('Please select a user and at least one pet');
       return;
     }
-    const qty = Math.max(1, parseInt(addUserQty || 1, 10) || 1);
+    const bundle = giveBundle.filter((entry) => ids.includes(entry.id));
+    if (bundle.length === 0) {
+      setError('Please select a user and at least one pet');
+      return;
+    }
 
     setAddUserBusy(true);
     try {
@@ -877,8 +975,13 @@ function FullAdminPanel() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${localStorage.getItem('token')}`
           },
+          // Per pet, so 1 of one and 3 of another go out in a single request.
           body: JSON.stringify({
-            items: ids.map((itemId) => ({ itemId, quantity: qty, mods: giveMods }))
+            items: bundle.map((entry) => ({
+              itemId: entry.id,
+              quantity: entry.quantity,
+              mods: entry.mods
+            }))
           })
         })
       );
@@ -886,11 +989,12 @@ function FullAdminPanel() {
       if (!response.ok) throw new Error(data.message || 'Could not give items');
       const added = Array.isArray(data.added) ? data.added.length : 0;
       if (added > 0) {
-        const modSuffix = giveMods.length > 0 ? ` with ${giveMods.join('')}` : '';
-        showCustomPopup(`Gave ${added} item${added === 1 ? '' : 's'} × ${qty} to ${displayUser(selectedUser)}${modSuffix}!`, 'success');
+        const breakdown = bundle.map((entry) => `${entry.quantity}× ${entry.name}`).join(', ');
+        showCustomPopup(`Gave ${displayUser(selectedUser)}: ${breakdown}`, 'success');
         setUserPets(data.inventory?.items || userPets);
         setSelectedPetIds([]);
-        setGiveMods([]);
+        setGiveQtys({});
+        setGiveModsById({});
       }
       if (data.failed?.length) setError(`${data.failed.length} item${data.failed.length === 1 ? '' : 's'} could not be added.`);
     } catch (err) {
@@ -1583,7 +1687,7 @@ function FullAdminPanel() {
                   <div className="give-picker">
                     <div className="give-picker-heading">
                       <div><span className="give-picker-kicker"><Icon name="gift" size={13} /> Give items</span><h4>Build a care package</h4><p>Select pets from the catalog, then tune the bundle before sending.</p></div>
-                      {selectedPetIds.length > 0 && <button type="button" className="give-clear-button" onClick={() => { setSelectedPetIds([]); setGiveMods([]); }}>Clear {selectedPetIds.length}</button>}
+                      {selectedPetIds.length > 0 && <button type="button" className="give-clear-button" onClick={() => { setSelectedPetIds([]); setGiveModsById({}); setGiveQtys({}); }}>Clear {selectedPetIds.length}</button>}
                     </div>
                     <div className="give-picker-search"><Icon name="search" size={15} /><input value={addUserPetSearch} onChange={(e) => setAddUserPetSearch(e.target.value)} placeholder="Search the pet catalog..." aria-label="Search pets to give" /></div>
                     <div className="give-picker-grid">
@@ -1591,24 +1695,106 @@ function FullAdminPanel() {
                         .filter((pet) => !addUserPetSearch || `${pet.name || ''} ${pet.description || ''}`.toLowerCase().includes(addUserPetSearch.toLowerCase()))
                         .slice(0, 96)
                         .map((pet) => {
-                          const selected = selectedPetIds.includes(pet.id || pet.itemId);
-                          return <button type="button" key={pet.id || pet.itemId} className={`give-picker-item ${selected ? 'selected' : ''}`} onClick={() => setSelectedPetIds((current) => selected ? current.filter((id) => id !== (pet.id || pet.itemId)) : [...current, pet.id || pet.itemId])}><img src={pet.imageUrl || pet.image || '/default-item.png'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.png'; }} /><span><strong>{pet.name || pet.itemName}</strong><small>{Number(pet.value || 0).toLocaleString()} AMP · {pet.rarity || 'common'}</small></span>{selected && <Icon name="check" size={14} />}</button>;
+                          const pid = petKey(pet);
+                          const selected = selectedPetIds.includes(pid);
+                          const mods = modsFor(pid);
+                          return (
+                            <div key={pid} className={`give-picker-item ${selected ? 'selected' : ''}`}>
+                              <button type="button" className="give-picker-pick" onClick={() => togglePetSelection(pet)} aria-pressed={selected}>
+                                <img src={pet.imageUrl || pet.image || '/default-item.png'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.png'; }} />
+                                <span><strong>{pet.name || pet.itemName}</strong><small>{Number(pet.value || 0).toLocaleString()} AMP · {pet.rarity || 'common'}</small></span>
+                                {selected && <Icon name="check" size={14} />}
+                              </button>
+                              {selected && (
+                                <div className="give-picker-controls">
+                                  <label className="give-qty-field">
+                                    <span>Amount</span>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={qtyFor(pid)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      onChange={(e) => setQtyFor(pid, e.target.value)}
+                                      aria-label={`How many ${pet.name || pet.itemName}`}
+                                    />
+                                  </label>
+                                  <div className="give-mods-field">
+                                    <span>Mods</span>
+                                    <div>
+                                      {['F', 'R', 'M', 'N'].map((m) => {
+                                        const on = mods.includes(m);
+                                        const locked = (m === 'F' || m === 'R') && modsLockedByTier(pid);
+                                        return (
+                                          <button
+                                            type="button"
+                                            key={m}
+                                            className={`${on ? 'active' : ''} ${locked ? 'locked' : ''}`}
+                                            onClick={() => toggleModFor(pid, m)}
+                                            disabled={locked}
+                                            title={locked
+                                              ? `${MOD_LABELS[m]} comes with ${mods.includes('M') ? 'Mega' : 'Neon'}`
+                                              : MOD_LABELS[m]}
+                                          >{m}</button>
+                                        );
+                                      })}
+                                    </div>
+                                    {modsLockedByTier(pid) && (
+                                      <small className="give-mods-note">
+                                        {mods.includes('M') ? 'Mega' : 'Neon'} includes Fly + Ride — the catalog only prices it that way.
+                                      </small>
+                                    )}
+                                  </div>
+                                  {mods.length > 0 && (
+                                    <small className="give-mods-result">
+                                      {(pet.name || pet.itemName)} ({mods.join('')}) → {moddedValue(petBaseOf(pet), mods).toLocaleString()} AMP each
+                                    </small>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
                         })}
                     </div>
                     {items.filter((pet) => !addUserPetSearch || `${pet.name || ''} ${pet.description || ''}`.toLowerCase().includes(addUserPetSearch.toLowerCase())).length > 96 && <small className="give-picker-limit">Showing the first 96 matches — refine your search to narrow the catalog.</small>}
                     <div className="give-selection-tray">
                       <div className="give-selection-chips">
-                        {selectedPetIds.length === 0 ? <span className="give-empty-selection">No pets selected yet</span> : selectedPetIds.map((id) => {
-                          const pet = items.find((candidate) => (candidate.id || candidate.itemId) === id);
-                          return pet ? <button type="button" key={id} className="give-selection-chip" onClick={() => setSelectedPetIds((current) => current.filter((selectedId) => selectedId !== id))}><img src={pet.imageUrl || pet.image || '/default-item.png'} alt="" /><span>{pet.name || pet.itemName}</span><Icon name="close" size={11} /></button> : null;
-                        })}
+                        {giveBundle.length === 0 ? <span className="give-empty-selection">No pets selected yet</span> : giveBundle.map((entry) => (
+                          <span key={entry.id} className="give-selection-chip">
+                            <img src={entry.pet.imageUrl || entry.pet.image || '/default-item.png'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.png'; }} />
+                            <span>
+                              <strong>{entry.name}</strong>
+                              <small>× {entry.quantity}</small>
+                            </span>
+                            <button type="button" onClick={() => togglePetSelection(entry.pet)} aria-label={`Remove ${entry.name} from the bundle`}><Icon name="close" size={11} /></button>
+                            <button
+                              type="button"
+                              className="give-chip-wipe"
+                              onClick={() => handleRemoveEverywhere(entry.pet)}
+                              disabled={wipingItemId === entry.id}
+                              title={`Remove ${entry.name} from every player's inventory`}
+                            >
+                              <Icon name="trash" size={11} />
+                            </button>
+                          </span>
+                        ))}
                       </div>
                       <div className="give-controls-row">
-                        <label className="give-quantity"><span>Qty each</span><input type="number" min="1" value={addUserQty} onChange={(e) => setAddUserQty(e.target.value)} /></label>
-                        <div className="give-mod-controls"><span>Mods</span><div>{['F', 'R', 'M', 'N'].map((m) => <button type="button" key={m} className={giveMods.includes(m) ? 'active' : ''} onClick={() => toggleGiveMod(m)} title={MOD_LABELS[m]}>{m}</button>)}</div></div>
-                        <button type="button" className="btn btn-primary give-submit" onClick={handleAddPetToUser} disabled={addUserBusy || selectedPetIds.length === 0}>{addUserBusy ? 'Sending...' : `Give ${selectedPetIds.length} × ${addUserQty}`}</button>
+                        {giveBundle.length === 0 ? (
+                          <span className="give-tray-hint">Pick pets above — each one gets its own amount and mods.</span>
+                        ) : (
+                          <>
+                            <span className="give-bundle-summary">
+                              {giveBundle.length} pet{giveBundle.length === 1 ? '' : 's'} · {giveTotalUnits} unit{giveTotalUnits === 1 ? '' : 's'}
+                            </span>
+                            <button type="button" className="btn btn-danger give-wipe-all" onClick={() => handleRemoveEverywhere(giveBundle[0].pet)} disabled={wipingItemId !== null} title="Remove this pet from every player's inventory">
+                              {wipingItemId !== null ? 'Working...' : 'Remove from everyone'}
+                            </button>
+                            <button type="button" className="btn btn-primary give-submit" onClick={handleAddPetToUser} disabled={addUserBusy || giveBundle.length === 0}>
+                              {addUserBusy ? 'Sending...' : `Give ${giveTotalUnits} item${giveTotalUnits === 1 ? '' : 's'}`}
+                            </button>
+                          </>
+                        )}
                       </div>
-                      {givePreview && <div className="give-preview-line"><Icon name="diamond" size={12} /> {givePreview.name} becomes <strong>{givePreview.value.toLocaleString()} AMP</strong> per unit</div>}
                     </div>
                   </div>
                 </div>

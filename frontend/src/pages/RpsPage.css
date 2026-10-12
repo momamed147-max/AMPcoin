@@ -131,50 +131,91 @@
   gap: 9px;
 }
 .rps-move-btn {
+  --move-tint: var(--acc-300);
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 15px 8px 13px;
-  background: var(--bg1);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 45%);
+  justify-content: center;
+  gap: 9px;
+  padding: 18px 10px 15px;
+  background: var(--bg2);
   border: 1px solid var(--line);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
   color: var(--mut);
-  font-size: 0.8rem;
-  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 0.92rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  transition: border-color 0.14s, background 0.14s, color 0.14s, transform 0.1s, box-shadow 0.14s;
+  box-shadow: var(--elev-1), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: border-color 0.16s var(--ease-1), background 0.16s var(--ease-1),
+              color 0.16s var(--ease-1), transform 0.12s var(--ease-1),
+              box-shadow 0.16s var(--ease-1);
 }
+/* Each move carries its own colour, so the three read apart at a glance
+   rather than as three identical grey slabs. */
+.rps-move-btn[data-move='rock'] { --move-tint: #f59e0b; }
+.rps-move-btn[data-move='paper'] { --move-tint: #38bdf8; }
+.rps-move-btn[data-move='scissors'] { --move-tint: #a78bfa; }
+
+/* The icon gets its own well so it has weight instead of floating loose on
+   the panel. */
+.rps-move-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--r-full);
+  background: var(--bg0);
+  border: 1px solid var(--line);
+  color: var(--move-tint);
+  transition: background 0.16s var(--ease-1), border-color 0.16s var(--ease-1),
+              box-shadow 0.16s var(--ease-1);
+}
+
 .rps-move-btn:hover:not(:disabled) {
-  border-color: rgba(47, 129, 247, 0.5);
-  background-color: var(--panel2);
+  border-color: color-mix(in srgb, var(--move-tint) 55%, transparent);
   color: var(--txt);
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.35);
+  transform: translateY(-2px);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.rps-move-btn:hover:not(:disabled) .rps-move-icon {
+  background: color-mix(in srgb, var(--move-tint) 14%, var(--bg0));
+  border-color: color-mix(in srgb, var(--move-tint) 40%, transparent);
+}
+/* Presses IN. A button you push should go down, not jump up. */
+.rps-move-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: var(--elev-1);
 }
 .rps-move-btn:disabled { cursor: not-allowed; opacity: 0.45; }
+
 .rps-move-btn.selected {
-  border-color: var(--acc);
-  background: var(--acc-soft);
+  border-color: var(--move-tint);
+  background: color-mix(in srgb, var(--move-tint) 14%, var(--bg2));
   color: var(--txt);
   opacity: 1;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 0 1px rgba(47, 129, 247, 0.25);
+  box-shadow: var(--elev-1), 0 0 0 1px color-mix(in srgb, var(--move-tint) 35%, transparent),
+              0 0 22px color-mix(in srgb, var(--move-tint) 28%, transparent);
+}
+.rps-move-btn.selected .rps-move-icon {
+  background: color-mix(in srgb, var(--move-tint) 22%, var(--bg0));
+  border-color: var(--move-tint);
+  box-shadow: 0 0 16px color-mix(in srgb, var(--move-tint) 40%, transparent);
 }
 .rps-move-btn em {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 7px;
+  right: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--acc);
-  color: #fff;
+  background: var(--move-tint);
+  color: #06080d;
   font-style: normal;
 }
 

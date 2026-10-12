@@ -39,6 +39,7 @@ const PATHS = {
   flag: (<g><path d="M6 21V4M6 4.5h11.5l-2.5 4 2.5 4H6" /></g>),
   shop: (<g><path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M4 9.5V19a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V9.5M9.5 20v-6h5v6" /></g>),
   bag: (<g><path d="M6.5 8h11l1 12.5h-13Z" /><path d="M9 10.5V6.5a3 3 0 0 1 6 0v4" /></g>),
+  trash: (<g><path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13.5h9l1-13.5" /><path d="M10.5 10v6.5M13.5 10v6.5" /></g>),
   send: (<g><path d="M21 3.5 10.5 14M21 3.5 14 21l-3.5-7L3 10.5Z" /></g>),
   warn: (<g><path d="M12 3.5 22 20H2Z" /><path d="M12 9.5v4.5M12 17.2v.1" /></g>),
   settings: (<g><path d="M4 6h10M18 6h2M4 12h2M10 12h10M4 18h7M15 18h5" /><circle cx="16" cy="6" r="2" /><circle cx="8" cy="12" r="2" /><circle cx="13" cy="18" r="2" /></g>),

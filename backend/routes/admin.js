@@ -798,6 +798,92 @@ router.post('/remove-item-everywhere', authenticateAdmin, (req, res) => {
   }
 });
 
+// Strip one catalog pet out of EVERY user's inventory.
+//
+// Deliberately keyed on the catalog itemId rather than a typed name. The
+// name-based route above matches with `includes`, so asking it to remove
+// "cat" quietly takes "Caterpillar" with it. Selecting the pet from the
+// catalog cannot make that mistake.
+//
+// Modded variants live under a composite id like `12345:NFR` (see
+// /user/:userId/add-items), so every variant of the base pet is matched too.
+router.post('/items/:itemId/remove-everywhere', authenticateAdmin, (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const itemsDb = dbManager.getItemsDb();
+    const item = (itemsDb.items || []).find(
+      (candidate) => String(candidate.id) === String(itemId) || String(candidate.itemId) === String(itemId)
+    );
+    if (!item) return res.status(404).json({ message: 'Pet not found' });
+
+    const baseId = String(item.id || item.itemId);
+
+    const db = dbManager.getMainDb();
+    const invs = db.inventories || [];
+    const list = Array.isArray(invs) ? invs : Object.values(invs);
+
+    let purgedStacks = 0;
+    let purgedUnits = 0;
+    const touchedUsers = [];
+
+    list.forEach((inv, index) => {
+      if (!inv || !Array.isArray(inv.items)) return;
+      const kept = [];
+      let changed = false;
+
+      for (const it of inv.items) {
+        const stackId = String(it.itemId || it.id || '');
+        const isBase = stackId === baseId;
+        // `12345:NFR`, `12345:M` - any variant of the same base pet.
+        const isVariant = stackId.startsWith(`${baseId}:`);
+        if (isBase || isVariant) {
+          purgedStacks += 1;
+          purgedUnits += Math.max(1, parseInt(it.quantity || 1, 10) || 1);
+          changed = true;
+        } else {
+          kept.push(it);
+        }
+      }
+
+      if (!changed) return;
+      inv.items = kept;
+      inv.totalValue = kept.reduce((s, i) => s + ((i.value || 0) * (i.quantity || 1)), 0);
+      touchedUsers.push(Array.isArray(invs) ? index : Object.keys(invs)[index]);
+    });
+
+    db.adminLogs = db.adminLogs || [];
+    db.adminLogs.push({
+      id: uuidv4(),
+      adminId: req.user.userId,
+      adminUsername: req.user.robloxUsername,
+      action: 'remove_item_everywhere',
+      itemId: baseId,
+      itemName: item.name || item.itemName,
+      purgedStacks,
+      purgedUnits,
+      affectedUsers: touchedUsers.length,
+      timestamp: new Date().toISOString()
+    });
+
+    dbManager.saveMainDb();
+
+    try {
+      const { emitToAll } = require('../realtime');
+      emitToAll('inventoryUpdate', { all: true });
+    } catch (_) { /* ignore */ }
+
+    res.json({
+      purgedStacks,
+      purgedUnits,
+      affectedUsers: touchedUsers.length,
+      name: item.name || item.itemName
+    });
+  } catch (error) {
+    console.error('Error removing item from every inventory:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // One-shot purge: delete ALL common + uncommon pets from the catalog and
 // strip them from every user inventory. OWNER ONLY (POOpPANTSpro).
 router.post('/purge-commons', authenticateAdmin, (req, res) => {
