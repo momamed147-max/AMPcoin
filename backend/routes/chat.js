@@ -4,7 +4,7 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateToken, authenticateAdmin, authenticateModerator } = require('../middleware/auth');
 const dbManager = require('../db/dbHelper');
 const { addNotification } = require('../notificationService');
-const { revealableAdmin } = require('../visibility');
+const { displayableAdmin } = require('../visibility');
 const { emitToUser } = require('../realtime');
 // Roblox lookups live in one module now: they used to be copy-pasted here,
 // in chat.js and in users.js, and all three blocked the browser's boot path
@@ -35,7 +35,7 @@ function serializeMuteUser(user, viewerId) {
     customDisplayName: user.customDisplayName || null,
     displayName: user.customDisplayName || user.displayName || user.robloxDisplayName || user.robloxUsername || 'Anonymous',
     avatar: user.avatar || '',
-    isAdmin: revealableAdmin(user, viewerId),
+    isAdmin: displayableAdmin(user, viewerId),
     isModerator: user.isModerator === true,
     isActive: user.isActive !== false,
     isBanned: user.isBanned === true,
@@ -274,7 +274,7 @@ router.post('/send', authenticateToken, async (req, res) => {
       robloxDisplayName: profile.robloxDisplayName || user.robloxDisplayName || null,
       avatar: avatar,
       robloxUserId: profile.robloxUserId || user.robloxUserId || null,
-      isAdmin: revealableAdmin(user, user.id),
+      isAdmin: displayableAdmin(user, user.id),
       isModerator: user.isModerator === true,
       message: message.trim(),
       timestamp: new Date().toISOString(),

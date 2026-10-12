@@ -20,3 +20,6 @@ _*.js
 # Snapshots of the live database. These contain real user emails and usernames
 # and must never be pushed - the repo is public.
 backups/
+
+# Screenshot output from tools/shots.js and tools/shot-operator.js.
+tools/shots-*/

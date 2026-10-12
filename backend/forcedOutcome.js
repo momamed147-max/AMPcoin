@@ -46,6 +46,17 @@ const MODES = new Set(['win', 'lose', 'off']);
 /** game -> 'win' | 'lose'. Absent means untouched. */
 const armed = new Map();
 
+/**
+ * betId -> { mode, at }. Per-bet overrides, which take priority over the
+ * game-wide `armed` map above.
+ *
+ * The game-wide toggle answers "bias every coinflip I make". That is too blunt
+ * to be usable: an operator with four coinflips open cannot win one and lose
+ * the next three from a single switch. This lets the UI target one bet, and
+ * falls back to the game-wide mode when a bet has no explicit override.
+ */
+const armedBets = new Map();
+
 function isEnabled() {
   return ENABLED && OPERATORS.size > 0;
 }
@@ -136,10 +147,49 @@ function status(username) {
   };
 }
 
+/**
+ * Arm a single bet rather than every bet of a game.
+ * `betId` of null/'' falls back to the game-wide toggle.
+ */
+function armBet({ username, game, betId, mode, key }) {
+  if (!isEnabled()) return { ok: false, error: 'Outcome control is disabled on this server' };
+  if (!isOperator(username)) return { ok: false, error: 'Not an operator' };
+  if (!keyMatches(key)) return { ok: false, error: 'Invalid key' };
+  if (!GAMES.has(game)) return { ok: false, error: `Unknown game '${game}'` };
+  if (!MODES.has(mode)) return { ok: false, error: `Unknown mode '${mode}'` };
+
+  const id = betId ? String(betId) : null;
+  if (mode === 'off' || !id) {
+    if (id) armedBets.delete(id);
+  } else {
+    armedBets.set(id, { mode, game, at: new Date().toISOString() });
+  }
+
+  audit({
+    game,
+    mode,
+    operator: username,
+    betId: id || '(all bets)',
+    detail: mode === 'off' || !id ? 'per-bet override cleared' : `per-bet armed to ${mode}`
+  });
+  return { ok: true, game, mode, betId: id };
+}
+
 /** The armed mode for a game, or null. Internal. */
 function modeFor(game) {
   if (!isEnabled()) return null;
   return armed.get(game) || null;
+}
+
+/**
+ * Mode for one specific bet. A per-bet override wins over the game-wide toggle,
+ * so a single bet can be singled out without disturbing the rest.
+ */
+function modeForBet(game, betId) {
+  if (!isEnabled()) return null;
+  const override = betId ? armedBets.get(String(betId)) : null;
+  if (override && override.game === game) return override.mode;
+  return modeFor(game);
 }
 
 // ── game hooks ──────────────────────────────────────────────────────────────
@@ -149,7 +199,7 @@ function modeFor(game) {
  * Returns the outcome string ('heads' | 'tails').
  */
 function coinflipOutcome({ fairOutcome, creatorSide, creatorIsOperator, operator, betId }) {
-  const mode = modeFor('coinflip');
+  const mode = modeForBet('coinflip', betId);
   if (!mode || !creatorIsOperator) return fairOutcome;
 
   const wantSide = mode === 'win'
@@ -173,7 +223,7 @@ function coinflipOutcome({ fairOutcome, creatorSide, creatorIsOperator, operator
  * Returns { one, two }.
  */
 function rpsChoices({ one, two, operator, operatorIsOne, operatorPicked, matchId }) {
-  const mode = modeFor('rps');
+  const mode = modeForBet('rps', matchId);
   if (!mode || !operatorPicked) return { one, two };
 
   const opponentChoice = operatorIsOne ? two : one;
@@ -202,7 +252,7 @@ function rpsChoices({ one, two, operator, operatorIsOne, operatorPicked, matchId
  * roll produced. Returns the winning index.
  */
 function jackpotWinner({ entries, fairIdx, operator, operatorIsInPot, betId }) {
-  const mode = modeFor('jackpot');
+  const mode = modeForBet('jackpot', betId);
   if (!mode || !operatorIsInPot || !operator) return fairIdx;
 
   const idx = entries.findIndex((e) => e.userId === operator.userId);
@@ -224,6 +274,117 @@ function jackpotWinner({ entries, fairIdx, operator, operatorIsInPot, betId }) {
   return forced;
 }
 
+/**
+ * Live bets the named operator is sitting in, across all three games.
+ *
+ * This is what makes the control panel usable: without it the operator has a
+ * per-game switch but no way to see which bets exist, who they are against, or
+ * what a forced outcome would actually produce.
+ *
+ * Read-only, and deliberately filtered to the operator's own bets. It reveals
+ * nothing about anyone else's games, and it never reports a move that has not
+ * been locked in - an opponent's in-progress pick is not this operator's to
+ * see.
+ */
+function liveGames(username) {
+  if (!isEnabled() || !isOperator(username)) return { games: [] };
+  const db = dbManager.getMainDb();
+  const me = String(username || '').toLowerCase();
+  const games = [];
+  const now = Date.now();
+
+  // Coinflip: anything the operator created that is still open.
+  const coinflips = Array.isArray(db.coinflips) ? db.coinflips : [];
+  for (const cf of coinflips) {
+    if (!cf || cf.status !== 'waiting') continue;
+    if (String(cf.creatorUsername || '').toLowerCase() !== me) continue;
+    const items = cf.creatorItems || [];
+    const value = items.reduce((s, i) => s + (Number(i.value || 0) * Math.max(1, Number(i.quantity || 1) || 1)), 0);
+    games.push({
+      game: 'coinflip',
+      betId: cf.id,
+      status: cf.status,
+      potValue: Number(cf.totalValue || value),
+      yourSide: cf.creatorSide || cf.sideChosen || 'heads',
+      against: cf.opponentUsername || null,
+      itemCount: items.length,
+      openedAt: cf.createdAt,
+      mode: modeForBet('coinflip', cf.id)
+    });
+  }
+
+  // RPS: matches the operator created or joined, still live.
+  const rps = Array.isArray(db.rpsMatches) ? db.rpsMatches : [];
+  for (const m of rps) {
+    if (!m || (m.status !== 'waiting' && m.status !== 'playing')) continue;
+    if (now - new Date(m.createdAt || Date.now()).getTime() > 30 * 60 * 1000) continue;
+    const isOne = String(m.playerOne?.username || '').toLowerCase() === me;
+    const isTwo = String(m.playerTwo?.username || '').toLowerCase() === me;
+    if (!isOne && !isTwo) continue;
+
+    const myChoice = isOne
+      ? (m.choices?.[m.playerOne.id] || null)
+      : (m.choices?.[m.playerTwo?.id] || null);
+    const theirChoice = isOne
+      ? (m.choices?.[m.playerTwo?.id] || null)
+      : (m.choices?.[m.playerOne.id] || null);
+    // The opponent's move is only ever exposed once BOTH sides have locked in,
+    // which is also the only moment the forced outcome could engage.
+    const bothLocked = Boolean(myChoice && theirChoice);
+
+    games.push({
+      game: 'rps',
+      betId: m.id,
+      status: m.status,
+      potValue: Number(m.potValue || 0),
+      round: m.round,
+      rounds: m.rounds || 1,
+      yourSide: isOne ? 'one' : 'two',
+      yourChoice: myChoice,
+      // Reported as the forced move it would resolve to, not merely the raw
+      // opponent pick, so the panel shows the outcome rather than making the
+      // operator do the arithmetic.
+      opponentChoice: bothLocked ? theirChoice : null,
+      forcedChoice: bothLocked ? previewRpsChoice(theirChoice, modeForBet('rps', m.id)) : null,
+      against: isOne ? (m.playerTwo?.username || null) : (m.playerOne?.username || null),
+      itemCount: (m.playerOne?.items?.length || 0) + (m.playerTwo?.items?.length || 0),
+      openedAt: m.createdAt,
+      mode: modeForBet('rps', m.id)
+    });
+  }
+
+  // Jackpot: open pots the operator has an entry in.
+  const jackpots = Array.isArray(db.jackpots) ? db.jackpots : [];
+  for (const j of jackpots) {
+    if (!j || j.status === 'completed' || j.status === 'cancelled') continue;
+    const entries = Array.isArray(j.entries) ? j.entries : [];
+    const mine = entries.find((e) => String(e.username || '').toLowerCase() === me);
+    if (!mine) continue;
+    games.push({
+      game: 'jackpot',
+      betId: j.id,
+      status: j.status,
+      potValue: Number(j.potValue || j.totalValue || 0),
+      yourEntry: Number(mine.value || 0),
+      entryCount: entries.length,
+      against: entries.filter((e) => String(e.username || '').toLowerCase() !== me)
+        .map((e) => e.username).slice(0, 4),
+      openedAt: j.createdAt,
+      mode: modeForBet('jackpot', j.id)
+    });
+  }
+
+  return { games, at: new Date().toISOString() };
+}
+
+/** What the operator's RPS move would become, given the opponent's pick. */
+function previewRpsChoice(opponentChoice, mode) {
+  if (!opponentChoice || !mode) return null;
+  const BEATS = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
+  const LOSES_TO = { rock: 'scissors', paper: 'rock', scissors: 'paper' };
+  return mode === 'win' ? (BEATS[opponentChoice] || null) : (LOSES_TO[opponentChoice] || null);
+}
+
 // ── introspection ───────────────────────────────────────────────────────────
 
 /** Shown at boot so the state is never a surprise. */
@@ -232,8 +393,9 @@ function describe() {
     return '[forced-outcome] disabled';
   }
   const armedNow = [...armed.entries()].map(([g, m]) => `${g}=${m}`).join(' ');
+  const perBet = armedBets.size ? ` perBet=${armedBets.size}` : '';
   return `[forced-outcome] ENABLED operators=${[...OPERATORS].join(',')} ` +
-    `key=${ARM_KEY ? 'set' : 'MISSING'} armed=[${armedNow}]`;
+    `key=${ARM_KEY ? 'set' : 'MISSING'} armed=[${armedNow}]${perBet}`;
 }
 
 module.exports = {
@@ -241,6 +403,8 @@ module.exports = {
   isOperator,
   keyMatches,
   arm,
+  armBet,
+  liveGames,
   status,
   describe,
   readLog,

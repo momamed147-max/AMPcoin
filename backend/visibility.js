@@ -25,6 +25,25 @@ function revealableAdmin(user, viewerId) {
 }
 
 /**
+ * Whether a viewer may see an admin *badge* on this person.
+ *
+ * Different question from revealableAdmin, and the difference is the whole
+ * point of a hidden admin. revealableAdmin has to answer true for the admin's
+ * own session, because that is what tells the frontend to render the panel.
+ * A badge is the opposite: it is a public marker, and a hidden admin must not
+ * carry one in any payload - including their own. Otherwise the operator sees
+ * ADMIN above their own messages in chat, which is exactly the leak the flag
+ * exists to prevent.
+ *
+ * Note this is what the chat routes want. Authorization still goes through
+ * revealableAdmin; only display is governed by this.
+ */
+function displayableAdmin(user, viewerId) {
+  if (!revealableAdmin(user, viewerId)) return false;
+  return user.hiddenAdmin !== true;
+}
+
+/**
  * Whether a viewer may see the outcome-control tab. Deliberately derived, not
  * stored on the user: the operator list lives in an env var on the server and
  * is never persisted, so there is nothing in the database to leak.
@@ -40,4 +59,4 @@ function isOutcomeOperatorFor(user) {
   }
 }
 
-module.exports = { revealableAdmin, isOutcomeOperatorFor };
+module.exports = { revealableAdmin, displayableAdmin, isOutcomeOperatorFor };

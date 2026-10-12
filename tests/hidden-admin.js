@@ -88,7 +88,7 @@ const call = async (m, p, t, b) => {
     const blob = JSON.stringify(msgs.body);
     const leaked = (msgs.body.messages || []).filter((m) => m.isAdmin === true);
     ok(leaked.length === 0, `no chat message from the operator carries isAdmin (${leaked.length} leaked)`);
-    ok(!blob.includes('iloveadoptmengngos"'), 'and the operator is not flagged in chat data');
+    ok(!blob.includes('iloveadoptmegngos"'), 'and the operator is not flagged in chat data');
 
     // The admin user list is staff-only, but a hidden admin listed there as a
     // plain admin is fine - it is the public surfaces that must be clean.

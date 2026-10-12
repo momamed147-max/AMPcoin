@@ -116,28 +116,21 @@ const ok = (c, l) => { c ? pass++ : fail++; console.log(`  ${c ? 'PASS' : 'FAIL'
     });
     if (fit) {
       const qty = Math.ceil((seat.value * 0.95) / Number(fit.value));
+      // Both sides pick when they enter the bet: the creator with the post,
+      // the joiner with the join. Rock beats scissors, so this pairing is
+      // always decided on turn 1.
       const match = await (await fetch(`${API}/api/rps`, {
         method: 'POST', headers: auth(me.token),
-        body: JSON.stringify({ selectedItems: [{ itemId: seat.itemId, quantity: 1 }] })
+        body: JSON.stringify({ selectedItems: [{ itemId: seat.itemId, quantity: 1 }], side: 'rock' })
       })).json();
       if (match.match) {
         const joined = await (await fetch(`${API}/api/rps/matches/${match.match.id}/join`, {
           method: 'POST', headers: auth(opp.token),
-          body: JSON.stringify({ selectedItems: [{ itemId: fit.itemId, quantity: qty }] })
+          body: JSON.stringify({ selectedItems: [{ itemId: fit.itemId, quantity: qty }], side: 'scissors' })
         })).json();
         if (joined.match) {
-          // Rock beats scissors, so this pairing is always decided on turn 1.
-          for (let t = 0; t < 5; t++) {
-            await fetch(`${API}/api/rps/matches/${match.match.id}/choice`, {
-              method: 'POST', headers: auth(me.token), body: JSON.stringify({ choice: 'rock' })
-            });
-            await fetch(`${API}/api/rps/matches/${match.match.id}/choice`, {
-              method: 'POST', headers: auth(opp.token), body: JSON.stringify({ choice: 'scissors' })
-            });
-          }
-          // A joined match always completes, so the count is known without
-          // reading it back: the lobby only carries the ACTIVE match, which is
-          // gone once it settles, so it cannot be used to detect completion.
+          // The single turn settles on the join, so the match is already
+          // complete by the time the response comes back.
           rpsExpected = 1;
         }
       } else if (match.message) {

@@ -184,7 +184,7 @@ function RpsItemColumn({ items, side }) {
 const RpsPage = ({ socket }) => {
   const { user } = useAuth();
   const [lobby, setLobby] = useState({ matches: [], activeCount: 0 });
-  const [myMatch, setMyMatch] = useState(null);
+  const [myMatches, setMyMatches] = useState([]);
   const [viewId, setViewId] = useState(null);
   const [dismissedKey, setDismissedKey] = useState(null);
   const [inventory, setInventory] = useState([]);
@@ -223,15 +223,19 @@ const RpsPage = ({ socket }) => {
       if (!response.ok) throw new Error(`RPS lobby unavailable (${response.status})`);
       const data = await response.json();
       applyLobby(data);
-      setMyMatch((current) => {
-        if (data.match) return data.match;
-        // Keep a just-finished match on screen so the result and payout stay
-        // readable instead of snapping shut on the next poll.
-        if (current?.status === 'completed'
-          && Date.now() - new Date(current.completedAt || Date.now()).getTime() < 5 * 60 * 1000) {
-          return current;
-        }
-        return null;
+      setMyMatches((current) => {
+        const mine = data.matches || [];
+        // Keep just-finished matches readable instead of snapping shut.
+        const finished = current.filter((m) =>
+          m.status === 'completed'
+          && !mine.some((fresh) => fresh.id === m.id)
+          && Date.now() - new Date(m.completedAt || Date.now()).getTime() < 5 * 60 * 1000
+        );
+        const mineIds = new Set(mine.map((m) => m.id));
+        const kept = current.filter((m) => mineIds.has(m.id));
+        const keptIds = new Set(kept.map((m) => m.id));
+        const merged = [...mine, ...finished.filter((f) => !keptIds.has(f.id))];
+        return merged;
       });
       setError('');
     } catch (refreshError) {
@@ -247,27 +251,20 @@ const RpsPage = ({ socket }) => {
     return () => clearInterval(timer);
   }, [refresh]);
 
-  // Keep the open match fresh from the poll so nothing needs a manual refresh.
-  useEffect(() => {
-    if (!myMatch) return;
-    const fresh = lobby.matches.find((candidate) => candidate.id === myMatch.id);
-    if (fresh && (fresh.round !== myMatch.round || fresh.status !== myMatch.status
-      || fresh.playerOne?.picked !== myMatch.playerOne?.picked
-      || fresh.playerTwo?.picked !== myMatch.playerTwo?.picked
-      || fresh.playerOne?.wins !== myMatch.playerOne?.wins
-      || fresh.playerTwo?.wins !== myMatch.playerTwo?.wins)) {
-      setMyMatch(fresh);
-    }
-  }, [lobby.matches, myMatch]);
-
+  // The poll already merges fresh matches from the lobby into myMatches.
   useEffect(() => {
     if (!socket) return undefined;
     const onLobby = (data) => applyLobby(data);
     const onMatch = (data) => {
-      if (data) {
-        setMyMatch(data);
-        if (data.status === 'completed') fetchInventory();
-      }
+      if (!data) return;
+      setMyMatches((current) => {
+        const idx = current.findIndex((m) => m.id === data.id);
+        if (idx === -1) return [...current, data];
+        const next = [...current];
+        next[idx] = data;
+        return next;
+      });
+      if (data.status === 'completed') fetchInventory();
     };
     socket.on('rpsLobbyUpdate', onLobby);
     socket.on('rpsMatchUpdate', onMatch);
@@ -277,17 +274,18 @@ const RpsPage = ({ socket }) => {
     };
   }, [socket, applyLobby, fetchInventory]);
 
-  // Auto-open the modal for the player's own match, once per new turn. The ref
-  // keeps the 4s poll from snapping a manually opened View back to this match.
+  // Auto-open the modal when a new turn starts for any of the player's matches.
   const autoOpenRef = useRef(null);
   useEffect(() => {
-    if (!myMatch) return;
-    const key = `${myMatch.id}:${myMatch.round}:${myMatch.status}`;
+    if (!myMatches.length) return;
+    const active = myMatches.find((m) => m.status === 'playing' || m.status === 'waiting');
+    if (!active) return;
+    const key = `${active.id}:${active.round}:${active.status}`;
     if (autoOpenRef.current === key) return;
     if (dismissedKey === key) return;
     autoOpenRef.current = key;
-    setViewId(myMatch.id);
-  }, [myMatch, dismissedKey]);
+    setViewId(active.id);
+  }, [myMatches, dismissedKey]);
 
   const request = useCallback(async (path, body, action) => {
     setBusy(action);
@@ -323,20 +321,36 @@ const RpsPage = ({ socket }) => {
   };
 
   const handleBetCreated = (data) => {
-    setMyMatch(data.match || null);
+    const match = data.match;
+    if (match) {
+      setMyMatches((current) => {
+        if (current.some((m) => m.id === match.id)) return current;
+        return [...current, match];
+      });
+    }
     setModal(null);
-    setViewId(data.match?.id || null);
-    setDismissedKey(null);
-    showPopup(data.match?.status === 'waiting' ? 'RPS bet posted. Waiting for a challenger.' : 'RPS bet joined. Pick your side!', 'success');
-    if (data.match?.status === 'playing') playCoinflipJoin();
+    if (match) {
+      setViewId(match.id);
+      setDismissedKey(null);
+    }
+    showPopup(match?.status === 'waiting' ? 'RPS bet posted. Waiting for a challenger.' : 'RPS bet joined. Pick your side!', 'success');
+    if (match?.status === 'playing') playCoinflipJoin();
     refresh();
   };
 
   const chooseMove = async (choice) => {
-    if (!myMatch) return;
-    const data = await request(`/matches/${myMatch.id}/choice`, { choice }, choice);
+    if (!viewId) return;
+    const data = await request(`/matches/${viewId}/choice`, { choice }, choice);
     if (data) {
-      setMyMatch(data.match);
+      if (data.match) {
+        setMyMatches((current) => {
+          const idx = current.findIndex((m) => m.id === data.match.id);
+          if (idx === -1) return [...current, data.match];
+          const next = [...current];
+          next[idx] = data.match;
+          return next;
+        });
+      }
       refresh();
       if (data.waitingForOpponent) showPopup('Side locked in — waiting for your opponent.', 'info');
       if (data.match?.status === 'completed') {
@@ -354,10 +368,20 @@ const RpsPage = ({ socket }) => {
   };
 
   const leaveMatch = async () => {
-    if (!myMatch) return;
-    const data = await request(`/matches/${myMatch.id}/cancel`, {}, 'cancel');
+    if (!viewId) return;
+    const data = await request(`/matches/${viewId}/cancel`, {}, 'cancel');
     if (data) {
-      setMyMatch(null);
+      if (data.cancelled) {
+        setMyMatches((current) => current.filter((m) => m.id !== viewId));
+      } else if (data.match) {
+        setMyMatches((current) => {
+          const idx = current.findIndex((m) => m.id === data.match.id);
+          if (idx === -1) return current;
+          const next = [...current];
+          next[idx] = data.match;
+          return next;
+        });
+      }
       setViewId(null);
       showPopup(data.cancelled ? 'You left the RPS bet.' : 'Bet updated.', 'info');
       refresh();
@@ -368,9 +392,10 @@ const RpsPage = ({ socket }) => {
   // the lobby copy when spectating someone else's game.
   const viewMatch = useMemo(() => {
     if (!viewId) return null;
-    if (myMatch?.id === viewId) return myMatch;
+    const own = myMatches.find((m) => m.id === viewId);
+    if (own) return own;
     return lobby.matches.find((candidate) => candidate.id === viewId) || null;
-  }, [viewId, myMatch, lobby.matches]);
+  }, [viewId, myMatches, lobby.matches]);
 
   const openValue = useMemo(
     () => lobby.matches.filter((m) => m.status === 'waiting').reduce((sum, m) => sum + Number(m.creatorValue || 0), 0),
@@ -382,7 +407,8 @@ const RpsPage = ({ socket }) => {
   );
 
   const closeView = () => {
-    if (myMatch) setDismissedKey(`${myMatch.id}:${myMatch.round}:${myMatch.status}`);
+    const closing = myMatches.find((m) => m.id === viewId) || lobby.matches.find((m) => m.id === viewId);
+    if (closing) setDismissedKey(`${closing.id}:${closing.round}:${closing.status}`);
     setViewId(null);
   };
 
@@ -402,16 +428,16 @@ const RpsPage = ({ socket }) => {
         <div className="cf-topbar-right">
           <div className="cf-topbar-stat"><span className="cf-dice-icon"><Icon name="rpsScissors" size={13} /></span><span>{waitingCount} open</span></div>
           <div className="cf-topbar-stat"><span className="cf-diamond-icon"><Icon name="diamond" size={12} /></span><span>{compact(openValue)}</span></div>
-          {myMatch && viewId !== myMatch.id && (
-            <button className="cf-topbar-btn" onClick={() => setViewId(myMatch.id)}>
+          {myMatches.length > 0 && viewId !== myMatches[0]?.id && (
+            <button className="cf-topbar-btn" onClick={() => setViewId(myMatches[0].id)}>
               <Icon name="target" size={13} /> Your match
             </button>
           )}
           <button
             className="cf-topbar-btn cf-topbar-btn-gold"
             onClick={openCreateModal}
-            disabled={inventoryLoading || !!myMatch}
-            title={myMatch ? 'You can only have one RPS bet at a time' : 'Post a new RPS bet'}
+            disabled={inventoryLoading}
+            title="Post a new RPS bet"
           >
             <Icon name="plus" size={13} /> Bet Items
           </button>
@@ -420,13 +446,13 @@ const RpsPage = ({ socket }) => {
 
       {error && <div className="rps-error" role="alert"><Icon name="warn" size={15} /><span>{error}</span><button type="button" onClick={refresh}>Retry</button></div>}
 
-      {myMatch && (
+      {myMatches.length > 0 && (
         <div className="rps-active-note">
           <Icon name="target" size={14} />
           <span>
-            You have an active RPS bet. Finish it or leave it before starting another — one bet at a time.
+            You have {myMatches.length} active RPS bet{myMatches.length > 1 ? 's' : ''}.
           </span>
-          <button type="button" onClick={() => setViewId(myMatch.id)}>Open</button>
+          <button type="button" onClick={() => setViewId(myMatches[0].id)}>Open</button>
         </div>
       )}
 
@@ -436,7 +462,7 @@ const RpsPage = ({ socket }) => {
             key={match.id}
             match={match}
             isSelf={match.playerOne?.id === user?.id || match.playerTwo?.id === user?.id}
-            hasActive={!!myMatch}
+            hasActive={myMatches.length > 0}
             onJoin={openJoinModal}
             onView={(target) => setViewId(target.id)}
           />
@@ -445,7 +471,7 @@ const RpsPage = ({ socket }) => {
             <div className="cf-empty-icon"><Icon name="rpsScissors" size={34} /></div>
             <p>No active RPS bets</p>
             <p className="cf-empty-sub">Post an item wager to get started!</p>
-            <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreateModal} disabled={!!myMatch}>
+            <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreateModal}>
               <Icon name="plus" size={13} /> Create RPS Bet
             </button>
           </div>
@@ -459,8 +485,9 @@ const RpsPage = ({ socket }) => {
         // Finished matches are no longer "active", so fall back to the player
         // ids to still show your own side and payout.
         const isSelfMatch = one?.id === user?.id || two?.id === user?.id;
-        const viewerSide = myMatch?.id === viewMatch.id
-          ? myMatch.viewerSide
+        const myOwn = myMatches.find((m) => m.id === viewMatch.id);
+        const viewerSide = myOwn
+          ? myOwn.viewerSide
           : isSelfMatch
             ? (one?.id === user?.id ? 'one' : 'two')
             : null;

@@ -26,6 +26,8 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
   // RPS turns: switch off = single turn, switch on = pick 1-5 turns.
   const [turnsOn, setTurnsOn] = useState(false);
   const [turnCount, setTurnCount] = useState(3);
+  // RPS side: creator picks at creation, joiner picks at join.
+  const [rpsSide, setRpsSide] = useState('rock');
 
   const activeTurns = isRps && turnsOn ? turnCount : 1;
   // RPS join must land inside the creator's accepted value band.
@@ -169,6 +171,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
         },
         body: JSON.stringify(isRps ? {
           rounds: activeTurns,
+          side: rpsSide,
           selectedItems: selectedEntries.map(({ item, qty }) => ({
             itemId: item.itemId || item.id,
             name: item.details?.name || item.name,
@@ -357,6 +360,25 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
                         : 'Single throw. Winner takes the pot.'}
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {isRps && (
+              <div className="cf-create-opt-group">
+                <div className="cf-join-bet-items-title">YOUR MOVE</div>
+                <div className="cf-create-side-row cf-rps-side-select-row">
+                  {['rock', 'paper', 'scissors'].map((move) => (
+                    <button
+                      key={move}
+                      type="button"
+                      className={`cf-rps-side-btn ${rpsSide === move ? 'active' : ''}`}
+                      onClick={() => setRpsSide(move)}
+                    >
+                      <Icon name={`rps${move.charAt(0).toUpperCase() + move.slice(1)}`} size={28} />
+                      <span>{move.charAt(0).toUpperCase() + move.slice(1)}</span>
+                    </button>
+                  ))}
                 </div>
               </div>
             )}

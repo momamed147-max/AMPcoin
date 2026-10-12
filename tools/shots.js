@@ -51,14 +51,37 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   page.on('pageerror', (e) => errors.push(e.message.slice(0, 160)));
 
   // Log in once through the real UI so the session matches a player's.
+  //
+  // The "Local test mode" block is compiled out of a production build
+  // (LOCAL_DEV_TOOLS is NODE_ENV !== 'production'), so a build served from
+  // frontend/build has no such button to click and every route redirects to
+  // /login. Sign in through the API instead, which is what that button calls
+  // anyway, and seed the same localStorage key the app reads. This works
+  // against a dev server and against a production build alike.
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle2' });
   await sleep(1200);
-  await page.evaluate(() => {
-    const b = Array.from(document.querySelectorAll('button'))
-      .find((x) => /local account/i.test(x.innerText || ''));
-    if (b) b.click();
-  });
-  await sleep(3000);
+  // The API is a different origin from the page (BASE is the frontend), so it
+  // has to be passed in separately - defaulting to the local backend.
+  const signedIn = await page.evaluate(async (apiBase) => {
+    try {
+      const res = await fetch(`${apiBase}/api/auth/dev-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: 'local-admin' })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.token) {
+        return `dev-login failed (${res.status}) keys=${Object.keys(data).join(',') || 'none'}`;
+      }
+      localStorage.setItem('token', data.token);
+      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+      return 'ok';
+    } catch (err) {
+      return `dev-login threw: ${err.message}`;
+    }
+  }, process.env.API_URL || 'http://localhost:5000');
+  if (signedIn !== 'ok') console.log(`  login: ${signedIn}`);
+  await sleep(2500);
 
   const report = [];
   for (const [route, label, publicRoute] of ROUTES) {

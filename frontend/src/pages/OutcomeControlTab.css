@@ -77,6 +77,117 @@
   color: var(--red);
 }
 
+/* ── live bets ──
+   The point of this section is that the operator can act on a specific bet
+   without touching any other, so each row carries its own Win/Lose/Fair. */
+.oc-live-head,
+.oc-defaults-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--line-soft);
+}
+.oc-live-head h4,
+.oc-defaults-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-md);
+  font-weight: 800;
+  color: var(--txt);
+}
+.oc-live-head span,
+.oc-defaults-head span {
+  font-size: var(--fs-xs);
+  color: var(--dim);
+  font-weight: 700;
+}
+
+.oc-live-empty {
+  margin: 0;
+  padding: var(--sp-5);
+  border-radius: var(--r-md);
+  border: 1px dashed var(--line);
+  font-size: var(--fs-sm);
+  color: var(--dim);
+  line-height: var(--lh-body);
+}
+
+.oc-live {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.oc-live-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-4);
+  border-radius: var(--r-md);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line-strong);
+  box-shadow: var(--elev-1);
+  transition: border-color var(--dur-2) var(--ease-1), background var(--dur-2) var(--ease-1);
+}
+.oc-live-row.is-win { border-left-color: var(--grn); }
+.oc-live-row.is-lose { border-left-color: var(--red); }
+
+.oc-live-main {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.oc-live-title {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.oc-live-game {
+  font-family: var(--font-display);
+  font-size: var(--fs-sm);
+  font-weight: 800;
+  color: var(--txt);
+  letter-spacing: 0.02em;
+}
+
+.oc-live-pot {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.oc-live-detail {
+  font-size: var(--fs-xs);
+  color: var(--mut);
+}
+.oc-live-detail strong {
+  color: var(--txt);
+  text-transform: capitalize;
+}
+.oc-live-forced strong { color: var(--grn); }
+.oc-live-muted { color: var(--dim); }
+
+.oc-live-meta {
+  font-size: var(--fs-xs);
+  color: var(--dim);
+}
+
+.oc-live-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+}
+.oc-live-actions .btn { min-width: 68px; }
+
 /* ── the game cards ── */
 .oc-grid {
   display: grid;
@@ -109,10 +220,25 @@
 }
 
 .oc-card-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   font-family: var(--font-display);
   font-size: var(--fs-lg);
   font-weight: 800;
   color: var(--txt);
+}
+
+/* How many of this game are live right now, so the operator can see at a
+   glance whether the fallback below it is about to apply to anything. */
+.oc-card-count {
+  padding: 1px 7px;
+  border-radius: var(--r-full);
+  background: var(--acc-soft);
+  color: var(--acc-300);
+  font-size: var(--fs-xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .oc-pill {
@@ -233,4 +359,8 @@
   .outcome-control { padding: var(--sp-4); }
   .oc-log-row { grid-template-columns: 68px 44px 1fr; }
   .oc-log-at { display: none; }
+  /* Stack the row: the buttons need the full width on a phone, and the pot
+     and the controls competing for one line is what made them cramped. */
+  .oc-live-row { flex-direction: column; align-items: stretch; gap: var(--sp-3); }
+  .oc-live-actions .btn { flex: 1 1 0; min-width: 0; }
 }

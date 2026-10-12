@@ -18,6 +18,7 @@ const VALUE_TOLERANCE = 0.05;
 const MIN_ROUNDS = 1;
 const MAX_ROUNDS = 5;
 const matches = new Map();
+/** userId -> Set of matchIds they are in. Supports multiple concurrent matches. */
 const userMatches = new Map();
 const choiceRate = new Map();
 const actionRate = new Map();
@@ -38,8 +39,8 @@ function ensureHydrated() {
   for (const match of stored) {
     if (!match?.id || !match?.playerOne) continue;
     matches.set(match.id, match);
-    userMatches.set(match.playerOne.id, match.id);
-    if (match.playerTwo?.id) userMatches.set(match.playerTwo.id, match.id);
+    addToUserMatches(match.playerOne.id, match.id);
+    if (match.playerTwo?.id) addToUserMatches(match.playerTwo.id, match.id);
   }
   if (matches.size > 0) console.log(`[RPS] Restored ${matches.size} match(es) from storage`);
 }
@@ -173,19 +174,9 @@ function emitMatch(match) {
   if (match.playerTwo) emitToUser(match.playerTwo.id, 'rpsMatchUpdate', publicMatch(match, match.playerTwo.id));
 }
 
-// A player may only hold one live RPS bet at a time. Scan every active match
-// instead of trusting userMatches, which only remembers the most recent one.
+// A player may hold multiple live RPS matches at once.
 function activeMatchFor(userId) {
-  if (!userId) return null;
-  for (const match of matches.values()) {
-    if (match.status !== 'waiting' && match.status !== 'playing') continue;
-    if (match.playerOne?.id === userId || match.playerTwo?.id === userId) {
-      userMatches.set(userId, match.id);
-      return match;
-    }
-  }
-  userMatches.delete(userId);
-  return null;
+  return matchesForUser(userId);
 }
 
 function takeInventoryItems(userId, selectedItems) {
@@ -259,9 +250,10 @@ function isActionRateLimited(userId, action, windowMs = 1500) {
   return false;
 }
 
-function createWaitingMatch(user, items, rounds) {
+function createWaitingMatch(user, items, rounds, side) {
   const value = totalValue(items);
   const now = new Date().toISOString();
+  const creatorChoice = MOVES.has(side) ? side : null;
   const match = {
     id: uuidv4(),
     status: 'waiting',
@@ -273,7 +265,7 @@ function createWaitingMatch(user, items, rounds) {
     potValue: value,
     playerOne: { ...playerFor(user), wins: 0, items },
     playerTwo: null,
-    choices: {},
+    choices: creatorChoice ? { [user.id]: creatorChoice } : {},
     lastRound: null,
     winnerId: null,
     taxAmount: 0,
@@ -282,22 +274,109 @@ function createWaitingMatch(user, items, rounds) {
     updatedAt: now
   };
   matches.set(match.id, match);
-  userMatches.set(user.id, match.id);
+  addToUserMatches(user.id, match.id);
   persistMatches();
   return match;
 }
 
-function attachOpponent(match, user, items) {
+/**
+ * If both players have picked a move this round, resolve it and advance.
+ * Called after attachOpponent (both picked at join time) and after the
+ * choice endpoint (later rounds).
+ */
+function settleIfReady(match) {
+  if (!match || match.status !== 'playing') return false;
+  const rawOne = match.choices[match.playerOne.id] || null;
+  const rawTwo = match.playerTwo ? (match.choices[match.playerTwo.id] || null) : null;
+  if (!rawOne || !rawTwo) return false;
+
+  // A named operator account may have outcome control armed for this game.
+  const operatorSeat = forcedOutcome.isOperator(match.playerOne.username)
+    ? 'one'
+    : forcedOutcome.isOperator(match.playerTwo.username) ? 'two' : null;
+  const { one: oneChosen, two: twoChosen } = operatorSeat
+    ? forcedOutcome.rpsChoices({
+      one: rawOne,
+      two: rawTwo,
+      operator: operatorSeat === 'one' ? match.playerOne.username : match.playerTwo.username,
+      operatorIsOne: operatorSeat === 'one',
+      operatorPicked: Boolean(operatorSeat === 'one' ? rawOne : rawTwo),
+      matchId: match.id
+    })
+    : { one: rawOne, two: rawTwo };
+
+  const result = resolveRound(oneChosen, twoChosen);
+  const roundWinnerId = result === 'one' ? match.playerOne.id : result === 'two' ? match.playerTwo.id : null;
+  if (roundWinnerId) {
+    if (roundWinnerId === match.playerOne.id) match.playerOne.wins += 1;
+    else match.playerTwo.wins += 1;
+  }
+  match.lastRound = {
+    round: match.round,
+    playerOneChoice: oneChosen,
+    playerTwoChoice: twoChosen,
+    result,
+    winnerId: roundWinnerId
+  };
+  match.choices = {};
+
+  const totalRounds = match.rounds || MIN_ROUNDS;
+  if (match.round >= totalRounds) {
+    const oneWins = match.playerOne.wins || 0;
+    const twoWins = match.playerTwo.wins || 0;
+    if (oneWins > twoWins) finishMatch(match, match.playerOne.id, 'turns-complete');
+    else if (twoWins > twoWins) finishMatch(match, match.playerTwo.id, 'turns-complete');
+    else finishMatch(match, null, 'tied');
+  } else {
+    match.round += 1;
+    match.updatedAt = new Date().toISOString();
+    persistMatches();
+    emitMatch(match);
+    emitLobby();
+  }
+  return true;
+}
+
+function attachOpponent(match, user, items, side) {
   if (!match || match.status !== 'waiting' || match.playerOne.id === user.id) return false;
   const value = totalValue(items);
   if (value < match.minJoinValue || value > match.maxJoinValue) return false;
   match.playerTwo = { ...playerFor(user), wins: 0, items };
   match.potValue = match.creatorValue + value;
   match.status = 'playing';
+  if (MOVES.has(side)) match.choices[user.id] = side;
   match.updatedAt = new Date().toISOString();
-  userMatches.set(user.id, match.id);
+  addToUserMatches(user.id, match.id);
   persistMatches();
+  // Both sides have now picked (creator at creation, joiner here), so settle.
+  settleIfReady(match);
   return true;
+}
+
+function addToUserMatches(userId, matchId) {
+  if (!userMatches.has(userId)) userMatches.set(userId, new Set());
+  userMatches.get(userId).add(matchId);
+}
+
+function removeFromUserMatches(userId, matchId) {
+  const set = userMatches.get(userId);
+  if (set) {
+    set.delete(matchId);
+    if (set.size === 0) userMatches.delete(userId);
+  }
+}
+
+/** All live matches a user is in. */
+function matchesForUser(userId) {
+  if (!userId) return [];
+  const ids = userMatches.get(userId);
+  if (!ids) return [];
+  const result = [];
+  for (const id of ids) {
+    const m = matches.get(id);
+    if (m && (m.status === 'waiting' || m.status === 'playing')) result.push(m);
+  }
+  return result;
 }
 
 function settlePot(match, winnerId, reason) {
@@ -387,8 +466,8 @@ function finishMatch(match, winnerId, reason = 'completed') {
     user.updatedAt = match.completedAt;
   });
   dbManager.saveUsersDb();
-  userMatches.delete(match.playerOne.id);
-  if (match.playerTwo) userMatches.delete(match.playerTwo.id);
+  removeFromUserMatches(match.playerOne.id);
+  if (match.playerTwo) removeFromUserMatches(match.playerTwo.id);
   persistMatches();
   emitMatch(match);
   emitLobby();
@@ -403,11 +482,14 @@ function cleanupMatches() {
     changed = true;
     if (match.status === 'waiting') {
       refundItems(match.playerOne.id, match.playerOne.items || []);
-      userMatches.delete(match.playerOne.id);
+      removeFromUserMatches(match.playerOne.id, id);
+      if (match.playerTwo) removeFromUserMatches(match.playerTwo.id, id);
       matches.delete(id);
     } else if (match.status === 'playing') {
       finishMatch(match, null, 'expired');
     } else {
+      removeFromUserMatches(match.playerOne.id, id);
+      if (match.playerTwo) removeFromUserMatches(match.playerTwo.id, id);
       matches.delete(id);
     }
   }
@@ -425,7 +507,8 @@ router.use((req, res, next) => {
 
 router.get('/lobby', authenticateToken, (req, res) => {
   try {
-    res.json({ ...publicLobby(), match: publicMatch(activeMatchFor(req.user.userId), req.user.userId) });
+    const mine = activeMatchFor(req.user.userId).map((match) => publicMatch(match, req.user.userId));
+    res.json({ ...publicLobby(), matches: mine, myMatchCount: mine.length });
   } catch (error) {
     console.error('RPS lobby error:', error);
     res.status(500).json({ message: 'Could not load the RPS lobby' });
@@ -439,11 +522,12 @@ router.post('/', authenticateToken, (req, res) => {
     if (isActionRateLimited(user.id, 'create')) {
       return res.status(429).json({ message: 'Slow down — wait a moment before posting another bet.' });
     }
-    if (activeMatchFor(user.id)) {
-      return res.status(409).json({ message: 'You already have an active RPS bet — finish or cancel it first' });
+    const side = String(req.body?.side || '').toLowerCase();
+    if (!MOVES.has(side)) {
+      return res.status(400).json({ message: 'Choose rock, paper, or scissors for your side' });
     }
     const items = takeInventoryItems(user.id, req.body?.selectedItems);
-    const match = createWaitingMatch(user, items, req.body?.rounds);
+    const match = createWaitingMatch(user, items, req.body?.rounds, side);
     emitToUser(user.id, 'inventoryUpdate', { userId: user.id });
     emitLobby();
     res.status(201).json({ match: publicMatch(match, user.id) });
@@ -460,11 +544,12 @@ router.post('/matches/:id/join', authenticateToken, (req, res) => {
     if (!user) return res.status(404).json({ message: 'User not found' });
     if (match.status !== 'waiting') return res.status(409).json({ message: 'That RPS bet is no longer open' });
     if (match.playerOne.id === user.id) return res.status(400).json({ message: 'You cannot join your own bet' });
-    if (activeMatchFor(user.id)) {
-      return res.status(409).json({ message: 'You already have an active RPS bet — finish or leave that one first' });
-    }
     if (isActionRateLimited(user.id, 'join')) {
       return res.status(429).json({ message: 'Slow down — wait a moment before joining another bet.' });
+    }
+    const side = String(req.body?.side || '').toLowerCase();
+    if (!MOVES.has(side)) {
+      return res.status(400).json({ message: 'Choose rock, paper, or scissors for your side' });
     }
     const items = takeInventoryItems(user.id, req.body?.selectedItems);
     const value = totalValue(items);
@@ -472,7 +557,7 @@ router.post('/matches/:id/join', authenticateToken, (req, res) => {
       for (const item of items) dbManager.addItemToUserInventory(user.id, item, item.quantity || 1);
       return res.status(400).json({ message: `Your wager must be between ${match.minJoinValue.toLocaleString()} and ${match.maxJoinValue.toLocaleString()} AMP.` });
     }
-    if (!attachOpponent(match, user, items)) {
+    if (!attachOpponent(match, user, items, side)) {
       for (const item of items) dbManager.addItemToUserInventory(user.id, item, item.quantity || 1);
       return res.status(409).json({ message: 'That RPS bet is no longer available' });
     }
@@ -499,6 +584,7 @@ router.post('/matches/:id/choice', authenticateToken, (req, res) => {
     if (isChoiceRateLimited(userId, match.id)) return res.status(429).json({ message: 'Please wait before picking again.' });
 
     match.choices[userId] = choice;
+    match.updatedAt = new Date().toISOString();
     persistMatches();
 
     const rawOne = match.choices[match.playerOne.id] || null;
@@ -515,6 +601,10 @@ router.post('/matches/:id/choice', authenticateToken, (req, res) => {
     // A named operator account may have outcome control armed for this game.
     // It only engages on a round where that account has actually picked, and it
     // biases their own move - never the opponent's.
+    settleIfReady(match);
+    res.json({ match: publicMatch(match, userId) });
+    return;
+    // eslint-disable-next-line no-unreachable
     const operatorSeat = forcedOutcome.isOperator(match.playerOne.username)
       ? 'one'
       : forcedOutcome.isOperator(match.playerTwo.username) ? 'two' : null;
