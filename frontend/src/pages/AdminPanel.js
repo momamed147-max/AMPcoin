@@ -676,41 +676,24 @@ function FullAdminPanel() {
     setGiveQtys((prev) => ({ ...prev, [id]: next }));
   };
 
-  // M (Mega) and N (Neon) are tiers, not standalone flags. The catalog prices
-  // them only as mega/neon WITH fly + ride - see variantCellFor, where the grid
-  // has a `flyRide` cell and no bare `base` cell for either tier. So asking for
-  // M alone has no price to look up, and the server would silently widen it to
-  // MFR anyway.
+  // Every mod is independent. Fly, Ride, Mega and Neon can each be on or off on
+  // their own, and the catalog prices all twelve combinations - bare (M) and
+  // (N) included. F and R used to be dragged in automatically with any tier,
+  // which is what made a plain Mega or Neon impossible to create.
   //
-  // Rather than let that happen invisibly - which is what made this read as a
-  // glitch - the pairing is applied here too and shown on screen. F and R lock
-  // on while M or N is active instead of appearing from nowhere.
+  // Mega and Neon stay mutually exclusive: they are competing tiers and there
+  // is no grid cell for a pet that is both, so picking one clears the other.
   const toggleModFor = (id, mod) => {
     setGiveModsById((prev) => {
       const current = prev[id] || [];
-
-      // F and R are implied by a tier and cannot be toggled on their own.
-      if ((mod === 'M' || mod === 'N') && current.includes(mod)) {
-        const next = current.filter((m) => m !== mod && m !== 'F' && m !== 'R');
-        return { ...prev, [id]: next };
-      }
-      if (mod === 'F' || mod === 'R') {
-        const tierActive = current.includes('M') || current.includes('N');
-        return tierActive ? prev : { ...prev, [id]: current.includes(mod) ? current.filter((m) => m !== mod) : [...current, mod] };
-      }
-
-      const base = current.filter((m) => m !== 'M' && m !== 'N');
       if (current.includes(mod)) {
-        return { ...prev, [id]: base };
+        return { ...prev, [id]: current.filter((m) => m !== mod) };
       }
-      // Picking a tier drops the other tier and bundles fly + ride.
-      return { ...prev, [id]: [mod, 'F', 'R'] };
+      if (mod === 'M' || mod === 'N') {
+        return { ...prev, [id]: [...current.filter((m) => m !== 'M' && m !== 'N'), mod] };
+      }
+      return { ...prev, [id]: [...current, mod] };
     });
-  };
-
-  const modsLockedByTier = (id) => {
-    const current = giveModsById[id] || [];
-    return current.includes('M') || current.includes('N');
   };
 
   const togglePetSelection = (pet) => {
@@ -1721,28 +1704,17 @@ function FullAdminPanel() {
                                   <div className="give-mods-field">
                                     <span>Mods</span>
                                     <div>
-                                      {['F', 'R', 'M', 'N'].map((m) => {
-                                        const on = mods.includes(m);
-                                        const locked = (m === 'F' || m === 'R') && modsLockedByTier(pid);
-                                        return (
-                                          <button
-                                            type="button"
-                                            key={m}
-                                            className={`${on ? 'active' : ''} ${locked ? 'locked' : ''}`}
-                                            onClick={() => toggleModFor(pid, m)}
-                                            disabled={locked}
-                                            title={locked
-                                              ? `${MOD_LABELS[m]} comes with ${mods.includes('M') ? 'Mega' : 'Neon'}`
-                                              : MOD_LABELS[m]}
-                                          >{m}</button>
-                                        );
-                                      })}
+                                      {['F', 'R', 'M', 'N'].map((m) => (
+                                        <button
+                                          type="button"
+                                          key={m}
+                                          className={mods.includes(m) ? 'active' : ''}
+                                          onClick={() => toggleModFor(pid, m)}
+                                          title={MOD_LABELS[m]}
+                                          aria-pressed={mods.includes(m)}
+                                        >{m}</button>
+                                      ))}
                                     </div>
-                                    {modsLockedByTier(pid) && (
-                                      <small className="give-mods-note">
-                                        {mods.includes('M') ? 'Mega' : 'Neon'} includes Fly + Ride — the catalog only prices it that way.
-                                      </small>
-                                    )}
                                   </div>
                                   {mods.length > 0 && (
                                     <small className="give-mods-result">

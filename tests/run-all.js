@@ -56,6 +56,10 @@ const SUITES = [
   { file: 'outcome-control-e2e.js', label: 'outcome control e2e' },
   { file: 'outcome-control.js', label: 'outcome control', server: false },
   { file: 'remove-everywhere.js', label: 'remove pet everywhere' },
+  // Pure logic over the mod grid, but it is the check that keeps the two copies
+  // of petMods.js (backend and frontend) from drifting apart.
+  { file: 'mod-combinations.js', label: 'mod combinations', server: false },
+  { file: 'mod-grant-e2e.js', label: 'mod grant e2e' },
   { file: 'css-palette.js', label: 'css palette', server: false },
   { file: 'css-reachability.js', label: 'css reachability', server: false }
 ];
