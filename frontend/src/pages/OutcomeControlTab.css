@@ -29,35 +29,18 @@
   max-width: 62ch;
 }
 
-/* ── the key ── */
-.oc-key-row {
+.oc-head {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+
+.oc-refresh {
+  display: inline-flex;
   align-items: center;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-}
-
-.oc-key-label {
-  font-size: var(--fs-xs);
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
-.oc-key-input {
-  flex: 1 1 260px;
-  min-width: 0;
-  font-family: var(--font-mono);
-  font-size: var(--fs-sm);
-}
-
-.oc-note {
-  margin: 0;
-  font-size: var(--fs-xs);
-  color: var(--dim);
-  line-height: var(--lh-body);
-  max-width: 68ch;
+  gap: 7px;
+  flex-shrink: 0;
 }
 
 .oc-status {

@@ -382,8 +382,14 @@ console.log('\n=== the frontend exposes the tab, and only to an operator ===\n')
     ok(src.includes('/api/outcome-control/'), 'it talks to the outcome-control endpoints');
     ok(!/FORCE_OUTCOME_KEY\s*=\s*['"][^'"]+['"]/.test(src),
       'and does NOT hardcode the server key');
-    ok(/sessionStorage/.test(src), 'the key is held in sessionStorage, not localStorage');
-    ok(!/localStorage\.setItem\([^)]*KEY/i.test(src), 'and never written to localStorage');
+    // The key gate was removed: the panel no longer asks for it, and must not
+    // keep any trace of it. These assert absence, so that a future edit cannot
+    // quietly reintroduce a key prompt.
+    ok(!/outcome-control-key/.test(src), 'no key is stored in the browser at all');
+    ok(!/sessionStorage/.test(src), 'nothing about a key is kept in sessionStorage');
+    ok(!/server key/i.test(src), 'and the panel never asks the operator for a key');
+    ok(/oc-live-row/.test(src), 'the panel lists live bets');
+    ok(/outcome-control\/live/.test(src), 'and loads them from the live feed');
   }
 
   // Only the admin panel may reference it. Anywhere else would surface the
@@ -407,7 +413,20 @@ console.log('\n=== the frontend exposes the tab, and only to an operator ===\n')
   const routerSrc = fs.readFileSync(path.join(ROOT, 'backend', 'routes', 'outcomeControl.js'), 'utf8');
   ok(!/router\.get\(/.test(routerSrc), 'the router still exposes no GET route');
   ok(/authenticateAdmin/.test(routerSrc), 'every route still requires an admin session');
-  ok(/keyMatches|\.arm\(/.test(routerSrc), 'arming still requires the server key');
+
+  // The key gate is gone, but the operator gate is what replaced it and is the
+  // one that actually matters: being any admin is not permission to rig.
+  ok(/isOperator/.test(routerSrc), 'every route re-checks the operator list');
+  // Count only the call sites, not the helper's own definition.
+  const refuseCalls = (routerSrc.match(/=\s*refuseUnlessOperator\(req, res\)/g) || []).length;
+  const postCount = (routerSrc.match(/router\.post\s*\(/g) || []).length;
+  ok(refuseCalls === postCount,
+    `every route calls the operator gate (${postCount} routes, ${refuseCalls} guarded)`);
+  ok(!/keyMatches\(/.test(routerSrc),
+    'the key is no longer read from the request body on any route');
+  // The key the module still expects is the server's own, never a client's.
+  ok(/SERVER_KEY\s*=\s*process\.env\.FORCE_OUTCOME_KEY/.test(routerSrc),
+    'any key passed to the module is the server env value, not caller-supplied');
 }
 
 load({ ...BASE }); // leave the process env as we found it

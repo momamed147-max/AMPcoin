@@ -7,13 +7,11 @@
  *
  * Requires the server to be running with FORCE_OUTCOME_ENABLED=1.
  */
-// The key lives in .env, the same place the server reads it from. Without
-// this the suite would fall back to a placeholder and every arming call would
-// be refused - which looks exactly like the feature being broken.
+// FORCE_OUTCOME_OPERATORS must match an account that exists, or the operator
+// check refuses every call and the suite looks like the feature is broken.
 try { require('dotenv').config({ path: require('path').resolve(__dirname, '..', '.env') }); } catch (_) { /* optional */ }
 
 const API = 'http://127.0.0.1:5000';
-const KEY = process.env.FORCE_OUTCOME_KEY || '';
 const OPERATOR_ENV = String(process.env.FORCE_OUTCOME_OPERATORS || '').split(',')[0].trim();
 const OPERATOR = OPERATOR_ENV || 'iloveadoptmegngos';
 
@@ -67,7 +65,6 @@ async function wager(tok, userId) {
 }
 
 (async () => {
-  if (!KEY) { console.log('  FORCE_OUTCOME_KEY is not set - nothing to test'); process.exit(1); }
   const admin = await login(OPERATOR);
   if (!admin.token) { console.log(`  cannot log in as ${OPERATOR} - run: FORCE_OUTCOME_ENABLED=1 FORCE_OUTCOME_OPERATORS=${OPERATOR} node seedlocal.js`); process.exit(1); }
   if (admin.user.isAdmin !== true) {
@@ -81,25 +78,38 @@ async function wager(tok, userId) {
   }
   ok(admin.user.isAdmin === true, `${OPERATOR} is an admin and can reach the endpoint`);
 
-  section('the endpoint refuses without a session or the key');
+  section('the endpoint refuses without a session, and refuses non-operators');
   {
     const anon = await fetch(`${API}/api/outcome-control/arm`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ game: 'coinflip', mode: 'win', key: KEY })
+      body: JSON.stringify({ game: 'coinflip', mode: 'win' })
     });
     ok(anon.status === 401, `no session is rejected (${anon.status})`);
 
-    const noKey = await call('POST', '/api/outcome-control/arm', admin.token, { game: 'coinflip', mode: 'win', key: 'wrong' });
-    ok(noKey.status === 403, `a wrong key is refused (${noKey.status})`);
-    ok(/refused/i.test(noKey.body.error || ''), `with a vague error ("${noKey.body.error}")`);
+    // There is no key gate any more. What replaced it is the operator check,
+    // so an admin who is NOT on the operator list must still be refused -
+    // being any admin is not permission to rig.
+    const other = await login(process.env.OTHER_ADMIN || 'local-admin');
+    if (String(other.user?.robloxUsername || '').toLowerCase() !== OPERATOR) {
+      const notOp = await call('POST', '/api/outcome-control/arm', other.token, { game: 'coinflip', mode: 'win' });
+      ok(notOp.status === 403,
+        `an admin who is not an operator is refused (${notOp.status})`);
+      ok(/refused/i.test(notOp.body.error || ''),
+        `with a vague error ("${notOp.body.error}")`);
+
+      const notOpLive = await call('POST', '/api/outcome-control/live', other.token, {});
+      ok(notOpLive.status === 403, `and cannot read the live feed either (${notOpLive.status})`);
+    } else {
+      console.log('  (skipped the non-operator check: only one admin account exists)');
+    }
   }
 
   section('arming');
   {
-    const r = await call('POST', '/api/outcome-control/arm', admin.token, { game: 'coinflip', mode: 'win', key: KEY });
+    const r = await call('POST', '/api/outcome-control/arm', admin.token, { game: 'coinflip', mode: 'win' });
     ok(r.status === 200 && r.body.ok === true, `armed coinflip to win (${r.status})`);
 
-    const bad = await call('POST', '/api/outcome-control/arm', admin.token, { game: 'tetris', mode: 'win', key: KEY });
+    const bad = await call('POST', '/api/outcome-control/arm', admin.token, { game: 'tetris', mode: 'win' });
     ok(bad.status === 403, `an unknown game is refused (${bad.status})`);
   }
 
@@ -147,7 +157,7 @@ async function wager(tok, userId) {
 
   section('it is recorded in the audit log');
   {
-    const log = await call('POST', '/api/outcome-control/log', admin.token, { key: KEY, limit: 20 });
+    const log = await call('POST', '/api/outcome-control/log', admin.token, { limit: 20 });
     ok(log.status === 200 && log.body.ok === true, `the log endpoint answers (${log.status})`);
     const entries = log.body.entries || [];
     ok(entries.length > 0, `it has entries (${entries.length})`);
@@ -157,14 +167,11 @@ async function wager(tok, userId) {
       ok(Boolean(forced.at && forced.operator), 'entries are timestamped and attributed');
       ok(/forced=/.test(forced.detail || ''), `and record both fair and forced (${forced.detail})`);
     }
-
-    const noKey = await call('POST', '/api/outcome-control/log', admin.token, { key: 'nope' });
-    ok(noKey.status === 403, `the log needs the key too (${noKey.status})`);
   }
 
   section('disarming restores normal behaviour');
   {
-    const r = await call('POST', '/api/outcome-control/arm', admin.token, { game: 'coinflip', mode: 'off', key: KEY });
+    const r = await call('POST', '/api/outcome-control/arm', admin.token, { game: 'coinflip', mode: 'off' });
     ok(r.status === 200, `disarmed (${r.status})`);
 
     const op = await login('local-admin');
@@ -195,7 +202,7 @@ async function wager(tok, userId) {
     }
   }
 
-  await call('POST', '/api/outcome-control/arm', admin.token, { game: 'coinflip', mode: 'off', key: KEY });
+  await call('POST', '/api/outcome-control/arm', admin.token, { game: 'coinflip', mode: 'off' });
   console.log(`\n${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch((e) => { console.error('CRASH', e); process.exit(1); });

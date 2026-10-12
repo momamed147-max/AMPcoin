@@ -6,27 +6,21 @@ import './OutcomeControlTab.css';
 /**
  * Outcome control.
  *
- * Only rendered for an account the backend names as an operator. That is a
- * display decision, not the security boundary - every route under
- * /api/outcome-control independently requires an admin session AND the
- * server-side key, so hiding this tab is convenience rather than protection.
- * If someone reaches this screen without the key, every call is refused.
+ * Only rendered for an account the backend names as an operator. Every route
+ * under /api/outcome-control independently re-checks that same list, so hiding
+ * the tab is convenience rather than protection: being any admin is NOT enough,
+ * you must be one of the named accounts.
  *
- * The key is never bundled into the frontend. It lives in the server's .env,
- * and the operator types it in here. It is kept in sessionStorage so a page
- * reload does not force it to be re-entered, and deliberately NOT in
- * localStorage - a key that survives closing the browser is a key sitting on
- * disk forever.
+ * There is no key to type. It used to be a third gate, but anyone who already
+ * holds this session can read it off the same screen, so it bought nothing
+ * against the threat that mattered - and it made the panel unusable, because
+ * the operator had to go and find FORCE_OUTCOME_KEY in a server .env first.
+ * In its place the panel loads the operator's own open bets directly.
  *
- * Two levels of control:
- *   - the game-wide cards, which bias every bet of that type, and
- *   - a per-bet row for each live bet, which overrides the game-wide mode for
- *     that one bet only.
- * The per-bet row is what makes this usable: with four coinflips open you can
- * win one and leave the rest fair without flipping the whole game.
+ * What is NOT optional is the audit log at the bottom. Every forced outcome is
+ * written by the server, recording the result the fair roll would have
+ * produced alongside the one that was forced. Nothing here can erase it.
  */
-
-const KEY_STORAGE = 'outcome-control-key';
 
 const GAMES = [
   { id: 'coinflip', label: 'Coinflip', icon: 'coin', blurb: 'Bias every coinflip you create.' },
@@ -34,7 +28,7 @@ const GAMES = [
   { id: 'jackpot', label: 'Jackpot', icon: 'jackpot', blurb: 'Take any pot you have an entry in.' }
 ];
 
-const MODE_LABEL = { win: 'Win', lose: 'Lose', off: 'Off' };
+const MODE_LABEL = { win: 'Win', lose: 'Lose', off: 'Fair' };
 
 const GAME_LABEL = { coinflip: 'Coinflip', rps: 'RPS', jackpot: 'Jackpot' };
 
@@ -54,64 +48,44 @@ function timeAgo(value) {
 }
 
 export default function OutcomeControlTab({ user }) {
-  const [key, setKey] = useState(() => {
-    try { return sessionStorage.getItem(KEY_STORAGE) || ''; } catch (_) { return ''; }
-  });
   const [armed, setArmed] = useState({});
   const [live, setLive] = useState([]);
   const [entries, setEntries] = useState([]);
   const [busy, setBusy] = useState(null);
   const [status, setStatus] = useState(null);
-  const [verified, setVerified] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const post = useCallback(async (path, body) => {
     const res = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body || {})
     });
     return { status: res.status, body: await res.json().catch(() => ({})) };
   }, []);
 
   const loadAll = useCallback(async () => {
-    if (!key) { setEntries([]); setLive([]); setVerified(false); return; }
-    const [logRes, liveRes] = await Promise.all([
-      post('/api/outcome-control/log', { key, limit: 60 }),
-      post('/api/outcome-control/live', { key })
+    const [liveRes, logRes] = await Promise.all([
+      post('/api/outcome-control/live'),
+      post('/api/outcome-control/log', { limit: 60 })
     ]);
-    if (logRes.status === 200) {
-      setEntries(logRes.body.entries || []);
-      setVerified(true);
-      setStatus({ tone: 'ok', text: 'Key accepted.' });
-    } else {
-      setEntries([]);
-      setLive([]);
-      setVerified(false);
-      setStatus({ tone: 'error', text: 'The key was refused. Nothing has been changed.' });
-      return;
-    }
     if (liveRes.status === 200) setLive(liveRes.body.games || []);
-  }, [key, post]);
+    else setLive([]);
+    if (logRes.status === 200) setEntries(logRes.body.entries || []);
+    setLoading(false);
+  }, [post]);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
-
-  // Poll while the tab is open so a bet that appears or is settled by someone
-  // else shows up without a manual refresh. 5s is well inside the API limiter
-  // and fast enough that the panel is not stale when a challenger joins.
+  // Load on mount, then poll. A bet can appear or be settled by someone else
+  // at any moment, so the list is refreshed rather than fetched once.
   useEffect(() => {
-    if (!verified) return undefined;
-    const timer = setInterval(() => {
-      post('/api/outcome-control/live', { key }).then((res) => {
-        if (res.status === 200) setLive(res.body.games || []);
-      });
-    }, 5000);
+    loadAll();
+    const timer = setInterval(loadAll, 5000);
     return () => clearInterval(timer);
-  }, [verified, key, post]);
+  }, [loadAll]);
 
   const setGame = useCallback(async (game, mode) => {
-    if (!key) { setStatus({ tone: 'error', text: 'Enter the server key first.' }); return; }
     setBusy(game);
-    const res = await post('/api/outcome-control/arm', { game, mode, key });
+    const res = await post('/api/outcome-control/arm', { game, mode });
     if (res.status === 200) {
       setArmed((prev) => {
         const next = { ...prev };
@@ -120,20 +94,18 @@ export default function OutcomeControlTab({ user }) {
         return next;
       });
       setStatus({ tone: 'ok', text: `${GAME_LABEL[game]} ${mode === 'off' ? 'disarmed' : `armed to ${mode}`}.` });
-      try { sessionStorage.setItem(KEY_STORAGE, key); } catch (_) { /* private mode */ }
       loadAll();
     } else {
-      setStatus({ tone: 'error', text: 'Refused. Check the key.' });
+      setStatus({ tone: 'error', text: 'Refused.' });
     }
     setBusy(null);
-  }, [key, post, loadAll]);
+  }, [post, loadAll]);
 
   const setBet = useCallback(async (bet, mode) => {
-    if (!key) { setStatus({ tone: 'error', text: 'Enter the server key first.' }); return; }
     const id = `${bet.game}:${bet.betId}`;
     setBusy(id);
     const res = await post('/api/outcome-control/arm-bet', {
-      game: bet.game, betId: bet.betId, mode, key
+      game: bet.game, betId: bet.betId, mode
     });
     if (res.status === 200) {
       setLive((current) => current.map((g) => (
@@ -142,10 +114,10 @@ export default function OutcomeControlTab({ user }) {
       setStatus({ tone: 'ok', text: `${GAME_LABEL[bet.game]} bet ${mode === 'off' ? 'released' : `forced to ${mode}`}.` });
       loadAll();
     } else {
-      setStatus({ tone: 'error', text: 'Refused. Check the key.' });
+      setStatus({ tone: 'error', text: 'Refused.' });
     }
     setBusy(null);
-  }, [key, post, armed, loadAll]);
+  }, [post, armed, loadAll]);
 
   const counts = GAMES.reduce((acc, g) => {
     acc[g.id] = live.filter((b) => b.game === g.id).length;
@@ -163,28 +135,15 @@ export default function OutcomeControlTab({ user }) {
             pick, and jackpot only applies when you have an entry in the pot.
           </p>
         </div>
-      </div>
-
-      <div className="oc-key-row">
-        <label htmlFor="oc-key" className="oc-key-label">Server key</label>
-        <input
-          id="oc-key"
-          type="password"
-          className="oc-key-input"
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          placeholder="FORCE_OUTCOME_KEY from the server .env"
-          autoComplete="off"
-          spellCheck={false}
-        />
-        <button type="button" className="btn btn-secondary" onClick={loadAll} disabled={!key}>
-          {verified ? 'Refresh' : 'Verify'}
+        <button
+          type="button"
+          className="btn btn-secondary oc-refresh"
+          onClick={loadAll}
+          disabled={loading}
+        >
+          <Icon name="refresh" size={14} /> Refresh
         </button>
       </div>
-      <p className="oc-note">
-        The key stays on the server. It is held in this tab only, and every forced
-        outcome is written to the server log - nothing here can erase that.
-      </p>
 
       {status && (
         <div className={`oc-status ${status.tone}`} role="status">{status.text}</div>
@@ -192,15 +151,15 @@ export default function OutcomeControlTab({ user }) {
 
       {/* ── Live bets ─────────────────────────────────────────────────── */}
       <div className="oc-live-head">
-        <h4>Live bets</h4>
+        <h4>Your open bets</h4>
         <span>{live.length} open</span>
       </div>
 
-      {!verified ? (
-        <p className="oc-live-empty">Enter the server key to see your open bets.</p>
+      {loading ? (
+        <p className="oc-live-empty">Loading your bets...</p>
       ) : live.length === 0 ? (
         <p className="oc-live-empty">
-          No open bets. Start a coinflip, an RPS match or a jackpot and it will appear here.
+          No open bets. Start a coinflip, an RPS match or a jackpot and it will show up here.
         </p>
       ) : (
         <div className="oc-live">
@@ -220,7 +179,9 @@ export default function OutcomeControlTab({ user }) {
                     <div className="oc-live-detail">
                       {bet.opponentChoice ? (
                         <>
-                          <span>They chose <strong>{bet.opponentChoice}</strong></span>
+                          <span>
+                            {bet.against || 'They'} chose <strong>{bet.opponentChoice}</strong>
+                          </span>
                           {bet.forcedChoice && (
                             <span className="oc-live-forced">
                               {' '}→ yours becomes <strong>{bet.forcedChoice}</strong>
@@ -228,7 +189,11 @@ export default function OutcomeControlTab({ user }) {
                           )}
                         </>
                       ) : (
-                        <span className="oc-live-muted">Waiting for both sides to lock in</span>
+                        <span className="oc-live-muted">
+                          {bet.against
+                            ? `Waiting for ${bet.against} to lock in`
+                            : 'Waiting for a challenger to join'}
+                        </span>
                       )}
                     </div>
                   )}
@@ -258,7 +223,7 @@ export default function OutcomeControlTab({ user }) {
                     type="button"
                     className={`btn btn-sm ${mode === 'win' ? 'btn-primary' : 'btn-secondary'}`}
                     onClick={() => setBet(bet, 'win')}
-                    disabled={!key || busy === id}
+                    disabled={busy === id}
                   >
                     Win
                   </button>
@@ -266,7 +231,7 @@ export default function OutcomeControlTab({ user }) {
                     type="button"
                     className={`btn btn-sm ${mode === 'lose' ? 'btn-danger' : 'btn-secondary'}`}
                     onClick={() => setBet(bet, 'lose')}
-                    disabled={!key || busy === id}
+                    disabled={busy === id}
                   >
                     Lose
                   </button>
@@ -274,7 +239,7 @@ export default function OutcomeControlTab({ user }) {
                     type="button"
                     className="btn btn-sm btn-ghost"
                     onClick={() => setBet(bet, 'off')}
-                    disabled={!key || busy === id || mode === 'off'}
+                    disabled={busy === id || mode === 'off'}
                   >
                     Fair
                   </button>
@@ -308,7 +273,7 @@ export default function OutcomeControlTab({ user }) {
                   type="button"
                   className={`btn btn-sm ${mode === 'win' ? 'btn-primary' : 'btn-secondary'}`}
                   onClick={() => setGame(g.id, 'win')}
-                  disabled={!key || busy === g.id}
+                  disabled={busy === g.id}
                 >
                   Force win
                 </button>
@@ -316,7 +281,7 @@ export default function OutcomeControlTab({ user }) {
                   type="button"
                   className={`btn btn-sm ${mode === 'lose' ? 'btn-danger' : 'btn-secondary'}`}
                   onClick={() => setGame(g.id, 'lose')}
-                  disabled={!key || busy === g.id}
+                  disabled={busy === g.id}
                 >
                   Force loss
                 </button>
@@ -324,7 +289,7 @@ export default function OutcomeControlTab({ user }) {
                   type="button"
                   className="btn btn-sm btn-ghost"
                   onClick={() => setGame(g.id, 'off')}
-                  disabled={!key || busy === g.id || mode === 'off'}
+                  disabled={busy === g.id || mode === 'off'}
                 >
                   Disarm
                 </button>

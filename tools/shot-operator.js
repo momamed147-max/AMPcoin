@@ -61,28 +61,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   console.log(`  outcome tab: ${tabInfo}`);
   await sleep(2500);
 
-  // Type the key so the live feed actually loads. It is read from the server
-  // .env here rather than bundled, which is the whole point of the design -
-  // this is a local screenshot convenience and nothing else.
-  const keyFromEnv = (() => {
-    try {
-      const env = fs.readFileSync(path.resolve(__dirname, '..', '.env'), 'utf8');
-      const m = env.match(/^\s*FORCE_OUTCOME_KEY\s*=\s*(.*)\s*$/m);
-      return m ? m[1].replace(/^["']|["']$/g, '') : '';
-    } catch (_) { return ''; }
-  })();
-
-  if (keyFromEnv) {
-    await page.type('#oc-key', keyFromEnv, { delay: 5 });
-    await page.evaluate(() => {
-      const btn = Array.from(document.querySelectorAll('button'))
-        .find((b) => /^(verify|refresh)$/i.test((b.textContent || '').trim()));
-      if (btn) btn.click();
-    });
-    await sleep(2500);
-  } else {
-    console.log('  no FORCE_OUTCOME_KEY in .env - live feed will stay empty');
-  }
+  // No key to type any more - the panel loads the operator's own bets on
+  // mount. Just wait for the list to arrive.
+  await sleep(2500);
 
   const info = await page.evaluate(() => ({
     tabs: Array.from(document.querySelectorAll('[role="tab"], .ap-tab, .admin-tab'))
