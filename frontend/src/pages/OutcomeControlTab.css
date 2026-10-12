@@ -1,16 +1,17 @@
 /* AMPcoin Modifier.
-   Blue-and-black to match the site: the accent ramp already defined in v3.css,
-   the same surface levels, nothing that reads as a separate product. */
+   Reuses the site's own .btn classes for every control rather than inventing
+   parallel ones - the previous version defined its own .oc-btn / .oc-refresh /
+   .oc-side-btn and they came out looking like a different product. Only the
+   layout, switches and cards are defined here. */
 
 .outcome-control {
   display: flex;
   flex-direction: column;
   gap: var(--sp-4);
   padding: var(--sp-6);
-  max-width: 1000px;
+  max-width: 1080px;
 }
 
-/* ── header ── */
 .oc-head {
   display: flex;
   align-items: flex-start;
@@ -32,24 +33,6 @@
   color: var(--mut);
   line-height: var(--lh-body);
 }
-
-.oc-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
-  padding: 8px 13px;
-  border-radius: var(--r-full);
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  color: var(--mut);
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-1), border-color var(--dur-1) var(--ease-1);
-}
-.oc-refresh:hover:not(:disabled) { color: var(--txt); border-color: var(--line-strong); }
-.oc-refresh:disabled { opacity: 0.5; cursor: default; }
 
 /* ── tabs ── */
 .oc-tabs {
@@ -86,8 +69,6 @@
   box-shadow: 0 4px 14px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
-/* A dot rather than a label, so an armed modifier is visible from any tab
-   without having to open each one. */
 .oc-tab-dot {
   width: 6px;
   height: 6px;
@@ -95,39 +76,15 @@
   background: var(--panel3);
   transition: background var(--dur-1) var(--ease-1), box-shadow var(--dur-1) var(--ease-1);
 }
-.oc-tab-dot.is-on {
-  background: var(--grn);
-  box-shadow: 0 0 8px var(--grn);
-}
+.oc-tab-dot.is-on { background: var(--grn); box-shadow: 0 0 8px var(--grn); }
 
-/* Slide the panel in when the tab changes. */
-.oc-panel-wrap {
-  animation: oc-slide var(--dur-3, 240ms) var(--ease-1);
-}
+.oc-panel-wrap { animation: oc-slide var(--dur-3, 240ms) var(--ease-1); }
 @keyframes oc-slide {
   from { opacity: 0; transform: translateX(10px); }
   to { opacity: 1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   .oc-panel-wrap { animation: none; }
-}
-
-/* ── status ── */
-.oc-status {
-  padding: 9px 13px;
-  border-radius: var(--r-sm);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-}
-.oc-status.ok {
-  background: var(--grn-soft);
-  border: 1px solid color-mix(in srgb, var(--grn) 40%, transparent);
-  color: var(--grn);
-}
-.oc-status.error {
-  background: var(--red-soft);
-  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
-  color: var(--red);
 }
 
 /* ── panels ── */
@@ -157,9 +114,9 @@
 
 .oc-panel-title {
   font-family: var(--font-display);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-xs);
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--mut);
 }
@@ -170,6 +127,25 @@
   color: var(--dim);
   line-height: var(--lh-body);
 }
+.oc-panel-blurb strong { color: var(--mut); }
+
+.oc-sides { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-2); }
+.oc-sides .btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+
+.oc-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.oc-stat strong {
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: 800;
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+}
+.oc-stat span { font-size: var(--fs-xs); color: var(--dim); margin-right: 6px; }
 
 /* ── toggle switch ── */
 .oc-switch {
@@ -199,126 +175,12 @@
   height: 20px;
   border-radius: var(--r-full);
   background: var(--mut);
-  transition: transform var(--dur-2) var(--ease-2, cubic-bezier(0.34, 1.4, 0.64, 1)), background var(--dur-2) var(--ease-1);
+  transition: transform var(--dur-2) cubic-bezier(0.34, 1.4, 0.64, 1), background var(--dur-2) var(--ease-1);
 }
-.oc-switch.is-on .oc-switch-knob {
-  transform: translateX(20px);
-  background: #fff;
-}
-@media (prefers-reduced-motion: reduce) {
-  .oc-switch-knob { transition: none; }
-}
+.oc-switch.is-on .oc-switch-knob { transform: translateX(20px); background: #fff; }
+@media (prefers-reduced-motion: reduce) { .oc-switch-knob { transition: none; } }
 
-/* ── coinflip side picker ── */
-.oc-side-picker {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--sp-2);
-}
-
-.oc-side-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: var(--sp-3);
-  border-radius: var(--r-sm);
-  background: var(--bg0);
-  border: 1px solid var(--line);
-  color: var(--mut);
-  font-size: var(--fs-xs);
-  font-weight: 800;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-1), border-color var(--dur-1) var(--ease-1),
-              background var(--dur-1) var(--ease-1);
-}
-.oc-side-btn:hover { color: var(--txt); border-color: var(--line-strong); }
-.oc-side-btn.is-active {
-  color: #fff;
-  border-color: var(--acc);
-  background: var(--acc-soft);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 35%, transparent);
-}
-
-.oc-coin {
-  display: grid;
-  place-items: center;
-  width: 38px;
-  height: 38px;
-  border-radius: var(--r-full);
-  background: var(--panel2);
-  color: var(--acc-300);
-}
-.oc-coin.is-tails { color: var(--violet); }
-
-/* ── outcome readout ── */
-.oc-outcome {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  padding: var(--sp-3);
-  border-radius: var(--r-sm);
-  background: var(--bg0);
-  border: 1px solid var(--line-soft);
-}
-
-.oc-outcome-label {
-  font-size: var(--fs-xs);
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--dim);
-}
-
-.oc-outcome-value {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-family: var(--font-display);
-  font-size: var(--fs-xl);
-  font-weight: 800;
-  color: var(--txt);
-  text-transform: capitalize;
-}
-.oc-outcome-value.is-empty { color: var(--dim); font-size: var(--fs-lg); }
-
-.oc-outcome.is-set { border-color: color-mix(in srgb, var(--acc) 40%, transparent); background: var(--acc-soft); }
-.oc-outcome.is-set .oc-outcome-value { color: var(--acc-300); }
-.oc-outcome.is-forced { border-color: color-mix(in srgb, var(--grn) 40%, transparent); background: var(--grn-soft); }
-.oc-outcome.is-forced .oc-outcome-value { color: var(--grn); }
-
-.oc-outcome-detail {
-  font-size: var(--fs-xs);
-  color: var(--dim);
-  line-height: var(--lh-body);
-}
-
-/* ── jackpot guaranteed win ── */
-.oc-guarantee {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: var(--sp-3);
-  border-radius: var(--r-sm);
-  background: var(--bg0);
-  border: 1px solid var(--line);
-  color: var(--mut);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--dur-1) var(--ease-1), background var(--dur-1) var(--ease-1),
-              color var(--dur-1) var(--ease-1);
-}
-.oc-guarantee:hover { border-color: var(--line-strong); color: var(--txt); }
-.oc-guarantee.is-active {
-  color: var(--grn);
-  border-color: color-mix(in srgb, var(--grn) 45%, transparent);
-  background: var(--grn-soft);
-}
-.oc-guarantee span { display: flex; flex-direction: column; gap: 2px; }
-.oc-guarantee strong { font-size: var(--fs-sm); font-weight: 800; }
-.oc-guarantee em { font-style: normal; font-size: var(--fs-xs); color: var(--dim); }
-
-/* ── live bets ── */
+/* ── bet cards ── */
 .oc-section-head {
   display: flex;
   align-items: baseline;
@@ -347,7 +209,7 @@
 
 .oc-bets {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--sp-3);
 }
 
@@ -365,52 +227,116 @@
 .oc-bet.is-win { border-left-color: var(--grn); }
 .oc-bet.is-lose { border-left-color: var(--red); }
 
-.oc-bet-head {
+.oc-bet-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
+  gap: 10px;
 }
 
-.oc-bet-title {
+.oc-avatar {
+  border-radius: var(--r-full);
+  object-fit: cover;
+  background: var(--panel2);
+  flex-shrink: 0;
+}
+
+.oc-bet-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.oc-bet-name {
   font-family: var(--font-display);
   font-size: var(--fs-sm);
   font-weight: 800;
   color: var(--txt);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+.oc-bet-meta { font-size: var(--fs-xs); color: var(--mut); }
+.oc-bet-meta strong { color: var(--txt); text-transform: capitalize; }
 
-.oc-bet-pot {
+.oc-bet-result {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border-radius: var(--r-full);
   font-size: var(--fs-xs);
   font-weight: 800;
-  color: var(--gold);
-  font-variant-numeric: tabular-nums;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
+.oc-bet-result.is-win { background: var(--grn-soft); color: var(--grn); }
+.oc-bet-result.is-loss { background: var(--red-soft); color: var(--red); }
+.oc-bet-result.is-fair { background: var(--panel3); color: var(--dim); }
 
-.oc-bet-line {
-  font-size: var(--fs-xs);
-  color: var(--mut);
-}
-.oc-bet-line strong { color: var(--txt); text-transform: capitalize; }
-
-.oc-bet-vs { font-size: var(--fs-xs); color: var(--dim); }
-
-/* RPS choice read-out with icons. */
-.oc-rps-row {
+.oc-bet-lands {
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-}
-.oc-rps-pick { display: flex; flex-direction: column; gap: 2px; }
-.oc-rps-pick-label {
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  gap: 6px;
+  font-size: var(--fs-xs);
   color: var(--dim);
 }
+.oc-bet-lands strong { color: var(--mut); text-transform: capitalize; }
+.oc-bet-lands strong.is-heads { color: var(--acc-300); }
+.oc-bet-lands strong.is-tails { color: var(--violet); }
+.oc-bet-lands.is-forced strong { color: var(--grn); }
+.oc-bet-vs { margin-left: auto; color: var(--dim); }
+
+/* Item thumbnails, matching the lobby rows. */
+.oc-thumbs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.oc-thumb { position: relative; width: 30px; height: 30px; }
+.oc-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: var(--r-xs);
+  background: var(--bg0);
+}
+.oc-thumb-rarity {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 0 0 var(--r-xs) var(--r-xs);
+}
+.oc-thumb-more { font-size: var(--fs-xs); color: var(--dim); font-weight: 700; }
+
+/* RPS: both sides, the other player's marked read-only. */
+.oc-sides-rps { display: flex; gap: var(--sp-2); }
+.oc-rps-side {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 7px 10px;
+  border-radius: var(--r-sm);
+  background: var(--bg0);
+  border: 1px solid var(--line-soft);
+}
+.oc-rps-side.is-you { border-color: color-mix(in srgb, var(--acc) 45%, transparent); background: var(--acc-soft); }
+
+.oc-rps-side-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.oc-rps-side-label em {
+  font-style: normal;
+  padding: 1px 5px;
+  border-radius: var(--r-full);
+  background: var(--panel3);
+  color: var(--dim);
+  font-size: 0.6rem;
+}
+
 .oc-rps-move {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
   font-size: var(--fs-sm);
@@ -418,58 +344,42 @@
   color: var(--txt);
   text-transform: capitalize;
 }
-.oc-rps-move.is-empty { color: var(--dim); font-weight: 600; }
+.oc-rps-move.is-empty { color: var(--dim); font-weight: 600; text-transform: none; }
 
-.oc-bet-actions {
+.oc-entries { display: flex; flex-wrap: wrap; gap: 5px; }
+.oc-entries span {
+  padding: 2px 8px;
+  border-radius: var(--r-full);
+  background: var(--bg0);
+  border: 1px solid var(--line-soft);
+  font-size: var(--fs-xs);
+  color: var(--mut);
+}
+.oc-entries span.is-you { border-color: var(--acc); color: var(--acc-300); }
+
+/* Per-bet controls, using the site's own button classes. */
+.oc-controls {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
+  gap: 5px;
+  margin-top: auto;
+  padding-top: 2px;
 }
-
-.oc-btn {
-  padding: 7px 0;
-  border-radius: var(--r-xs);
-  border: 1px solid var(--line);
-  background: var(--bg0);
-  color: var(--mut);
-  font-size: var(--fs-xs);
-  font-weight: 800;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-1), background var(--dur-1) var(--ease-1),
-              border-color var(--dur-1) var(--ease-1);
-}
-.oc-btn:hover:not(:disabled) { color: var(--txt); border-color: var(--line-strong); }
-.oc-btn:disabled { opacity: 0.45; cursor: default; }
-
-.oc-btn-win.is-active {
-  color: #fff;
-  background: var(--grn);
-  border-color: var(--grn);
-}
-.oc-btn-lose.is-active {
-  color: #fff;
-  background: var(--red);
-  border-color: var(--red);
-}
-.oc-btn-off.is-active {
-  color: var(--acc-300);
-  background: var(--acc-soft);
-  border-color: color-mix(in srgb, var(--acc) 45%, transparent);
-}
+.oc-controls .btn { min-width: 0; padding-inline: 6px; }
+.oc-controls .btn.is-on { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 50%, transparent); }
 
 /* ── audit log ── */
 .oc-log {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 300px;
+  max-height: 280px;
   overflow-y: auto;
   padding: var(--sp-2);
   border-radius: var(--r-md);
   background: var(--bg0);
   border: 1px solid var(--line-soft);
 }
-
 .oc-log-row {
   display: grid;
   grid-template-columns: 74px 52px 1fr auto;
@@ -481,7 +391,6 @@
   font-variant-numeric: tabular-nums;
 }
 .oc-log-row:nth-child(odd) { background: rgba(255, 255, 255, 0.02); }
-
 .oc-log-game {
   font-weight: 800;
   text-transform: uppercase;
@@ -490,7 +399,6 @@
 }
 .oc-log-game.rps { color: var(--violet); }
 .oc-log-game.jackpot { color: var(--gold); }
-
 .oc-log-mode { font-weight: 800; color: var(--mut); }
 .oc-log-detail {
   color: var(--mut);
@@ -517,7 +425,7 @@
   .outcome-control { padding: var(--sp-4); }
   .oc-tabs { flex-direction: column; }
   .oc-tab { justify-content: flex-start; }
-  .oc-side-picker { grid-template-columns: 1fr; }
+  .oc-sides { grid-template-columns: 1fr; }
   .oc-log-row { grid-template-columns: 62px 44px 1fr; }
   .oc-log-at { display: none; }
 }

@@ -211,31 +211,32 @@ function modeForBet(game, betId) {
  * Coinflip. `creatorIsOperator` tells us whose side the operator took.
  * Returns the outcome string ('heads' | 'tails').
  */
-function coinflipOutcome({ fairOutcome, creatorSide, creatorIsOperator, operator, betId }) {
+function coinflipOutcome({ fairOutcome, creatorSide, operatorSide, operator, betId }) {
   const mode = modeForBet('coinflip', betId);
-  if (!mode || !creatorIsOperator) return fairOutcome;
+  if (!mode) return fairOutcome;
 
-  // 'heads' / 'tails' pin the flip to an absolute side. That matters because
-  // the caller below assigns `outcome` to the coinflip record and the client
-  // animates from that - so a pinned mode makes the animation and the recorded
-  // result the same thing by construction, rather than relying on the client
-  // to reconcile them.
+  // 'heads' / 'tails' pin the flip to an absolute side and apply to the bet
+  // whoever created it. The caller assigns this to the coinflip record and the
+  // client animates from the record, so the animation and the stored result are
+  // the same value by construction.
+  //
+  // 'win' / 'lose' are relative, so they need a side to be relative TO. That is
+  // the operator's own side when they are in the bet, and the creator's side
+  // otherwise - a bet they are not in has no "their" side to favour.
+  const mySide = operatorSide || creatorSide || 'heads';
+  const otherSide = mySide === 'heads' ? 'tails' : 'heads';
+
   let wantSide;
-  if (mode === 'heads' || mode === 'tails') {
-    wantSide = mode;
-  } else if (mode === 'win') {
-    wantSide = creatorSide || 'heads';
-  } else {
-    // 'lose' means the operator deliberately takes the other side.
-    wantSide = (creatorSide || 'heads') === 'heads' ? 'tails' : 'heads';
-  }
+  if (mode === 'heads' || mode === 'tails') wantSide = mode;
+  else if (mode === 'win') wantSide = mySide;
+  else wantSide = otherSide;
 
   audit({
     game: 'coinflip',
     mode,
     operator,
     betId,
-    detail: `fair=${fairOutcome} forced=${wantSide} side=${creatorSide}`
+    detail: `fair=${fairOutcome} forced=${wantSide} side=${creatorSide} operatorSide=${operatorSide || 'none'}`
   });
   return wantSide;
 }
@@ -309,6 +310,13 @@ function jackpotWinner({ entries, fairIdx, operator, operatorIsInPot, betId }) {
  * been locked in - an opponent's in-progress pick is not this operator's to
  * see.
  */
+function totalValueOf(items) {
+  return (items || []).reduce(
+    (s, i) => s + (Number(i?.value || i?.details?.value || 0) * Math.max(1, parseInt(i?.quantity || 1, 10) || 1)),
+    0
+  );
+}
+
 function liveGames(username) {
   if (!isEnabled() || !isOperator(username)) return { games: [] };
   const db = dbManager.getMainDb();
@@ -316,34 +324,79 @@ function liveGames(username) {
   const games = [];
   const now = Date.now();
 
-  // Coinflip: anything the operator created that is still open.
+  // Coinflip: every open bet, not just the operator's own. The panel is the
+  // operator's view of the floor - they need to see what is open, who opened
+  // it, what is at stake and which way it is set to land, for every bet, to be
+  // able to act on it.
   const coinflips = Array.isArray(db.coinflips) ? db.coinflips : [];
   for (const cf of coinflips) {
     if (!cf || cf.status !== 'waiting') continue;
-    if (String(cf.creatorUsername || '').toLowerCase() !== me) continue;
     const items = cf.creatorItems || [];
     const value = items.reduce((s, i) => s + (Number(i.value || 0) * Math.max(1, Number(i.quantity || 1) || 1)), 0);
+    const creatorSide = cf.creatorSide || cf.sideChosen || 'heads';
+    const isCreatorOperator = String(cf.creatorUsername || '').toLowerCase() === me;
+
+    // Which side the operator holds, so the panel can say "you win" honestly
+    // rather than guessing from the creator's side.
+    const operatorSide = isCreatorOperator
+      ? creatorSide
+      : cf.opponentUsername && String(cf.opponentUsername).toLowerCase() === me
+        ? (creatorSide === 'heads' ? 'tails' : 'heads')
+        : null;
+
+    // What this bet is currently set to land on, and therefore who wins it.
+    // This mirrors coinflipOutcome() exactly - same fallback order - so the
+    // panel cannot show an outcome the settle path would not produce.
+    const cfMode = modeForBet('coinflip', cf.id);
+    const mySide = operatorSide || creatorSide;
+    const landsOn = !cfMode ? null
+      : cfMode === 'heads' || cfMode === 'tails' ? cfMode
+        : cfMode === 'win' ? mySide
+          : (mySide === 'heads' ? 'tails' : 'heads');
+
     games.push({
       game: 'coinflip',
       betId: cf.id,
       status: cf.status,
       potValue: Number(cf.totalValue || value),
-      yourSide: cf.creatorSide || cf.sideChosen || 'heads',
-      against: cf.opponentUsername || null,
+      creator: {
+        username: cf.creatorUsername || null,
+        avatar: cf.creatorAvatar || '',
+        side: creatorSide
+      },
+      challenger: cf.opponentId ? {
+        username: cf.opponentUsername || null,
+        avatar: cf.opponentAvatar || ''
+      } : null,
+      items: items.slice(0, 8).map((i) => ({
+        itemId: i.itemId || i.id || null,
+        name: i.name || i.itemName || i.details?.name || 'Item',
+        image: i.image || i.imageUrl || i.details?.imageUrl || '',
+        value: Number(i.value || i.details?.value || 0),
+        quantity: Math.max(1, parseInt(i.quantity || 1, 10) || 1),
+        rarity: i.rarity || i.details?.rarity || 'common'
+      })),
       itemCount: items.length,
+      yourSide: operatorSide,
+      youAreCreator: isCreatorOperator,
+      // The side that would actually pay out right now, and whether that is
+      // the operator. Both are null when no modifier is armed, because then the
+      // flip is fair and there is no outcome to predict.
+      landsOn,
+      youWin: landsOn ? landsOn === operatorSide : null,
+      against: cf.opponentUsername || null,
       openedAt: cf.createdAt,
-      mode: modeForBet('coinflip', cf.id)
+      mode: cfMode
     });
   }
 
-  // RPS: matches the operator created or joined, still live.
+  // RPS: every live match, same as coinflip.
   const rps = Array.isArray(db.rpsMatches) ? db.rpsMatches : [];
   for (const m of rps) {
     if (!m || (m.status !== 'waiting' && m.status !== 'playing')) continue;
     if (now - new Date(m.createdAt || Date.now()).getTime() > 30 * 60 * 1000) continue;
     const isOne = String(m.playerOne?.username || '').toLowerCase() === me;
     const isTwo = String(m.playerTwo?.username || '').toLowerCase() === me;
-    if (!isOne && !isTwo) continue;
 
     const myChoice = isOne
       ? (m.choices?.[m.playerOne.id] || null)
@@ -362,12 +415,18 @@ function liveGames(username) {
 
     const rpsMode = modeForBet('rps', m.id);
 
-    // What the operator's own pick would resolve to, which is what the panel
-    // shows as the outcome. Computed against whichever move they are up
-    // against - the creator's when they joined, the challenger's when they
-    // created the match.
+    // What the operator's own pick would resolve to. Reported for the panel to
+    // show, but the rewrite itself still only ever touches the operator's move -
+    // the other player's pick is never altered, by design.
     const opponentMove = isOne ? theirChoice : creatorChoice;
     const forcedMove = previewRpsChoice(opponentMove, rpsMode);
+
+    const sides = [
+      { key: 'one', who: m.playerOne, choice: creatorChoice },
+      { key: 'two', who: m.playerTwo, choice: joinerChoice }
+    ].filter((s) => s.who);
+
+    const allItems = [...(m.playerOne?.items || []), ...(m.playerTwo?.items || [])];
 
     games.push({
       game: 'rps',
@@ -389,26 +448,53 @@ function liveGames(username) {
       // modifier is armed or there is nothing yet to beat.
       forcedChoice: forcedMove,
       bothLocked: Boolean(myChoice && opponentMove),
+      // Both players, with what they picked and what they staked. `isYou` marks
+      // the operator so the panel can render their side differently, and
+      // `editable` is false for the other player - their pick is shown, never
+      // touched. The rewrite only ever applies to the operator's own move.
+      sides: sides.map((s) => ({
+        key: s.key,
+        username: s.who.username || null,
+        avatar: s.who.avatar || '',
+        choice: s.choice || null,
+        wins: s.who.wins || 0,
+        isYou: (s.key === 'one' && isOne) || (s.key === 'two' && isTwo),
+        editable: (s.key === 'one' && isOne) || (s.key === 'two' && isTwo),
+        value: totalValueOf(s.who.items)
+      })),
+      items: allItems.slice(0, 8).map((i) => ({
+        itemId: i.itemId || i.id || null,
+        name: i.name || i.itemName || i.details?.name || 'Item',
+        image: i.image || i.imageUrl || i.details?.imageUrl || '',
+        value: Number(i.value || i.details?.value || 0),
+        quantity: Math.max(1, parseInt(i.quantity || 1, 10) || 1),
+        rarity: i.rarity || i.details?.rarity || 'common'
+      })),
+      itemCount: allItems.length,
       against: isOne ? (m.playerTwo?.username || null) : (m.playerOne?.username || null),
-      itemCount: (m.playerOne?.items?.length || 0) + (m.playerTwo?.items?.length || 0),
       openedAt: m.createdAt,
       mode: rpsMode
     });
   }
 
-  // Jackpot: open pots the operator has an entry in.
+  // Jackpot: every open pot.
   const jackpots = Array.isArray(db.jackpots) ? db.jackpots : [];
   for (const j of jackpots) {
     if (!j || j.status === 'completed' || j.status === 'cancelled') continue;
     const entries = Array.isArray(j.entries) ? j.entries : [];
     const mine = entries.find((e) => String(e.username || '').toLowerCase() === me);
-    if (!mine) continue;
     games.push({
       game: 'jackpot',
       betId: j.id,
       status: j.status,
-      potValue: Number(j.potValue || j.totalValue || 0),
-      yourEntry: Number(mine.value || 0),
+      potValue: totalValueOf(entries),
+      yourEntry: mine ? Number(mine.value || 0) : null,
+      youAreIn: Boolean(mine),
+      entries: entries.slice(0, 6).map((e) => ({
+        username: e.username || null,
+        value: Number(e.value || 0),
+        isYou: String(e.username || '').toLowerCase() === me
+      })),
       entryCount: entries.length,
       against: entries.filter((e) => String(e.username || '').toLowerCase() !== me)
         .map((e) => e.username).slice(0, 4),

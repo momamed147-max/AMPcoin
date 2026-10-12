@@ -75,7 +75,7 @@ console.log('\n=== while disabled, the games behave exactly as before ===\n');
   // Coinflip must pass the fair outcome through untouched.
   for (const fair of ['heads', 'tails']) {
     for (const side of ['heads', 'tails']) {
-      const got = off.coinflipOutcome({ fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'x' });
+      const got = off.coinflipOutcome({ fairOutcome: fair, creatorSide: side, operatorSide: side, operator: 'iloveadoptmegngos', betId: 'x' });
       ok(got === fair, `coinflip passthrough: fair=${fair} side=${side} -> ${got}`);
     }
   }
@@ -128,22 +128,35 @@ console.log('\n=== armed: it does what it says ===\n');
   const fo = load({ ...BASE, FORCE_OUTCOME_ENABLED: '1', FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos', FORCE_OUTCOME_KEY: 'k' });
   ok(fo.arm({ username: 'iloveadoptmegngos', game: 'coinflip', mode: 'win', key: 'k' }).ok === true, 'coinflip armed to win');
 
-  // 'win' means the operator's chosen side always comes up.
+  // 'win' means the operator's own side always comes up. This holds whether
+  // they created the bet or joined it - operatorSide says which side they hold.
   for (const side of ['heads', 'tails']) {
     for (const fair of ['heads', 'tails']) {
-      const got = fo.coinflipOutcome({ fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'b1' });
-      ok(got === side, `coinflip win: operator picked ${side}, fair was ${fair} -> ${got}`);
+      const got = fo.coinflipOutcome({ fairOutcome: fair, creatorSide: side, operatorSide: side, operator: 'iloveadoptmegngos', betId: 'b1' });
+      ok(got === side, `coinflip win: operator on ${side}, fair was ${fair} -> ${got}`);
     }
   }
 
-  // A non-operator creator is never affected, even with the game armed.
-  for (const fair of ['heads', 'tails']) {
-    const got = fo.coinflipOutcome({ fairOutcome: fair, creatorSide: 'heads', creatorIsOperator: false, operator: 'someone-else', betId: 'b2' });
-    ok(got === fair, `coinflip leaves a non-operator alone (fair=${fair} -> ${got})`);
+  // Joined a bet, so the operator holds the OTHER side. 'win' must still mean
+  // the operator's side, not the creator's.
+  {
+    const got = fo.coinflipOutcome({
+      fairOutcome: 'heads', creatorSide: 'heads', operatorSide: 'tails', operator: 'iloveadoptmegngos', betId: 'b-joined'
+    });
+    ok(got === 'tails', `coinflip win on a joined bet favours the operator's side (got ${got})`);
+  }
+
+  // The operator not being in the bet at all: there is no "their" side to
+  // favour, so win/lose are measured against the creator's.
+  {
+    const got = fo.coinflipOutcome({
+      fairOutcome: 'tails', creatorSide: 'heads', operatorSide: null, operator: 'iloveadoptmegngos', betId: 'b-outside'
+    });
+    ok(got === 'heads', `win on a bet the operator is not in uses the creator's side (got ${got})`);
   }
 
   ok(fo.arm({ username: 'iloveadoptmegngos', game: 'coinflip', mode: 'off', key: 'k' }).ok === true, 'disarmed again');
-  const after = fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'b3' });
+  const after = fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', operatorSide: 'heads', operator: 'iloveadoptmegngos', betId: 'b3' });
   ok(after === 'tails', 'and once disarmed it is a passthrough again');
 }
 
@@ -206,7 +219,7 @@ console.log('\n=== every forced outcome is logged ===\n');
   fo.arm({ username: 'iloveadoptmegngos', game: 'rps', mode: 'win', key: 'k' });
   fo.arm({ username: 'iloveadoptmegngos', game: 'jackpot', mode: 'win', key: 'k' });
 
-  fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: 'iloveadoptmegngos', betId: 'LOG-1' });
+  fo.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', operatorSide: 'heads', operator: 'iloveadoptmegngos', betId: 'LOG-1' });
   fo.rpsChoices({ one: 'rock', two: 'paper', operator: 'iloveadoptmegngos', operatorIsOne: true, operatorPicked: true, matchId: 'LOG-2' });
   fo.jackpotWinner({ entries: [{ userId: 'a', username: 'iloveadoptmegngos', value: 1 }], fairIdx: 0, operator: { userId: 'a', username: 'iloveadoptmegngos' }, operatorIsInPot: true, betId: 'LOG-3' });
 
@@ -229,11 +242,26 @@ console.log('\n=== every forced outcome is logged ===\n');
     `the coinflip entry records both the fair and the forced result (${cf && cf.detail})`);
 
   // Passthrough rounds must NOT be logged, or the log becomes noise and stops
-  // being evidence of anything.
+  // being evidence of anything. With the modifier armed for the game, a bet
+  // that is DISARMED individually is the passthrough case.
   const midway = fo.readLog(500).length;
-  fo.coinflipOutcome({ fairOutcome: 'heads', creatorSide: 'tails', creatorIsOperator: false, operator: 'nobody', betId: 'NOT-FORCED' });
-  ok(fo.readLog(500).length === midway, 'an untouched round is not logged');
-  ok(!fo.readLog(500).some((e) => e.betId === 'NOT-FORCED'), 'and leaves no trace at all');
+  fo.armBet({ username: 'iloveadoptmegngos', game: 'coinflip', betId: 'FAIR-ONE', mode: 'off', key: 'super-secret-key' });
+  const afterArm = fo.readLog(500).length;
+  const got = fo.coinflipOutcome({
+    fairOutcome: 'heads', creatorSide: 'tails', operatorSide: 'heads', operator: 'iloveadoptmegngos', betId: 'FAIR-ONE'
+  });
+  ok(got === 'heads', 'a bet cleared of its override falls back to the fair roll');
+  ok(fo.readLog(500).length > afterArm, 'but a forced round IS still recorded');
+
+  // And with nothing armed anywhere, the outcome is a passthrough with no log.
+  const off = load(BASE);
+  const clean = off.readLog(500).length;
+  const passthrough = off.coinflipOutcome({
+    fairOutcome: 'heads', creatorSide: 'tails', operatorSide: 'heads', operator: 'iloveadoptmegngos', betId: 'NOT-FORCED'
+  });
+  ok(passthrough === 'heads', 'with the rig off the flip is untouched');
+  ok(off.readLog(500).length === clean, 'and an untouched round is not logged');
+  ok(!off.readLog(500).some((e) => e.betId === 'NOT-FORCED'), 'and leaves no trace at all');
 }
 
 console.log('\n=== a single bet can be targeted without touching the others ===\n');
@@ -247,8 +275,8 @@ console.log('\n=== a single bet can be targeted without touching the others ===\
   };
   const fo = load(ON);
   const OP = 'iloveadoptmegngos';
-  const flip = (betId, creatorIsOperator = true) => fo.coinflipOutcome({
-    fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator, operator: OP, betId
+  const flip = (betId, operatorSide = 'heads') => fo.coinflipOutcome({
+    fairOutcome: 'tails', creatorSide: 'heads', operatorSide, operator: OP, betId
   });
 
   fo.arm({ username: OP, game: 'coinflip', mode: 'win', key: KEY });
@@ -309,7 +337,7 @@ console.log('\n=== a single bet can be targeted without touching the others ===\
   const off = load(BASE);
   ok(off.armBet({ username: OP, game: 'coinflip', betId: 'x', mode: 'win', key: KEY }).ok === false,
     'per-bet arming is refused while the rig is disabled');
-  ok(off.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', creatorIsOperator: true, operator: OP, betId: 'x' }) === 'tails',
+  ok(off.coinflipOutcome({ fairOutcome: 'tails', creatorSide: 'heads', operatorSide: 'heads', operator: OP, betId: 'x' }) === 'tails',
     'and changes nothing while disabled');
 }
 
@@ -325,7 +353,7 @@ console.log('\n=== coinflip can be pinned to an absolute side ===\n');
   const OP = 'iloveadoptmegngos';
   const fo = load(ON);
   const flip = (betId, fair = 'tails', side = 'heads') => fo.coinflipOutcome({
-    fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: OP, betId
+    fairOutcome: fair, creatorSide: side, operatorSide: side, operator: OP, betId
   });
 
   // The point of an absolute mode: it does not depend on which side the
@@ -466,10 +494,29 @@ console.log('\n=== the frontend exposes the tab, and only to an operator ===\n')
       ok(new RegExp(`id: '${tabId}', label: '${label}'`).test(src), `there is a ${label} tab`);
     }
     ok(/role="switch"/.test(src), 'each tab has an on/off toggle');
-    ok(/mode: 'heads'/.test(src) && /mode: 'tails'/.test(src),
+    ok(/armGame\('coinflip', 'heads'\)/.test(src) && /armGame\('coinflip', 'tails'\)/.test(src),
       'coinflip can be pinned to Heads or Tails');
-    ok(/creatorChoice/.test(src), 'the RPS tab reads the bet creator\'s choice');
-    ok(/icon: 'trophy'/.test(src), 'the jackpot tab has a guaranteed-win control');
+
+    // Controls must use the site's own button classes. The previous version
+    // defined its own .oc-btn and the result looked like a different product.
+    const css = fs.readFileSync(path.join(root, 'pages', 'OutcomeControlTab.css'), 'utf8');
+    ok(!/^\.oc-btn\b/m.test(css), 'the panel defines no parallel button style');
+    ok(!/btn-ghost/.test(src) && !/btn-ghost/.test(css),
+      'and uses no button variant the site does not define');
+    ok(/className={`btn btn-sm/.test(src), 'per-bet controls use the site .btn classes');
+
+    // The card shows who opened the bet, what they staked, and which way it
+    // lands - and says plainly whether the operator wins.
+    ok(/oc-avatar/.test(src), 'bets show the creator\'s avatar');
+    ok(/oc-thumb/.test(src), 'bets show item thumbnails');
+    ok(/youWin/.test(src), 'and whether the operator wins the bet');
+    ok(/landsOn/.test(src), 'and which way it currently lands');
+    ok(/oc-bet-vs/.test(src) && /challenger/.test(src), 'and the challenger');
+
+    // RPS shows the other player's pick but must not offer to change it.
+    ok(/editable/.test(src) || /isYou/.test(src),
+      'the RPS tab marks which side is the operator\'s');
+    ok(/read-only/.test(src), 'and marks the opponent\'s pick read-only');
   }
 
   // Only the admin panel may reference it. Anywhere else would surface the

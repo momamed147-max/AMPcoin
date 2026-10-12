@@ -390,11 +390,23 @@ router.post('/:id/join', authenticateToken, (req, res) => {
     // A named operator account may have outcome control armed for this game.
     // Off unless FORCE_OUTCOME_ENABLED is set, in which case this is a
     // passthrough and the flip below is untouched.
+    //
+    // The operator may be on EITHER side of this bet. Which side they took is
+    // what 'win' and 'lose' are measured against; the absolute heads/tails modes
+    // do not care and pin the flip outright.
+    const creatorSide = coinflip.creatorSide || 'heads';
+    const joiningName = user.displayName || user.robloxUsername;
+    const operatorIsCreator = forcedOutcome.isOperator(coinflip.creatorUsername);
+    const operatorSide = operatorIsCreator
+      ? creatorSide
+      : forcedOutcome.isOperator(joiningName)
+        ? (creatorSide === 'heads' ? 'tails' : 'heads')
+        : null;
     const outcome = forcedOutcome.coinflipOutcome({
       fairOutcome,
-      creatorSide: coinflip.creatorSide || 'heads',
-      creatorIsOperator: forcedOutcome.isOperator(coinflip.creatorUsername),
-      operator: coinflip.creatorUsername,
+      creatorSide,
+      operatorSide,
+      operator: operatorIsCreator ? coinflip.creatorUsername : joiningName,
       betId: coinflip.id
     });
 
