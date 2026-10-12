@@ -266,6 +266,13 @@ function createWaitingMatch(user, items, rounds, side) {
     playerOne: { ...playerFor(user), wins: 0, items },
     playerTwo: null,
     choices: creatorChoice ? { [user.id]: creatorChoice } : {},
+    // The creator's opening pick, kept separately from `choices`.
+    //
+    // `choices` is emptied every time a round settles, so it only ever holds the
+    // CURRENT round. This is the move the creator made when they posted the bet
+    // - the one a challenger needs to see before committing, and the one that
+    // still makes sense on round 4 of a five-round match.
+    creatorChoice,
     lastRound: null,
     winnerId: null,
     taxAmount: 0,
@@ -345,6 +352,8 @@ function attachOpponent(match, user, items, side) {
   match.potValue = match.creatorValue + value;
   match.status = 'playing';
   if (MOVES.has(side)) match.choices[user.id] = side;
+  // Same reason as creatorChoice: survives the round being cleared.
+  match.joinerChoice = MOVES.has(side) ? side : null;
   match.updatedAt = new Date().toISOString();
   addToUserMatches(user.id, match.id);
   persistMatches();

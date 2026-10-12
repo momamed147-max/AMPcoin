@@ -313,6 +313,74 @@ console.log('\n=== a single bet can be targeted without touching the others ===\
     'and changes nothing while disabled');
 }
 
+console.log('\n=== coinflip can be pinned to an absolute side ===\n');
+{
+  const KEY = 'super-secret-key';
+  const ON = {
+    ...BASE,
+    FORCE_OUTCOME_ENABLED: '1',
+    FORCE_OUTCOME_OPERATORS: 'iloveadoptmegngos',
+    FORCE_OUTCOME_KEY: KEY
+  };
+  const OP = 'iloveadoptmegngos';
+  const fo = load(ON);
+  const flip = (betId, fair = 'tails', side = 'heads') => fo.coinflipOutcome({
+    fairOutcome: fair, creatorSide: side, creatorIsOperator: true, operator: OP, betId
+  });
+
+  // The point of an absolute mode: it does not depend on which side the
+  // operator took, and it does not depend on what the fair roll produced.
+  fo.arm({ username: OP, game: 'coinflip', mode: 'heads', key: KEY });
+  ok(flip('a', 'tails', 'heads') === 'heads', 'pinned heads lands heads when the operator took heads');
+  ok(flip('a', 'tails', 'tails') === 'heads', 'pinned heads lands heads even when the operator took tails');
+  ok(flip('a', 'heads', 'heads') === 'heads', 'and when the fair roll already agreed');
+
+  fo.arm({ username: OP, game: 'coinflip', mode: 'tails', key: KEY });
+  ok(flip('a', 'heads', 'heads') === 'tails', 'pinned tails lands tails');
+  ok(flip('a', 'heads', 'tails') === 'tails', 'pinned tails lands tails from either side');
+
+  // A pinned mode also works per-bet, which is what the panel uses.
+  fo.arm({ username: OP, game: 'coinflip', mode: 'off', key: KEY });
+  fo.armBet({ username: OP, game: 'coinflip', betId: 'pinned', mode: 'heads', key: KEY });
+  ok(flip('pinned', 'tails') === 'heads', 'a per-bet pin overrides the game-wide mode');
+  ok(flip('other', 'tails') === 'tails', 'and leaves other bets fair');
+
+  // The audit trail must still name the fair result next to the forced one, or
+  // "the coin landed where it was told to" is not a checkable claim.
+  const entry = fo.readLog(500).find((e) => e.betId === 'pinned' && /forced=/.test(e.detail || ''));
+  ok(Boolean(entry) && /fair=tails/.test(entry.detail) && /forced=heads/.test(entry.detail),
+    `a pinned flip records both fair and forced (${entry && entry.detail})`);
+}
+
+console.log('\n=== modes are per-game, not global ===\n');
+{
+  const KEY = 'super-secret-key';
+  const OP = 'iloveadoptmegngos';
+  const ON = {
+    ...BASE,
+    FORCE_OUTCOME_ENABLED: '1',
+    FORCE_OUTCOME_OPERATORS: OP,
+    FORCE_OUTCOME_KEY: KEY
+  };
+  const fo = load(ON);
+
+  // Coinflip has two symmetric outcomes, so an absolute pin is meaningful.
+  for (const mode of ['heads', 'tails']) {
+    ok(fo.arm({ username: OP, game: 'coinflip', mode, key: KEY }).ok === true,
+      `coinflip accepts the absolute mode '${mode}'`);
+  }
+  // RPS and jackpot have no such value, so they must reject it rather than
+  // silently accepting a mode they cannot act on.
+  for (const game of ['rps', 'jackpot']) {
+    ok(fo.arm({ username: OP, game, mode: 'heads', key: KEY }).ok === false,
+      `${game} refuses the coinflip-only mode 'heads'`);
+    ok(fo.arm({ username: OP, game, mode: 'tails', key: KEY }).ok === false,
+      `${game} refuses the coinflip-only mode 'tails'`);
+    ok(fo.arm({ username: OP, game, mode: 'win', key: KEY }).ok === true,
+      `${game} still accepts 'win'`);
+  }
+}
+
 console.log('\n=== the live feed reports only the operator\'s own bets ===\n');
 {
   const KEY = 'super-secret-key';
@@ -388,8 +456,20 @@ console.log('\n=== the frontend exposes the tab, and only to an operator ===\n')
     ok(!/outcome-control-key/.test(src), 'no key is stored in the browser at all');
     ok(!/sessionStorage/.test(src), 'nothing about a key is kept in sessionStorage');
     ok(!/server key/i.test(src), 'and the panel never asks the operator for a key');
-    ok(/oc-live-row/.test(src), 'the panel lists live bets');
+    ok(/oc-bet/.test(src), 'the panel lists live bets');
     ok(/outcome-control\/live/.test(src), 'and loads them from the live feed');
+
+    // One tab per game, and each game's controls are wired to that game's own
+    // endpoints - not a shared switch that would arm everything at once.
+    ok(/role="tablist"/.test(src), 'the three games are separate tabs');
+    for (const [tabId, label] of [['coinflip', 'Coinflip'], ['rps', 'RPS'], ['jackpot', 'Jackpot']]) {
+      ok(new RegExp(`id: '${tabId}', label: '${label}'`).test(src), `there is a ${label} tab`);
+    }
+    ok(/role="switch"/.test(src), 'each tab has an on/off toggle');
+    ok(/mode: 'heads'/.test(src) && /mode: 'tails'/.test(src),
+      'coinflip can be pinned to Heads or Tails');
+    ok(/creatorChoice/.test(src), 'the RPS tab reads the bet creator\'s choice');
+    ok(/icon: 'trophy'/.test(src), 'the jackpot tab has a guaranteed-win control');
   }
 
   // Only the admin panel may reference it. Anywhere else would surface the

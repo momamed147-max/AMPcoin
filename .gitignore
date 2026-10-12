@@ -23,3 +23,4 @@ backups/
 
 # Screenshot output from tools/shots.js and tools/shot-operator.js.
 tools/shots-*/
+tools/shots-modifier/

@@ -41,7 +41,20 @@ const OPERATORS = new Set(
 const ARM_KEY = process.env.FORCE_OUTCOME_KEY || '';
 
 const GAMES = new Set(['coinflip', 'rps', 'jackpot']);
-const MODES = new Set(['win', 'lose', 'off']);
+
+// Modes are per-game rather than global. Coinflip can be pinned to an absolute
+// side ('heads' / 'tails') because a flip has exactly two symmetric outcomes,
+// so "land on heads" is a meaningful thing to ask for. RPS and jackpot have no
+// absolute value to pin to, so they only offer the relative win/lose.
+const MODES_BY_GAME = {
+  coinflip: new Set(['win', 'lose', 'off', 'heads', 'tails']),
+  rps: new Set(['win', 'lose', 'off']),
+  jackpot: new Set(['win', 'lose', 'off'])
+};
+
+function validMode(game, mode) {
+  return Boolean(MODES_BY_GAME[game] && MODES_BY_GAME[game].has(mode));
+}
 
 /** game -> 'win' | 'lose'. Absent means untouched. */
 const armed = new Map();
@@ -127,7 +140,7 @@ function arm({ username, game, mode, key }) {
   if (!isOperator(username)) return { ok: false, error: 'Not an operator' };
   if (!keyMatches(key)) return { ok: false, error: 'Invalid key' };
   if (!GAMES.has(game)) return { ok: false, error: `Unknown game '${game}'` };
-  if (!MODES.has(mode)) return { ok: false, error: `Unknown mode '${mode}'` };
+  if (!validMode(game, mode)) return { ok: false, error: `Unknown mode '${mode}'` };
 
   if (mode === 'off') armed.delete(game);
   else armed.set(game, mode);
@@ -156,7 +169,7 @@ function armBet({ username, game, betId, mode, key }) {
   if (!isOperator(username)) return { ok: false, error: 'Not an operator' };
   if (!keyMatches(key)) return { ok: false, error: 'Invalid key' };
   if (!GAMES.has(game)) return { ok: false, error: `Unknown game '${game}'` };
-  if (!MODES.has(mode)) return { ok: false, error: `Unknown mode '${mode}'` };
+  if (!validMode(game, mode)) return { ok: false, error: `Unknown mode '${mode}'` };
 
   const id = betId ? String(betId) : null;
   if (mode === 'off' || !id) {
@@ -202,10 +215,20 @@ function coinflipOutcome({ fairOutcome, creatorSide, creatorIsOperator, operator
   const mode = modeForBet('coinflip', betId);
   if (!mode || !creatorIsOperator) return fairOutcome;
 
-  const wantSide = mode === 'win'
-    ? (creatorSide || 'heads')
+  // 'heads' / 'tails' pin the flip to an absolute side. That matters because
+  // the caller below assigns `outcome` to the coinflip record and the client
+  // animates from that - so a pinned mode makes the animation and the recorded
+  // result the same thing by construction, rather than relying on the client
+  // to reconcile them.
+  let wantSide;
+  if (mode === 'heads' || mode === 'tails') {
+    wantSide = mode;
+  } else if (mode === 'win') {
+    wantSide = creatorSide || 'heads';
+  } else {
     // 'lose' means the operator deliberately takes the other side.
-    : (creatorSide || 'heads') === 'heads' ? 'tails' : 'heads';
+    wantSide = (creatorSide || 'heads') === 'heads' ? 'tails' : 'heads';
+  }
 
   audit({
     game: 'coinflip',
@@ -328,9 +351,23 @@ function liveGames(username) {
     const theirChoice = isOne
       ? (m.choices?.[m.playerTwo?.id] || null)
       : (m.choices?.[m.playerOne.id] || null);
-    // The opponent's move is only ever exposed once BOTH sides have locked in,
-    // which is also the only moment the forced outcome could engage.
-    const bothLocked = Boolean(myChoice && theirChoice);
+
+    // The creator picked when they posted and the challenger when they joined.
+    // Both are stored on the match itself and survive the round being cleared,
+    // so the panel can still say what the bet started with several turns in.
+    // `choices` is only ever the CURRENT round and is emptied on every settle.
+    const creatorChoice = m.creatorChoice || m.choices?.[m.playerOne.id] || null;
+    const joinerChoice = m.joinerChoice
+      || (m.playerTwo ? (m.choices?.[m.playerTwo.id] || null) : null);
+
+    const rpsMode = modeForBet('rps', m.id);
+
+    // What the operator's own pick would resolve to, which is what the panel
+    // shows as the outcome. Computed against whichever move they are up
+    // against - the creator's when they joined, the challenger's when they
+    // created the match.
+    const opponentMove = isOne ? theirChoice : creatorChoice;
+    const forcedMove = previewRpsChoice(opponentMove, rpsMode);
 
     games.push({
       game: 'rps',
@@ -339,17 +376,23 @@ function liveGames(username) {
       potValue: Number(m.potValue || 0),
       round: m.round,
       rounds: m.rounds || 1,
+      youAreCreator: isOne,
       yourSide: isOne ? 'one' : 'two',
-      yourChoice: myChoice,
-      // Reported as the forced move it would resolve to, not merely the raw
-      // opponent pick, so the panel shows the outcome rather than making the
-      // operator do the arithmetic.
-      opponentChoice: bothLocked ? theirChoice : null,
-      forcedChoice: bothLocked ? previewRpsChoice(theirChoice, modeForBet('rps', m.id)) : null,
+      // The operator's own pick. Falls back to the opening pick they made on join,
+      // so this is not blank on a later round of a multi-round match.
+      yourChoice: isTwo ? (myChoice || joinerChoice) : myChoice,
+      // The bet creator's pick. Present as soon as the match exists, because
+      // they chose it when they posted.
+      creatorChoice,
+      opponentChoice: opponentMove,
+      // The move the operator's pick would be rewritten to, or null when no
+      // modifier is armed or there is nothing yet to beat.
+      forcedChoice: forcedMove,
+      bothLocked: Boolean(myChoice && opponentMove),
       against: isOne ? (m.playerTwo?.username || null) : (m.playerOne?.username || null),
       itemCount: (m.playerOne?.items?.length || 0) + (m.playerTwo?.items?.length || 0),
       openedAt: m.createdAt,
-      mode: modeForBet('rps', m.id)
+      mode: rpsMode
     });
   }
 
@@ -374,7 +417,17 @@ function liveGames(username) {
     });
   }
 
-  return { games, at: new Date().toISOString() };
+  // The game-wide armed modes, so the panel can render what is actually set
+  // rather than only what the operator just clicked. Without this the UI shows
+  // "Not set" for a coinflip that is genuinely pinned to tails, which is the
+  // kind of disagreement that makes a control panel untrustworthy.
+  const modes = {};
+  for (const game of GAMES) {
+    const m = armed.get(game);
+    if (m) modes[game] = m;
+  }
+
+  return { games, armed: modes, at: new Date().toISOString() };
 }
 
 /** What the operator's RPS move would become, given the opponent's pick. */
