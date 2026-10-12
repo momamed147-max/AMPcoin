@@ -37,7 +37,7 @@ router.post('/dev-login', (req, res) => {
         robloxUsername: username,
         robloxDisplayName: username,
         displayName: username,
-        balance: 100000,
+
         isAdmin: localAdmin,
         isModerator: false,
         isActive: true,
@@ -179,7 +179,7 @@ router.post('/register', async (req, res) => {
       robloxUserId: null,
       robloxDisplayName: null,
       avatarCachedAt: 0,
-      balance: 0,
+
       totalDeposited: 0,
       totalWithdrawn: 0,
       gamesPlayed: 0,
@@ -518,7 +518,7 @@ router.post('/verify-and-register', async (req, res) => {
       robloxUserId: pending.robloxUserId,
       robloxDisplayName: pending.displayName,
       avatarCachedAt: 0,
-      balance: 0,
+
       totalDeposited: 0,
       totalWithdrawn: 0,
       gamesPlayed: 0,

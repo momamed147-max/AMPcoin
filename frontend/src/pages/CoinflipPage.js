@@ -52,7 +52,7 @@ function timeAgo(ts) {
 /* ── Pet hover tooltip now lives in components/PetTooltip.js ── */
 
 /* ════════════════════════════════════════════════════════════════════ */
-const CoinflipPage = ({ socket, setBalance }) => {
+const CoinflipPage = ({ socket }) => {
   const { user } = useAuth();
   const [coinflips, setCoinflips] = useState([]);
   const [activeCount, setActiveCount] = useState(0);
@@ -1093,7 +1093,6 @@ const [sortBy] = useState('newest');
           onCreated={handleBetCreated}
           userId={user?.id}
           socket={socket}
-          setBalance={setBalance}
           userInventory={userInventory}
         />
       )}

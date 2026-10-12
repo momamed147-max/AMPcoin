@@ -10,7 +10,7 @@ import './ModBadges.css';
 import '../pages/CoinflipPage.css';
 import './CreateCoinflipModal.css';
 
-const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, userInventory, gameType = 'coinflip', match = null }) => {
+const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory, gameType = 'coinflip', match = null }) => {
   const isRps = gameType === 'rps' || gameType === 'rps-join';
   const isRpsJoin = gameType === 'rps-join';
   const [selectedQty, setSelectedQty] = useState({}); // stackKey -> units selected
@@ -202,11 +202,11 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, setBalance, u
           try { onCreated(data); } catch (e) { console.error('onCreated handler failed:', e); }
         }
 
-        // Coinflip displays a cash balance; RPS wagers inventory only.
-        if (!isRps && setBalance) {
-          const totalWagered = getTotalValue();
-          setBalance(prev => prev - totalWagered);
-        }
+        // There is no cash balance to decrement. This used to do exactly that:
+        // every coinflip wager - which is items - subtracted the item value
+        // from a cash figure that was never spent and never paid back, so the
+        // number only ever fell. The wager is escrow server-side and the
+        // inventory updates arrive over the socket.
 
         onClose();
       } else {

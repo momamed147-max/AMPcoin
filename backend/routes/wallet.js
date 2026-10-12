@@ -19,67 +19,6 @@ router.get('/bot', (req, res) => {
   }
 });
 
-router.post('/withdraw', authenticateToken, (req, res) => {
-  try {
-    const { amount, address } = req.body;
-    const userId = req.user.userId;
-    
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ message: 'Invalid amount' });
-    }
-    
-    if (!address) {
-      return res.status(400).json({ message: 'Address required' });
-    }
-    
-    const usersDb = dbManager.getUsersDb();
-    const user = usersDb.users.find(u => u.id === userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    
-    if ((user.balance || 0) < amount) {
-      return res.status(400).json({ message: 'Insufficient balance' });
-    }
-    
-    // Deduct from balance
-    user.balance -= parseFloat(amount);
-    user.updatedAt = new Date().toISOString();
-    
-    // Record withdrawal request
-    const withdrawal = {
-      id: uuidv4(),
-      userId,
-      robloxUsername: user.robloxUsername,
-      amount: parseFloat(amount),
-      address,
-      status: 'pending',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    
-    const db = dbManager.getMainDb();
-    db.withdrawals = db.withdrawals || [];
-    db.withdrawals.push(withdrawal);
-    
-    dbManager.saveUsersDb();
-    dbManager.saveMainDb();
-
-    // Real-time: notify user balance changed
-    const { emitToAll } = require('../realtime');
-    emitToAll('inventoryUpdate', { userId });
-
-    res.json({
-      message: 'Withdrawal request submitted successfully',
-      withdrawal
-    });
-  } catch (error) {
-    console.error('Error processing withdrawal:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Withdraw items
 router.post('/withdraw-items', authenticateToken, (req, res) => {
   try {
     const { items, address } = req.body;

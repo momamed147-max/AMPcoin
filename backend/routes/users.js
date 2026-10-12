@@ -308,7 +308,6 @@ router.get('/:robloxUsername/stats', authenticateToken, (req, res) => {
       totalDeposited: user.totalDeposited || 0,
       totalWithdrawn: user.totalWithdrawn || 0,
       winRate: (user.gamesPlayed || 0) > 0 ? ((user.gamesWon || 0) / user.gamesPlayed) * 100 : 0,
-      balance: user.balance || 0,
       joinedDate: user.createdAt
     };
     

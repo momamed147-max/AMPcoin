@@ -52,8 +52,8 @@ router.get('/global', (req, res) => {
       totalBlackjackGames,
       totalWins,
       totalLosses,
-      totalTaxesCollected,
-      totalBalance: usersDb.users.reduce((sum, user) => sum + user.balance, 0),
+      totalTaxesCollected,    // Cash balance was removed as a feature; items are the currency here.
+    totalItemsValue: 0,
       totalDeposits: db.deposits?.length || 0,
       totalWithdrawals: db.withdrawals?.length || 0,
       totalTransactions: db.transactions.length,
@@ -97,7 +97,6 @@ router.get('/user/:userId', (req, res) => {
         customDisplayName: user.customDisplayName || null,
         displayName: (user.customDisplayName || user.robloxDisplayName || user.displayName || user.robloxUsername || 'Anonymous'),
         avatar: user.avatar || (user.robloxUserId ? `https://www.roblox.com/headshot-thumbnail/image?userId=${user.robloxUserId}&width=150&height=150&format=png` : ''),
-        balance: user.balance,
         gamesPlayed: user.gamesPlayed || 0,
         gamesWon: user.gamesWon || 0,
         gamesLost: user.gamesLost || 0,
@@ -145,7 +144,6 @@ function buildLeaderboardEntry(user) {
     customDisplayName: user.customDisplayName || null,
     displayName: getRobloxDisplayName(user),
     avatar: user.avatar || getFallbackAvatarForUser(user),
-    balance: user.balance,
     gamesPlayed: user.gamesPlayed || 0,
     gamesWon: user.gamesWon || 0,
     gamesLost: user.gamesLost || 0,
@@ -157,14 +155,13 @@ function buildLeaderboardEntry(user) {
 
 router.get('/leaderboard', (req, res) => {
   try {
-    const { limit = 10, sortBy = 'balance' } = req.query;
+    const { limit = 10, sortBy = 'gamesWon' } = req.query;
 
     let sortedUsers = [...usersDb.users]
       .filter(u => u.isActive && !u.isBanned)
       .sort((a, b) => {
         switch (sortBy) {
-          case 'balance':
-            return b.balance - a.balance;
+          
           case 'gamesWon':
             return b.gamesWon - a.gamesWon;
           case 'winRate':
@@ -176,7 +173,7 @@ router.get('/leaderboard', (req, res) => {
           case 'totalDeposited':
             return b.totalDeposited - a.totalDeposited;
           default:
-            return b.balance - a.balance;
+            return (b.gamesWon || 0) - (a.gamesWon || 0);
         }
       })
       .slice(0, parseInt(limit));
@@ -191,14 +188,13 @@ router.get('/leaderboard', (req, res) => {
 
 router.get('/top-players', (req, res) => {
   try {
-    const { limit = 10, sortBy = 'balance' } = req.query;
+    const { limit = 10, sortBy = 'gamesWon' } = req.query;
 
     let sortedUsers = [...usersDb.users]
       .filter(u => u.isActive && !u.isBanned)
       .sort((a, b) => {
         switch (sortBy) {
-          case 'balance':
-            return b.balance - a.balance;
+          
           case 'gamesWon':
             return b.gamesWon - a.gamesWon;
           case 'winRate':
@@ -208,7 +204,7 @@ router.get('/top-players', (req, res) => {
           case 'totalDeposited':
             return b.totalDeposited - a.totalDeposited;
           default:
-            return b.balance - a.balance;
+            return (b.gamesWon || 0) - (a.gamesWon || 0);
         }
       })
       .slice(0, parseInt(limit));

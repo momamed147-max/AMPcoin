@@ -303,17 +303,9 @@ const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUserBalance = useCallback(
-    (newBalance) => {
-      setUser((prev) => {
-        if (!prev) return prev;
-        const updated = { ...prev, balance: newBalance };
-        persistUser(updated);
-        return updated;
-      });
-    },
-    [persistUser]
-  );
+  // Cash balance was removed as a feature - no game settled against it and
+  // nothing paid it out. Anything that used to call this was decrementing a
+  // figure that had no effect on any wager.
 
   const updateUser = useCallback(
     (patch) => {
@@ -359,7 +351,6 @@ const AuthProvider = ({ children }) => {
     isModerator,
     isStaff,
     refreshUser,
-    updateUserBalance,
     updateUser
   };
 

@@ -35,7 +35,7 @@ function wheelColorFor(entry, idx) {
   return WHEEL_POOL[h % WHEEL_POOL.length];
 }
 
-const JackpotPage = ({ socket, setBalance }) => {
+const JackpotPage = ({ socket }) => {
   const [jackpot, setJackpot] = useState(null);
   const [history, setHistory] = useState([]);
   const [inventory, setInventory] = useState([]);

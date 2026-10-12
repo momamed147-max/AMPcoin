@@ -61,7 +61,9 @@ function AppContent() {
   // Toasts are declared here but rendered at the end, so they sit above every
   // modal and survive navigation.
   const toast = useToast();
-  const [balance, setBalance] = useState(0);
+  // Cash balance was removed as a feature. It never meant anything: no game
+  // settled against it and nothing paid it out, so it could only ever go down.
+  // Items are the currency on this site.
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -177,23 +179,8 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    if (user) {
-      setBalance(user.balance);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    socket.on('balanceUpdate', (data) => {
-      if (data.userId === user?.id) {
-        setBalance(data.newBalance);
-        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        storedUser.balance = data.newBalance;
-        localStorage.setItem('user', JSON.stringify(storedUser));
-      }
-    });
     socket.on('onlineCountUpdate', () => {});
     return () => {
-      socket.off('balanceUpdate');
       socket.off('onlineCountUpdate');
     };
   }, [user]);
@@ -232,7 +219,7 @@ function AppContent() {
           </>
         )}
         <div className="main-content">
-          {user && <Header balance={balance} setBalance={setBalance} socket={socket} />}
+          {user && <Header socket={socket} />}
           <div className="page-content" key={location.pathname}>
             {/* keying on the path remounts the boundary on navigation, so a
                 page that crashed cannot leave its error showing after you
@@ -243,8 +230,8 @@ function AppContent() {
               <Route path="/login" element={!user ? <LoginPage /> : <Navigate to="/coinflip" />} />
               <Route path="/register" element={<Navigate to="/login" replace />} />
               <Route path="/" element={user ? <Navigate to="/coinflip" replace /> : <Navigate to="/login" replace />} />
-              <Route path="/coinflip" element={<ProtectedRoute><CoinflipPage socket={socket} setBalance={setBalance} /></ProtectedRoute>} />
-              <Route path="/jackpot" element={<ProtectedRoute><JackpotPage socket={socket} setBalance={setBalance} /></ProtectedRoute>} />
+              <Route path="/coinflip" element={<ProtectedRoute><CoinflipPage socket={socket} /></ProtectedRoute>} />
+              <Route path="/jackpot" element={<ProtectedRoute><JackpotPage socket={socket} /></ProtectedRoute>} />
               <Route path="/rps" element={<ProtectedRoute><RpsPage socket={socket} /></ProtectedRoute>} />
               <Route path="/trading" element={<ProtectedRoute><TradingPage socket={socket} /></ProtectedRoute>} />
               <Route path="/upgrader" element={<ProtectedRoute><UpgraderPage socket={socket} /></ProtectedRoute>} />

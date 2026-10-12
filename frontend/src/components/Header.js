@@ -22,7 +22,7 @@ const WM_PAGE_SIZE = 24;
 
 const DEFAULT_AVATAR = '/default-avatar.png';
 
-const Header = ({ balance, socket }) => {
+const Header = ({ socket }) => {
   const location = useLocation();
   const { user, refreshUser } = useAuth();
   const [showWalletModal, setShowWalletModal] = useState(false);
@@ -298,9 +298,7 @@ const Header = ({ balance, socket }) => {
   useEffect(() => {
     if (!socket) return;
     const refresh = () => fetchInventory();
-    // A balance change can be a bonus claim, so the streak dot is re-checked
-    // here too rather than going stale until the next reload.
-    socket.on('balanceUpdate', refresh);
+    // Inventory changes are the only thing that moves a number in this bar now.
     socket.on('newCoinflip', refresh);
     socket.on('coinflipJoined', refresh);
     socket.on('coinflipResult', refresh);
@@ -308,7 +306,6 @@ const Header = ({ balance, socket }) => {
     socket.on('inventoryUpdate', refresh);
     socket.on('giveawayUpdate', refresh);
     return () => {
-      socket.off('balanceUpdate', refresh);
       socket.off('newCoinflip', refresh);
       socket.off('coinflipJoined', refresh);
       socket.off('coinflipResult', refresh);
@@ -435,13 +432,10 @@ const Header = ({ balance, socket }) => {
       </div>
 
       <div className="header-center">
-        <div className="balance-pill cash-balance" title={`${Number(balance || 0).toLocaleString()} AMP available`}>
-          <span className="balance-gem"><Icon name="coin" size={15} /></span>
-          <span className="balance-copy">
-            <span className="balance-label">Balance</span>
-            <strong className="balance-total">{formatCompact(balance)}</strong>
-          </span>
-        </div>
+        {/* No cash balance pill. That currency was never used: no game settles
+            against it, and nothing paid it out - it could only be spent or
+            withdrawn, never won. Items are the currency on this site, so the
+            inventory pill below is the only number that means anything here. */}
         <div
           className="balance-pill"
           title={`Inventory value: ${totalInventoryValue.toLocaleString()} AMP`}

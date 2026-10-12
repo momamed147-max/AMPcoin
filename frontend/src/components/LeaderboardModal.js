@@ -39,7 +39,7 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [reloadKey, setReloadKey] = useState(0);
-  const [activeTab, setActiveTab] = useState('topPlayers');
+  const [activeTab, setActiveTab] = useState('mostWins');
   const [resolvedProfiles, setResolvedProfiles] = useState({});
   const [avatarErrs, setAvatarErrs] = useState({});
 
@@ -151,7 +151,7 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
             <tr>
               <th>Rank</th>
               <th>Player</th>
-              <th>{activeTab === 'topPlayers' ? 'Balance' : activeTab === 'mostWins' ? 'Wins' : 'Streak'}</th>
+              <th>{activeTab === 'mostWins' ? 'Wins' : 'Streak'}</th>
               {activeTab !== 'highestStreak' && (
                 <>
                   <th>Losses</th>
@@ -165,9 +165,7 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
               leaderboardData.map((player, index) => {
                 const key = player.id || player.robloxUsername || index;
                 const secondaryValue =
-                  activeTab === 'topPlayers'
-                    ? `${(player.balance || 0).toLocaleString()} AMP`
-                    : activeTab === 'mostWins'
+                  activeTab === 'mostWins'
                       ? (player.gamesWon || 0)
                       : (player.highestStreak || 0);
                 return (
@@ -234,12 +232,6 @@ const LeaderboardModal = ({ isOpen, onClose }) => {
 
         <div className="modal-body">
           <div className="leaderboard-tabs">
-            <button
-              className={`tab-btn ${activeTab === 'topPlayers' ? 'active' : ''}`}
-              onClick={() => setActiveTab('topPlayers')}
-            >
-              Top Players
-            </button>
             <button
               className={`tab-btn ${activeTab === 'mostWins' ? 'active' : ''}`}
               onClick={() => setActiveTab('mostWins')}

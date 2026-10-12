@@ -256,14 +256,7 @@ const ProfilePage = () => {
                   <p className="profile-field-value mono small">{profile.id}</p>
                 </div>
 
-                <div className="profile-field">
-                  <label>Balance</label>
-                  <p className="profile-field-value balance">
-                    {Number(profile.balance || 0).toLocaleString()} AMP
-                  </p>
                 </div>
-
-              </div>
 
               <div className="profile-stats">
                 <div className="stat">

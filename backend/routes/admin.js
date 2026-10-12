@@ -125,7 +125,12 @@ function dashboardStats(req, res) {
       stats.totalTransactions = (db.transactions || []).length;
       stats.totalDeposits = (db.deposits || []).length;
       stats.totalWithdrawals = (db.withdrawals || []).length;
-      stats.totalBalance = users.reduce((sum, user) => sum + (user.balance || 0), 0);
+      // Cash balance was removed as a feature. Report the item value that actually
+    // circulates here instead - that is what players hold and what the
+    // dashboard should be telling an admin about.
+    stats.totalItemsValue = (db.main && db.main.inventories)
+      ? Object.values(db.main.inventories).reduce((total, inv) => total + (Array.isArray(inv) ? inv.reduce((s, item) => s + (Number(item?.value || 0) * Math.max(1, parseInt(item?.quantity || 1, 10) || 1)), 0) : 0), 0)
+      : 0;
     }
 
     res.json(stats);
@@ -219,86 +224,6 @@ router.get('/users/:robloxUsername', authenticateAdmin, (req, res) => {
   }
 });
 
-// Update user balance (give/remove AMPcoin)
-router.put('/users/:robloxUsername/balance', authenticateAdmin, (req, res) => {
-  try {
-    const { amount, action, reason } = req.body;
-    const robloxUsername = req.params.robloxUsername;
-    const usersDb = dbManager.getUsersDb();
-    const db = dbManager.getMainDb();
-    
-    const user = usersDb.users.find(u => u.robloxUsername === robloxUsername || u.id === robloxUsername);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    const parsedAmount = parseFloat(amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
-      return res.status(400).json({ message: 'Invalid amount' });
-    }
-
-    let newBalance;
-    if (action === 'add') {
-      user.balance = (user.balance || 0) + parsedAmount;
-      newBalance = user.balance;
-    } else if (action === 'remove') {
-      if ((user.balance || 0) < parsedAmount) {
-        return res.status(400).json({ message: 'Insufficient balance to remove' });
-      }
-      user.balance = (user.balance || 0) - parsedAmount;
-      newBalance = user.balance;
-    } else {
-      return res.status(400).json({ message: 'Invalid action. Use "add" or "remove"' });
-    }
-
-    user.updatedAt = new Date().toISOString();
-
-    // Record admin action
-    const adminLog = {
-      id: uuidv4(),
-      adminId: req.user.userId,
-      adminUsername: req.user.robloxUsername,
-      action: `balance_${action}`,
-      targetUsername: user.robloxUsername,
-      oldValue: action === 'add' ? user.balance - parsedAmount : user.balance + parsedAmount,
-      newValue: newBalance,
-      reason: reason || 'Admin adjustment',
-      timestamp: new Date().toISOString()
-    };
-
-    // Record transaction
-    const transaction = {
-      id: uuidv4(),
-      userId: user.id,
-      robloxUsername: user.robloxUsername,
-      amount: action === 'add' ? parsedAmount : -parsedAmount,
-      type: `admin_balance_${action}`,
-      status: 'completed',
-      metadata: {
-        adminId: req.user.userId,
-        reason: reason || 'Admin adjustment'
-      },
-      timestamp: new Date().toISOString()
-    };
-
-    db.adminLogs = db.adminLogs || [];
-    db.adminLogs.push(adminLog);
-    db.transactions = db.transactions || [];
-    db.transactions.push(transaction);
-
-    dbManager.saveUsersDb();
-    dbManager.saveMainDb();
-
-    res.json({
-      message: `Balance ${action === 'add' ? 'added' : 'removed'} successfully`,
-      newBalance,
-      transaction
-    });
-  } catch (error) {
-    console.error('Error updating user balance:', error);
-    res.status(500).json({ message: 'Server error' });
-  }
-});
 
 // Toggle user account status
 router.put('/users/:robloxUsername/status', authenticateAdmin, (req, res) => {

@@ -80,7 +80,7 @@ function FullAdminPanel() {
     mutedUsers: 0,
     totalChatMessages: 0,
     dailyActiveUsers: 0,
-    totalBalance: 0
+    totalItemsValue: 0
   });
   const [statusActions, setStatusActions] = useState({});
   const [moderatorActions, setModeratorActions] = useState({});
@@ -380,7 +380,7 @@ function FullAdminPanel() {
               mutedUsers: Number(stats.mutedUsers || 0),
               totalChatMessages: Number(stats.totalChatMessages || 0),
               dailyActiveUsers: Number(stats.dailyActiveUsers || 0),
-              totalBalance: Number(stats.totalBalance || stats.totalAmp || 0)
+              totalItemsValue: Number(stats.totalItemsValue || 0)
             });
           }
         } catch (err) {
@@ -1336,10 +1336,10 @@ function FullAdminPanel() {
                   <p className="stat-number">{pendingTransactions.length}</p>
                 </div>
                 <div className="stat-card highlight">
-                  <h3>Total Amp in Circulation</h3>
-                  <p className="stat-number">
-                    {Number(adminStats.totalBalance || 0).toLocaleString()} AMP
-                  </p>
+                  <h3>Items in Circulation</h3>
+                    <p className="stat-number">
+                      {Number(adminStats.totalItemsValue || 0).toLocaleString()} AMP
+                    </p>
                 </div>
                 <div className="stat-card">
                   <h3>Active Today</h3>
@@ -1891,7 +1891,7 @@ function FullAdminPanel() {
                   <datalist id="tax-recipient-users">
                     {allUsers.map((u) => (
                       <option key={u.id} value={u.robloxUsername || u.id}>
-                        {displayUser(u)} ({Number(u.balance || 0).toLocaleString()} AMP)
+                        {displayUser(u)}
                       </option>
                     ))}
                   </datalist>
