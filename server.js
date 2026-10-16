@@ -21,16 +21,22 @@ require('dotenv').config();
 // protects every other way the server can be started, including by hand, which
 // is how that accident happened.
 //
-//   NODE_ENV=production          -> DATABASE_URL is required, LOCAL_JSON_MODE ignored
-//   LOCAL_JSON_MODE=true         -> DATABASE_URL is cleared and local JSON is used
-//   anything else with a URL     -> refuse, and say which host it found
+//   LOCAL_JSON_MODE=true          -> local JSON store, DATABASE_URL discarded
+//   running on Railway            -> Postgres, DATABASE_URL required
+//   dev with a remote URL         -> refuse, and name the host
+//
+// "Running on Railway" is detected from RAILWAY_* rather than NODE_ENV, because
+// this service does not set NODE_ENV in production. Keying the check on
+// NODE_ENV alone meant the first deploy of this guard refused to boot and took
+// the whole site down.
 (function resolveDatabase() {
   const local = String(process.env.LOCAL_JSON_MODE || '').toLowerCase() === 'true';
-  const production = process.env.NODE_ENV === 'production';
+  const onRailway = Boolean(process.env.RAILWAY_ENVIRONMENT || process.env.RAILWAY_PROJECT_ID);
+  const production = process.env.NODE_ENV === 'production' || onRailway;
 
   // Production must never silently run off a JSON file.
   if (production && local) {
-    console.error('[db] NODE_ENV=production with LOCAL_JSON_MODE=true.');
+    console.error('[db] Production (Railway or NODE_ENV=production) with LOCAL_JSON_MODE=true.');
     console.error('[db] Refusing to boot: production cannot use the local JSON store.');
     process.exit(1);
   }
@@ -45,11 +51,10 @@ require('dotenv').config();
   }
 
   const url = String(process.env.DATABASE_URL || '').trim();
-  if (!url) return;
-  if (process.env.ALLOW_REMOTE_DB) return;
+  if (!url || production || process.env.ALLOW_REMOTE_DB) return;
 
   const host = (() => { try { return new URL(url).hostname; } catch { return 'unknown'; } })();
-  console.error(`[db] NODE_ENV is not "production" and DATABASE_URL points at ${host}.`);
+  console.error(`[db] Neither NODE_ENV=production nor Railway, and DATABASE_URL points at ${host}.`);
   console.error('[db] Refusing to boot so local work cannot write to a live database.');
   console.error('[db] Set LOCAL_JSON_MODE=true to use the local JSON store,');
   console.error('[db] or ALLOW_REMOTE_DB=1 if you really mean to.');

@@ -57,6 +57,29 @@ console.log('\n=== server database guard ===\n');
 }
 
 {
+  // Production on Railway does NOT set NODE_ENV. Keying the guard on NODE_ENV
+  // alone made the first deploy of this guard refuse to boot and took the site
+  // down, so RAILWAY_* counts as production in its own right.
+  const r = boot({
+    NODE_ENV: '',
+    LOCAL_JSON_MODE: '',
+    DATABASE_URL: REMOTE,
+    RAILWAY_ENVIRONMENT: 'production',
+    RAILWAY_PROJECT_ID: 'ce622b7f-fed7-4dda-9190-e87097b794e5',
+  });
+  ok(!r.out.includes('Refusing to boot'), 'Railway boots without NODE_ENV set');
+  ok(!r.out.includes('Using the local JSON store'), 'and does not silently fall back to JSON');
+}
+
+{
+  // The same, but with no RAILWAY_* and no NODE_ENV at all: still production by
+  // absence of any local signal, so it must not refuse on that basis either.
+  const r = boot({ NODE_ENV: '', LOCAL_JSON_MODE: '', DATABASE_URL: REMOTE, RAILWAY_ENVIRONMENT: '', RAILWAY_PROJECT_ID: '' });
+  ok(r.out.includes('Refusing to boot'),
+    'a bare environment with a remote URL still refuses, since nothing marks it as production');
+}
+
+{
   // Opting in explicitly still works, so the guard is a speed bump and not a wall.
   const r = boot({
     NODE_ENV: 'development',
