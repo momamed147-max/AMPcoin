@@ -148,14 +148,21 @@ html[data-theme] .auth-card {
   padding: 34px 32px 30px;
   border-radius: 20px;
   background-color: rgba(14, 20, 31, 0.72);
+  /* !important, and only here: four separate sheets set `background` - the
+     shorthand - on this one element, and a shorthand resets every background
+     longhand beneath it. Source order and specificity both failed to settle it
+     over several passes. Nothing else on the card needs this; border, shadow
+     and blur all apply normally. */
+  background: rgba(14, 20, 31, 0.72) !important;
+  background-image:
+    radial-gradient(420px 170px at 50% 0%, rgba(76, 141, 255, 0.16), transparent 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.018) 26%, transparent 58%),
+    linear-gradient(180deg, rgba(22, 32, 48, 0.95) 0%, rgba(11, 17, 27, 0.95) 100%) !important;
   /* The 420px radial at the top is the highlight the card already had in
      main.css. A background lists its topmost layer first, so keeping it here
      and adding the panel gradient beneath is what actually changes the look -
      replacing it was why this read as unchanged. */
-  background-image:
-    radial-gradient(420px 170px at 50% 0%, rgba(76, 141, 255, 0.14), transparent 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0.015) 26%, transparent 58%),
-    linear-gradient(180deg, rgba(21, 30, 45, 0.92) 0%, rgba(12, 18, 29, 0.92) 100%);
+  
   border: 1px solid rgba(148, 163, 184, 0.2);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.1),
