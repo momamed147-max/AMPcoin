@@ -22,15 +22,9 @@
   --red: #f05d57;
   --gold: #e6ad3c;
   --orange: #ee8b42;
-  --nav-h: 64px;
-  --header-h: 58px;
   --r-sm: 9px;
   --r-md: 12px;
   --r-lg: 16px;
-  --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 18px 48px rgba(0, 0, 0, 0.28);
-  --shadow-lg: 0 30px 90px rgba(0, 0, 0, 0.48);
-  --ease: cubic-bezier(0.2, 0.75, 0.25, 1);
 }
 
 html {
@@ -1975,21 +1969,14 @@ textarea:focus,
   backdrop-filter: blur(3px);
 }
 
-/* Tablet: dock chat only when there is comfortable room */
-@media (max-width: 1600px) and (min-width: 1280px) {
-  .cf-topbar {
-    flex-wrap: wrap;
-    align-items: center;
-  }
+/* Tablet: dock chat only when there is comfortable room.
+   Removed: a rule that put the lobby's control row on its own full-width band
+   for every viewport up to 1600px. It stacked the topbar at exactly the width
+   a desktop monitor is, which made the bar 111px tall with about 400px of
+   nothing in the middle of it - on the one screen the lobby is read on.
 
-  .cf-topbar-right {
-    flex: 1 0 100%;
-    justify-content: flex-end;
-    padding-top: 7px;
-    border-top: 1px solid var(--line-soft);
-  }
-}
-
+   The topbar's own breakpoints now live in ui/lobby.css, next to the rest of
+   the bar. */
 @media (max-width: 1279px) and (min-width: 769px) {
   .chat-column {
     display: none !important;

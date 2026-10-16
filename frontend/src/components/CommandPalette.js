@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import ModalPortal from './ModalPortal';
 import Icon from './Icon';
 import { playButtonClick } from '../sound';
-import '../ui/tokens.css';
 import './CommandPalette.css';
 
 /**

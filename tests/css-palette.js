@@ -1,16 +1,20 @@
 /**
- * No stylesheet may declare :root variables.
+ * Exactly one stylesheet may declare the palette.
  *
- * The app-level palette lives in ui/v3.css, imported from index.js. Any other
- * file that declares :root is a landmine, because a stylesheet belonging to a
- * lazy page chunk is injected AFTER the main bundle. Its :root therefore wins,
- * and the moment that route opens the whole site reverts to whatever fallback
- * that file happened to carry.
+ * ui/system.css owns every design token. Any other file that declares a base
+ * :root palette is a landmine twice over:
  *
- * This was live for a long time and was invisible: lobby.css,
- * AnimatedPopup.css, AuthPage.css, AdminPanel.css and ProfileModal.css all
- * carried the same stale fallback, so every game route silently painted the
- * old colours while the login page looked correct.
+ *   1. It is a copy waiting to drift. Four files used to own the palette
+ *      between them, which is why the site never looked designed by anyone -
+ *      no single sheet was choosing a colour, values had just accumulated.
+ *
+ *   2. A stylesheet belonging to a lazy page chunk is injected AFTER the main
+ *      bundle. Its :root wins on that route, and the moment the route opens
+ *      the whole site reverts to whatever fallback that file carried. This was
+ *      live for a long time and was invisible: lobby.css, AnimatedPopup.css,
+ *      AuthPage.css, AdminPanel.css and ProfileModal.css all shipped the same
+ *      stale fallback, so every game route silently painted the old colours
+ *      while the login page looked correct.
  *
  * Run: node tests/css-palette.js
  */
@@ -36,7 +40,7 @@ const ok = (c, label, detail) => {
   else { fail += 1; console.log(`  FAIL  ${label}${detail ? `\n        ${detail}` : ''}`); }
 };
 
-console.log('\n=== only the app-level stylesheets may declare :root variables ===\n');
+console.log('\n=== only ui/system.css may declare a base palette ===\n');
 
 // index.js is the entry, so its CSS imports - and those of anything they
 // reach, transitively - load in the main bundle and are safe. A stylesheet
@@ -79,72 +83,91 @@ const mainBundleCss = (function closure(entry) {
 // harmless wherever they live and must not trip this.
 const PALETTE_VARS = /^--(bg\d?|panel\d?|line(-soft|-strong)?|txt|mut|dim|acc(-\d+)?|acc-(soft|glow)|grn(-soft)?|red(-soft)?|gold(-soft)?|orange|violet|pink|cyan|r-(xs|sm|md|lg|xl|full)|elev-\d+|fs-|dur-\d|font-)$/;
 
-const ALLOWED_PALETTE_OWNERS = /^index\.css$|^theme(-new)?\.css$|^ui\/(tokens|v3)\.css$/;
+// The system is the only owner. Nothing else may even be in the main bundle
+// with a palette, because a second copy can disagree with the first and there
+// is then no way to tell which one the user is looking at.
+const PALETTE_OWNER = 'ui/system.css';
 
 console.log(`  main-bundle stylesheets (transitive from index.js): ${mainBundleCss.size}\n`);
 
 const offenders = [];
 for (const file of walk(SRC)) {
   const rel = path.relative(SRC, file).replace(/\\/g, '/');
-  const src = fs.readFileSync(file, 'utf8');
+  // Strip comments before scanning. The previous detector required :root to be
+  // preceded by } or a comma, which meant a :root sitting under a comment
+  // header - the normal way to write one - was invisible to it. This guard
+  // reported "no stylesheet declares a palette" while system.css, the whole
+  // point of it, was right there.
+  const src = fs.readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
   // A bare :root block (not :root[data-theme=...], which is how a theme
   // overrides the palette) that declares custom properties.
-  const declares = [...src.matchAll(/(^|[},]\s*)(:root(?![^\s{,]*\[))\s*\{([^}]*)\}/g)]
-    .filter((m) => /--[a-z0-9-]+\s*:/.test(m[3]));
+  const declares = [...src.matchAll(/:root(?![^\s{,]*\[)\s*\{([^}]*)\}/g)]
+    .filter((m) => /--[a-z0-9-]+\s*:/.test(m[1]));
   if (!declares.length) continue;
 
-  const props = [...declares[0][3].matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]);
+  const props = [...declares[0][1].matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]);
   const paletteProps = props.filter((p) => PALETTE_VARS.test(p));
   if (!paletteProps.length) continue; // layout-only :root, fine anywhere
 
-  const isMain = mainBundleCss.has(file);
-  offenders.push({ rel, isMain, props: paletteProps });
+  const isOwner = rel === PALETTE_OWNER;
+  offenders.push({ rel, isOwner, props: paletteProps });
 
-  if (isMain) {
-    ok(ALLOWED_PALETTE_OWNERS.test(rel),
-      `${rel} may own a base :root palette`,
-      ALLOWED_PALETTE_OWNERS.test(rel)
-        ? ''
-        : `${paletteProps.length} palette vars declared here: ${paletteProps.slice(0, 6).join(', ')}\n        a second palette is a copy of ui/v3.css waiting to drift`);
+  if (isOwner) {
+    ok(mainBundleCss.has(file),
+      `${rel} loads in the main bundle, so every route inherits it`,
+      'it is imported by index.js but the resolver could not reach it');
   } else {
     ok(false,
       `${rel} must not declare :root palette variables`,
-      `it ships in a lazy page chunk, where it loads AFTER ui/v3.css and reverts the whole site on that route\n        declared: ${paletteProps.slice(0, 6).join(', ')}`);
+      `only ${PALETTE_OWNER} owns the palette\n        declared here: ${paletteProps.slice(0, 6).join(', ')}\n        ${mainBundleCss.has(file)
+        ? 'it is in the main bundle, so it silently competes with the system'
+        : 'it ships in a lazy page chunk, so it reverts the whole site on that route'}`);
   }
 }
 
 if (!offenders.length) console.log('  (no stylesheet declares :root variables at all)');
 
-console.log('\n=== the app palette is actually reachable ===\n');
+console.log('\n=== the system is imported first, and the palette is complete ===\n');
 const indexJs = fs.readFileSync(path.join(SRC, 'index.js'), 'utf8');
 {
-  const v3 = path.join(SRC, 'ui', 'v3.css');
-  ok(fs.existsSync(v3), 'ui/v3.css exists');
-  const src = fs.readFileSync(v3, 'utf8');
-  for (const v of ['--bg0', '--bg1', '--bg2', '--panel', '--txt', '--acc', '--grn', '--red']) {
-    ok(new RegExp(`${v}\\s*:`).test(src), `v3.css defines ${v}`);
+  const system = path.join(SRC, 'ui', 'system.css');
+  ok(fs.existsSync(system), 'ui/system.css exists');
+  const src = fs.readFileSync(system, 'utf8');
+
+  // The token set every other stylesheet reads. If one is missing here it
+  // falls through to some other sheet's value, which is precisely the drift
+  // this redesign is removing.
+  const REQUIRED = [
+    '--bg0', '--bg1', '--bg2', '--panel', '--panel2', '--panel3',
+    '--line', '--line-soft', '--line-strong',
+    '--txt', '--mut', '--dim',
+    '--acc', '--acc-bright', '--acc-soft', '--acc-glow',
+    '--grn', '--red', '--gold', '--orange',
+    '--font-body', '--font-display', '--font-mono',
+    '--r-sm', '--r-md', '--r-lg',
+    '--elev-1', '--elev-2', '--elev-3', '--elev-4',
+    '--dur-1', '--dur-2', '--dur-3', '--ease-1', '--ease-2',
+    '--focus-ring', '--page-max', '--z-modal',
+  ];
+  for (const v of REQUIRED) {
+    ok(new RegExp(`${v}\\s*:`).test(src), `system.css defines ${v}`);
   }
-  ok(indexJs.includes('ui/v3.css'), 'and index.js imports it');
-  // v3 must be the last stylesheet index.js imports, or a later one wins.
+
   const cssImports = [...indexJs.matchAll(/import\s+['"](\.[^'"]+\.css)['"]/g)].map((m) => m[1]);
-  const idxV3 = cssImports.indexOf('./ui/v3.css');
+  ok(cssImports.includes('./ui/system.css'), 'and index.js imports it');
 
-  // v3 must land after every layer it is meant to outrank. Those are the older
-  // design layers and the token/theme sheets, which sit earlier by design.
-  const v3MustBeat = ['./index.css', './theme.css', './ui/tokens.css', './ui/ui.css', './ui/shell.css'];
-  for (const sheet of v3MustBeat) {
-    ok(idxV3 > cssImports.indexOf(sheet),
-      `v3.css comes after ${sheet}, so v3 wins where it should`);
-  }
+  const idxSystem = cssImports.indexOf('./ui/system.css');
+  ok(idxSystem === 0,
+    'and it is the FIRST stylesheet, so everything after it can read the tokens',
+    idxSystem < 0 ? 'not imported' : `it is at position ${idxSystem + 1}, after ${cssImports[idxSystem - 1]}`);
 
-  // And the deliberate override layers come after v3, or they do nothing. Each
-  // exists to beat v3 in the cascade, which is why they are imported last.
-  const overrides = ['./ui/surface.css', './ui/layout.css'];
-  for (const sheet of overrides) {
-    ok(cssImports.indexOf(sheet) > idxV3,
-      `${sheet} is imported after v3.css, or it would be discarded`);
-  }
+  // A theme must still be able to override the system, which it does by
+  // matching :root[data-theme]. Same specificity as a bare :root class would
+  // lose, but these are attribute selectors on the same element, so the
+  // system being first is what keeps themes winning.
+  ok(idxSystem < cssImports.indexOf('./theme.css'),
+    'theme.css loads after the system, so a chosen theme still repaints it');
 }
 
 console.log('\n=== themes still override the palette ===\n');

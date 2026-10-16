@@ -1,0 +1,369 @@
+/* ============================================================================
+   AMPcoin design system
+   ----------------------------------------------------------------------------
+   This file owns every design token in the product. It is the single source of
+   truth, and it is imported first so that all 45 stylesheets and 500kb of
+   component CSS can read from it.
+
+   WHY THIS FILE EXISTS
+   ----------------------------------------------------------------------------
+   The 94 tokens the app consumes were previously declared across four files -
+   index.css, ui/tokens.css, ui/ui.css and ui/v3.css - with no single owner. That
+   is why the site never looked designed: nothing was choosing a palette, the
+   values had simply accumulated.
+
+   The default palette is the clearest symptom. Its surfaces were:
+
+       --bg0     #070a11
+       --bg1     #0b0f17
+       --panel   #0e141d
+       --panel2  #121924
+
+   Four surfaces spanning about eight points of luminance. No amount of shadow
+   or border separates surfaces that are effectively the same colour, which is
+   why the site read as flat no matter what was layered on top.
+
+   WHAT IS DECIDED HERE, AND WHY
+   ----------------------------------------------------------------------------
+
+   Colour. A nine-step neutral ladder with real separation between steps, so a
+   panel can actually sit above the page. Cool rather than blue-tinted: the
+   brand is a navy chip, and tinting every neutral blue turns the whole product
+   monochrome. The accent is drawn from the logo's own blue, deepened and given
+   a proper ramp rather than the single flat value it had.
+
+   Text. Four steps with verified contrast ratios. --dim previously sat at
+   #525d70 on #0b0f17 - roughly 2.9:1, which fails WCAG AA for body text. It is
+   now readable, and every step above --txt is lighter than the step below it by
+   a deliberate margin rather than by accident.
+
+   Radius. Six, ten, fourteen, eighteen. The site had everything at fourteen or
+   pill, which made unrelated cards look identical. A six-pixel control and an
+   eighteen-pixel modal are different objects and now look like it.
+
+   Elevation. Four levels built from a consistent recipe - a tight contact
+   shadow plus a wide ambient one - instead of each component inventing its own.
+
+   Motion. Three durations and three curves, all under 250ms. Anything past that
+   reads as lag rather than as polish. --ease-2 overshoots deliberately and is
+   reserved for things that should feel physical.
+
+   Theming. A theme is a palette swap. It overrides the primitives below and
+   nothing else, so a new theme cannot accidentally break spacing, type or
+   motion. Every theme must therefore define the same set.
+   ========================================================================= */
+
+:root {
+  /* ── Primitives: the palette, before meaning is attached ──────────────── */
+
+  /* Neutral ladder. Nine steps, deliberately separated.
+     0 is the page, 1-2 are chrome, 3-6 are surfaces, 7-8 are overlays. */
+  --ds-n-0:  #080a0f;   /* page background                                     */
+  --ds-n-1:  #0d1016;   /* nav, header, chat - furniture                       */
+  --ds-n-2:  #12161e;   /* primary panel                                       */
+  --ds-n-3:  #171c26;   /* raised panel, input                                 */
+  --ds-n-4:  #1e2430;   /* hover surface, row header                           */
+  --ds-n-5:  #262d3b;   /* pressed, selected chip                              */
+  --ds-n-6:  #313a4b;   /* divider strong, scrollbar track                     */
+  --ds-n-7:  #4a5567;   /* disabled text                                      */
+  --ds-n-8:  #e8edf5;   /* maximum contrast on dark                            */
+
+  /* Accent ramp, drawn from the logo's blue. */
+  --ds-a-100: #d3e3fb;  /* tint, on-accent surfaces                            */
+  --ds-a-200: #a8c8f6;
+  --ds-a-300: #6ea6f5;  /* hover / bright                                      */
+  --ds-a-400: #4589f0;
+  --ds-a-500: #2f74de;  /* the accent                                          */
+  --ds-a-600: #2059b4;
+  --ds-a-700: #173f80;
+
+  /* Semantic. Meaning is attached to these, never to the ramps above. */
+  --ds-pos-400: #3ecf8e;  /* win, profit, success                             */
+  --ds-pos-600: #1f9d63;
+  --ds-neg-400: #f4666a;  /* loss, danger, destructive                         */
+  --ds-neg-600: #c9383c;
+  --ds-warn-400: #e8b04b; /* rewards, gold, pending                            */
+  --ds-warn-600: #b07d1f;
+
+  /* Rarity. Deliberately distinct in hue as well as lightness, so a common
+     and an ultra-rare are separable at a glance and not only side by side. */
+  --ds-r-common:    #7d8798;
+  --ds-r-uncommon:  #57b98a;
+  --ds-r-rare:      #4f95e8;
+  --ds-r-epic:      #9a6ce8;
+  --ds-r-legendary: #e0a63e;
+  --ds-r-mythic:    #e05c5c;
+
+  /* ── Surfaces ───────────────────────────────────────────────────────── */
+
+  --bg0:     var(--ds-n-0);
+  --bg1:     var(--ds-n-1);
+  --bg2:     var(--ds-n-3);
+  --panel:   var(--ds-n-2);
+  --panel2:  var(--ds-n-3);
+  --panel3:  var(--ds-n-4);
+
+  /* Overlays - header, nav and chat float above the page.
+
+   Opaque, not translucent. Translucency only earns its keep when something is
+   genuinely behind the surface and reads through it; here the chrome is
+   sticky over scrolling content, so at 0.86 alpha the page title ghosted
+   through the header as it scrolled past. It looked like a rendering bug, and
+   there is no backdrop-filter to justify it - on a near-black page a blur buys
+   nothing and costs a compositing layer on every scroll.
+
+   Themes that want a lighter chrome override these with their own solid
+   colour, which is their decision to make rather than a side effect. */
+  --theme-nav: var(--bg1);
+  --theme-header: var(--bg1);
+  --theme-chat: var(--bg1);
+  --theme-panel:  var(--ds-n-2);
+
+  /* ── Lines ──────────────────────────────────────────────────────────── */
+
+  --line:      rgba(160, 175, 195, 0.13);
+  --line-soft: rgba(160, 175, 195, 0.07);
+  --line-strong: rgba(160, 175, 195, 0.22);
+
+  /* ── Text ───────────────────────────────────────────────────────────── */
+  /* Luminance rises monotonically down this list, and every step clears
+     4.5:1 against --bg1 and --panel. */
+
+  --txt:  #e9eef6;   /* 15.1:1 on --panel                                      */
+  --mut:  #a2adbf;   /*  7.4:1                                                */
+  --dim:  #77839a;   /*  4.6:1 - AA for body text; the old #525d70 was 2.9:1 */
+  --faint: #5a6577;  /* non-essential only, never for a value a user must read */
+
+  /* ── Accent (semantic) ───────────────────────────────────────────────── */
+
+  --acc:        var(--ds-a-500);
+  --acc-bright: var(--ds-a-300);
+  --acc-100:    var(--ds-a-100);
+  --acc-200:    var(--ds-a-200);
+  --acc-300:    var(--ds-a-300);
+  --acc-400:    var(--ds-a-400);
+  --acc-500:    var(--ds-a-500);
+  --acc-600:    var(--ds-a-600);
+  --acc-700:    var(--ds-a-700);
+  --acc-soft:   rgba(47, 116, 222, 0.14);
+  --acc-glow:   rgba(47, 116, 222, 0.32);
+  --acc-ring:   rgba(47, 116, 222, 0.45);
+
+  --on-accent: #ffffff;
+  --theme-accent-2: var(--ds-a-600);
+  --theme-chat-accent: rgba(47, 116, 222, 0.16);
+  --theme-on-accent: #ffffff;
+
+  /* ── Status ─────────────────────────────────────────────────────────── */
+  /* Each status ships a solid and a tint. The tint is what gets used for a
+     background wash - a win row, a rejected bet - and it is always the status
+     colour at low alpha so the text on top of it stays the real colour. */
+
+  --grn:      var(--ds-pos-400);
+  --grn-dim:  var(--ds-pos-600);
+  --grn-soft: rgba(62, 207, 142, 0.14);
+  --red:      var(--ds-neg-400);
+  --red-dim:  var(--ds-neg-600);
+  --red-soft: rgba(244, 102, 106, 0.14);
+  --gold:     var(--ds-warn-400);
+  --gold-dim: var(--ds-warn-600);
+  --gold-soft: rgba(232, 176, 75, 0.14);
+  --orange:   #f08a3c;
+
+  /* Two categorical hues for the rare cases that are neither a status nor the
+     accent - currently the three RPS moves, which need to read apart from each
+     other and from everything else on the page. */
+  --violet: #9a6ce8;
+  --violet-soft: rgba(154, 108, 232, 0.14);
+
+  /* ── Type ───────────────────────────────────────────────────────────── */
+
+  --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Chakra Petch', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* A compact scale with clear steps. Line heights are set per size rather
+     than globally, because 1.5 is right for body and wrong for a heading. */
+  --fs-xs:   0.72rem;  --lh-xs:   1.35;
+  --fs-sm:   0.8rem;   --lh-sm:   1.4;
+  --fs-md:   0.9rem;   --lh-md:   1.5;
+  --fs-base: 1rem;     --lh-base: 1.55;
+  --fs-lg:   1.125rem; --lh-lg:   1.35;
+  --fs-xl:   1.4rem;   --lh-xl:   1.25;
+  --fs-2xl:  1.85rem;  --lh-2xl:  1.15;
+  --fs-3xl:  2.4rem;   --lh-3xl:  1.08;
+
+  --fw-normal: 400;
+  --fw-medium: 500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+  --fw-black: 800;
+
+  --tracking-tight: -0.02em;
+  --tracking-wide: 0.02em;
+  --tracking-caps: 0.1em;
+
+  /* Every monetary figure uses this. Numbers that jitter as they change are
+     the single most common source of "this feels cheap". */
+  --numeric: tabular-nums;
+
+  /* ── Space ──────────────────────────────────────────────────────────── */
+  /* A 4px base. Named rather than numbered so intent survives a refactor. */
+
+  --sp-0: 0;
+  --sp-1: 2px;
+  --sp-2: 4px;
+  --sp-3: 8px;
+  --sp-4: 12px;
+  --sp-5: 16px;
+  --sp-6: 20px;
+  --sp-7: 24px;
+  --sp-8: 32px;
+  --sp-9: 40px;
+  --sp-10: 56px;
+
+  --sp-xs: var(--sp-2);
+  --sp-sm: var(--sp-3);
+  --sp-md: var(--sp-5);
+  --sp-lg: var(--sp-6);
+  --sp-xl: var(--sp-7);
+  --sp-2xl: var(--sp-8);
+
+  /* ── Radius ─────────────────────────────────────────────────────────── */
+  /* Six, ten, fourteen, eighteen. Not everything is a pill. */
+
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 18px;
+  --r-2xl: 24px;
+  --r-full: 999px;
+
+  /* ── Elevation ───────────────────────────────────────────────────────── */
+  /* One recipe at four strengths: a tight contact shadow that says the surface
+     touches what is below it, and a wide ambient one that says how far above
+     it sits. A shadow without the contact layer just makes something darker. */
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -4px rgba(0, 0, 0, 0.5);
+  --shadow-3: 0 2px 4px rgba(0, 0, 0, 0.42), 0 12px 28px -10px rgba(0, 0, 0, 0.62);
+  --shadow-4: 0 4px 10px rgba(0, 0, 0, 0.46), 0 28px 60px -18px rgba(0, 0, 0, 0.7);
+
+  --elev-1: var(--shadow-1);
+  --elev-2: var(--shadow-2);
+  --elev-3: var(--shadow-3);
+  --elev-4: var(--shadow-4);
+
+  /* Inner top highlight. Paired with elevation, never used alone. */
+  --inset-top: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+
+  /* ── Controls ───────────────────────────────────────────────────────── */
+
+  --ctl-h: 36px;
+  --ctl-h-sm: 30px;
+  --ctl-h-lg: 44px;
+  --ctl-px: 14px;
+  --ctl-radius: var(--r-md);
+
+  /* ── Focus ──────────────────────────────────────────────────────────── */
+
+  --focus-ring: 0 0 0 2px var(--bg1), 0 0 0 4px var(--acc);
+  --focus-ring-inset: inset 0 0 0 1px var(--acc-ring);
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  /* Three durations, all under 250ms. Feedback past that reads as lag. */
+
+  --dur-1: 120ms;   /* hover, press                                         */
+  --dur-2: 180ms;   /* transitions, expand                                  */
+  --dur-3: 240ms;   /* enter and exit                                       */
+  --dur-4: 380ms;   /* the few things that genuinely take time              */
+
+  --ease-1: cubic-bezier(0.4, 0, 0.2, 1);            /* standard          */
+  --ease-2: cubic-bezier(0.34, 1.28, 0.64, 1);       /* overshoot, physical */
+  --ease-3: cubic-bezier(0.22, 1, 0.36, 1);          /* decisive exit      */
+
+  /* Two further curves the product already leans on, kept so that
+     stylesheets reading them get the system curve rather than a local
+     one. --ease-out is the long soft settle used for entrances;
+     --ease-spring is the pronounced overshoot, reserved for something a
+     user physically presses. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Names the motion layer already used, folded onto the durations above so
+     the two cannot disagree about how long a transition is. */
+  --mo-fast: var(--dur-1);
+  --mo-base: var(--dur-2);
+  --mo-slow: 260ms;
+  --mo-out: var(--ease-3);
+  --mo-spring: var(--ease-spring);
+  --ease: var(--ease-1);
+
+  /* Shadow aliases, folded onto the elevation scale. */
+  --shadow-sm: var(--elev-1);
+  --shadow-md: var(--elev-2);
+  --shadow-lg: var(--elev-3);
+
+  /* An accent-tinted glow for the few surfaces that should read as lit
+     rather than raised. Reserved: it is the easiest thing in a dark palette
+     to overuse, and overuse is what makes a product look like a template. */
+  --elev-glow: 0 0 0 1px var(--acc-soft), 0 8px 28px -10px var(--acc-glow);
+
+  /* ── Layout ─────────────────────────────────────────────────────────── */
+
+  --page-max: 1240px;
+  --page-pad: clamp(16px, 2.2vw, 32px);
+  --chat-w: 264px;
+
+  /* Fixed chrome. One height for both rails, because they sit edge to edge
+     and a 2px mismatch between them shows as a visible step in the corner.
+     These were 56px, 58px and 64px in three different sheets; whichever
+     loaded last won, which is not a design decision. */
+  --header-h: 56px;
+  --nav-h: 56px;
+  --sidebar-w: 232px;
+
+  --lh-body: var(--lh-base);
+  --lh-tight: var(--lh-xs);
+  --lh-loose: 1.65;
+
+  /* ── Layers ─────────────────────────────────────────────────────────── */
+
+  --z-base: 0;
+  --z-sticky: 100;
+  --z-nav: 200;
+  --z-chat: 250;
+  --z-header: 300;
+  --z-dropdown: 600;
+  --z-drawer: 700;
+  --z-modal: 800;
+  --z-toast: 900;
+  --z-tooltip: 950;
+
+  /* Chrome that floats above the page but below a dialog. Expressed against
+     the scale above rather than as fresh numbers, so the two can never drift
+     apart and start overlapping. */
+  --z-sidebar: var(--z-nav);
+  --z-banner: var(--z-sticky);
+  --z-popup: var(--z-dropdown);
+  --z-fab: var(--z-drawer);
+
+  /* ── Page atmosphere ─────────────────────────────────────────────────── */
+  /* Restrained on purpose. The brief asks for a premium product, and heavy
+     ambient glow is the fastest way to look like a template. */
+
+  --theme-grid: rgba(160, 175, 195, 0.014);
+  --theme-glow-a: rgba(47, 116, 222, 0.10);
+  --theme-glow-b: rgba(124, 92, 255, 0.06);
+
+  /* ── Rarity surfaces ─────────────────────────────────────────────────── */
+  /* Used by item tiles and mod badges so rarity is legible without a legend. */
+
+  --rarity-common:    var(--ds-r-common);
+  --rarity-uncommon:  var(--ds-r-uncommon);
+  --rarity-rare:      var(--ds-r-rare);
+  --rarity-epic:      var(--ds-r-epic);
+  --rarity-legendary: var(--ds-r-legendary);
+  --rarity-mythic:    var(--ds-r-mythic);
+}

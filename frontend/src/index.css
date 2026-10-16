@@ -1,59 +1,141 @@
-:root {
-  --bg0: #070a11;
-  --bg1: #0b0f17;
-  --panel: #0e141d;
-  --panel2: #121924;
-  --line: rgba(148, 163, 184, 0.12);
-  --line-soft: rgba(148, 163, 184, 0.07);
-  --txt: #eef2f7;
-  --mut: #8b96a8;
-  --dim: #525d70;
-  --acc: #2f81f7;
-  --acc-soft: rgba(47, 129, 247, 0.12);
-  --grn: #3fb950;
-  --red: #f85149;
-  --gold: #d29922;
-  --orange: #ec7f24;
-  --r-sm: 8px;
-  --r-md: 10px;
-  --r-lg: 14px;
+/* ============================================================================
+   Base reset
+   ----------------------------------------------------------------------------
+   Design tokens live in ui/system.css and nowhere else. This file is the
+   document-level reset that sits on top of them.
+   ========================================================================= */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* The app owns its own scrolling regions; the document itself must not
+     bounce horizontally on any viewport. */
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  font-size: var(--fs-base);
+  line-height: var(--lh-base);
+  color: var(--txt);
+  background-color: var(--bg0);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
-  background: linear-gradient(135deg, #000000 0%, #0a0a1a 30%, #001122 60%, #000000 100%);
+
+  /* Numerals line up in tables, lobbies and every value readout. */
+  font-variant-numeric: tabular-nums;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* Theme atmosphere. Two very soft washes positioned off-canvas so they read
+   as light falling into the room rather than as a gradient painted onto it.
+   Both are pinned, so they cost nothing to scroll and never move under
+   content while a lobby animates. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-base);
+  pointer-events: none;
+  background:
+    radial-gradient(900px 620px at 18% -8%, var(--theme-glow-a), transparent 62%),
+    radial-gradient(760px 560px at 92% 6%, var(--theme-glow-b), transparent 60%);
 }
 
-/* Custom scrollbar */
+/* Legacy full-bleed background gradients set a <img>-style cover on
+   background-size. This is the correct pairing for a fixed wash. */
+body::before,
+body::after {
+  background-size: cover;
+  background-position: center;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--fw-semi);
+  line-height: var(--lh-lg);
+  color: var(--txt);
+}
+
+p { margin: 0; }
+
+a {
+  color: var(--acc-bright);
+  text-decoration: none;
+  transition: color var(--dur-1) var(--ease-1);
+}
+a:hover { color: var(--acc-100); }
+
+img, svg, video {
+  display: block;
+  max-width: 100%;
+}
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+code, pre {
+  font-family: var(--font-mono);
+}
+
+/* A single focus treatment for the whole product. Keyboard users get a ring
+   that is clearly visible against every surface; pointer users get nothing
+   extra, because :focus-visible does not fire for them. */
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+
+/* Scrollbars, on the product's terms. Thin, neutral, and only obvious enough
+   to find without being visible when you are reading. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--panel3) transparent;
+}
+
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  height: 10px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #0a0a1a;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #2a2a3a;
-  border-radius: 4px;
+  background: var(--panel3);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--r-full);
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #00aaff;
+  background: var(--ds-n-6);
+  background-clip: content-box;
 }
 
-/* Game-name font: Chakra Petch for logo, game tabs, and headings */
+/* Selection uses the accent at low opacity so selected text stays legible. */
+::selection {
+  background: var(--acc-soft);
+  color: var(--txt);
+}
+
+/* ============================================================================
+   Display type
+   ----------------------------------------------------------------------------
+   Chakra Petch is the brand's geometric face. It is reserved for names and
+   figures - the logo, game tabs, section titles, pot values - so that it
+   means "this is AMPcoin" rather than being the default body font.
+   ========================================================================= */
+
 .sidebar-logo .logo-text,
 .auth-logo-text,
 .cf-tab-label,
@@ -62,8 +144,27 @@ code {
 .vc-header h2,
 .jp-pot-value,
 .auth-title {
-  font-family: 'Chakra Petch', 'Segoe UI', sans-serif;
-  letter-spacing: 0.3px;
+  font-family: var(--font-display);
+  letter-spacing: 0.02em;
 }
 
 .amp-icon { display: inline-block; }
+
+/* ============================================================================
+   Reduced motion
+   ----------------------------------------------------------------------------
+   Not a blanket kill - the 1ms duration keeps transitionend firing so
+   components that depend on it to clean up still resolve. What goes away is
+   anything decorative that would otherwise move while someone reads.
+   ========================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+}

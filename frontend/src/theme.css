@@ -1,9 +1,9 @@
 /* Theme layer — loaded after the main visual system so every surface inherits it. */
 
 :root {
-  --theme-nav: rgba(8, 13, 22, 0.9);
-  --theme-header: rgba(9, 14, 24, 0.82);
-  --theme-chat: rgba(9, 14, 24, 0.82);
+  --theme-nav: var(--bg1);
+  --theme-header: var(--bg1);
+  --theme-chat: var(--bg1);
   --theme-panel: #0d1420;
   --theme-grid: rgba(255, 255, 255, 0.012);
   --theme-glow-a: rgba(50, 104, 190, 0.15);
@@ -14,9 +14,9 @@
 }
 
 :root[data-theme='default'] {
-  --theme-nav: rgba(8, 13, 22, 0.9);
-  --theme-header: rgba(9, 14, 24, 0.82);
-  --theme-chat: rgba(9, 14, 24, 0.82);
+  --theme-nav: var(--bg1);
+  --theme-header: var(--bg1);
+  --theme-chat: var(--bg1);
   --theme-panel: #0d1420;
   --theme-grid: rgba(255, 255, 255, 0.012);
   --theme-glow-a: rgba(50, 104, 190, 0.15);
@@ -48,9 +48,9 @@
   --red: #ff769b;
   --gold: #ffd166;
   --orange: #ffad68;
-  --theme-nav: rgba(27, 9, 35, 0.92);
-  --theme-header: rgba(29, 10, 38, 0.84);
-  --theme-chat: rgba(25, 8, 33, 0.86);
+  --theme-nav: var(--bg1);
+  --theme-header: var(--bg1);
+  --theme-chat: var(--bg1);
   --theme-panel: #21102b;
   --theme-grid: rgba(255, 170, 240, 0.018);
   --theme-glow-a: rgba(204, 70, 220, 0.18);
@@ -82,9 +82,9 @@
   --red: #fb7185;
   --gold: #fde68a;
   --orange: #fdba74;
-  --theme-nav: rgba(8, 8, 11, 0.92);
-  --theme-header: rgba(12, 12, 16, 0.86);
-  --theme-chat: rgba(9, 9, 12, 0.88);
+  --theme-nav: var(--bg1);
+  --theme-header: var(--bg1);
+  --theme-chat: var(--bg1);
   --theme-panel: #0f0f14;
   --theme-grid: rgba(255, 255, 255, 0.009);
   --theme-glow-a: rgba(196, 181, 253, 0.1);
@@ -116,9 +116,9 @@
   --red: #f87171;
   --gold: #facc15;
   --orange: #fb923c;
-  --theme-nav: rgba(29, 19, 3, 0.92);
-  --theme-header: rgba(31, 20, 4, 0.86);
-  --theme-chat: rgba(25, 16, 3, 0.88);
+  --theme-nav: var(--bg1);
+  --theme-header: var(--bg1);
+  --theme-chat: var(--bg1);
   --theme-panel: #241904;
   --theme-grid: rgba(255, 210, 80, 0.014);
   --theme-glow-a: rgba(245, 158, 11, 0.16);
@@ -152,9 +152,9 @@
   --red: #fb7185;
   --gold: #fbbf24;
   --orange: #f97316;
-  --theme-nav: rgba(9, 24, 22, 0.92);
-  --theme-header: rgba(11, 30, 27, 0.88);
-  --theme-chat: rgba(8, 22, 20, 0.9);
+  --theme-nav: var(--bg1);
+  --theme-header: var(--bg1);
+  --theme-chat: var(--bg1);
   --theme-panel: #10241f;
   --theme-grid: rgba(20, 184, 166, 0.016);
   --theme-glow-a: rgba(249, 115, 22, 0.15);

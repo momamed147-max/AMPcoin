@@ -1,0 +1,779 @@
+/* ============================================================================
+   AMPcoin components
+   ----------------------------------------------------------------------------
+   The primitive layer: panels, buttons, tabs, modals, badges, tables, empty
+   states. Everything on every page is built from these, which is what makes
+   the product feel like one thing rather than eleven.
+
+   Everything here reads from ui/system.css. Not one colour is written out
+   literally. That is the whole point - when a theme repaints a token, this
+   layer repaints with it, and a new theme cannot leave half the product
+   behind.
+
+   RESTRAINT
+   ----------------------------------------------------------------------------
+   The temptation with a dark interface is to reach for a gradient on every
+   surface and a glow on every button. It is the fastest way to make a product
+   look like a template, and it costs real legibility: glows reduce the
+   contrast between a control and the thing behind it, and stacked gradients
+   make flat text look soft.
+
+   The rules actually followed here:
+
+     - A surface gets ONE gradient, a light falloff from the top edge. That is
+       what makes it read as lit from above. It is a fraction of a percent of
+       white, not a visible wash.
+     - Elevation is a shadow, and a shadow alone only makes something darker.
+       Anything raised also gets a one-pixel highlight on its top edge.
+     - The accent appears on things you can act on and on figures that decide
+       something. Nowhere else. A screen where everything is accented has no
+       accent.
+     - A figure is never filled with a gradient. Numbers have to stay
+       readable first and impressive second.
+
+   IMPORT ORDER
+   ----------------------------------------------------------------------------
+   Imported after the legacy layers so it wins the primitives they also style.
+   A stylesheet inside a lazy page chunk still beats this file, which is the
+   behaviour we want: a page owns its own components, and this layer governs
+   the ones shared by all of them.
+   ========================================================================= */
+
+/* ============================================================================
+   Surfaces
+   ========================================================================= */
+
+/* A panel is the base unit of every screen. One definition, so a card on
+   Trading lines up with one on Blackjack.
+
+   The gradient is the "lit from above" cue and nothing more. The hairline
+   border does the actual separation work; the gradient only stops a large
+   surface from reading as a hole cut in the page. */
+.panel,
+.card,
+.ui-panel,
+.cf-topbar,
+.cp-panel {
+  position: relative;
+  background-color: var(--panel);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.035) 0%,
+    rgba(255, 255, 255, 0.008) 18%,
+    transparent 44%
+  );
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--elev-1), var(--inset-top);
+}
+
+/* Anything genuinely floating - a popover, a menu, a card that overlaps other
+   content - is one elevation step up and carries a stronger border, because
+   an overlay needs a clear edge against whatever is behind it. */
+.elev-2,
+.popover,
+.dropdown {
+  box-shadow: var(--elev-3), var(--inset-top);
+  border-color: var(--line-strong);
+}
+
+.elev-3 {
+  box-shadow: var(--elev-4), var(--inset-top);
+  border-color: var(--line-strong);
+}
+
+/* ============================================================================
+   Buttons
+   ========================================================================= */
+
+/* One button, four weights of emphasis, three sizes.
+
+   The visual weight order is deliberate and never varies: primary is the only
+   filled accent, secondary is a raised neutral, ghost is text with a hover
+   surface. Two filled buttons side by side means the choice between them was
+   never really a choice. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  min-height: var(--ctl-h);
+  padding: 0 var(--ctl-px);
+  border: 1px solid transparent;
+  border-radius: var(--ctl-radius);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  line-height: 1;
+  letter-spacing: var(--tracking-wide);
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--dur-1) var(--ease-1),
+    background-image var(--dur-1) var(--ease-1),
+    border-color var(--dur-1) var(--ease-1),
+    color var(--dur-1) var(--ease-1),
+    box-shadow var(--dur-1) var(--ease-1),
+    transform var(--dur-1) var(--ease-1);
+}
+
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-sm {
+  min-height: var(--ctl-h-sm);
+  padding: 0 10px;
+  font-size: var(--fs-xs);
+  border-radius: var(--r-sm);
+}
+
+.btn-lg {
+  min-height: var(--ctl-h-lg);
+  padding: 0 20px;
+  font-size: var(--fs-md);
+}
+
+/* -- Primary ------------------------------------------------------------- */
+/* A single flat accent fill. The old three-stop gradient plus a 28px glow made
+   every button on screen the brightest object, which meant none of them were. */
+
+.btn-primary,
+.cf-join-btn {
+  background-color: var(--acc);
+  border-color: var(--acc-300);
+  color: var(--on-accent);
+  box-shadow: var(--inset-top), 0 2px 10px -4px var(--acc-glow);
+}
+
+.btn-primary:hover:not(:disabled):not([aria-disabled='true']),
+.cf-join-btn:hover:not(:disabled) {
+  background-color: var(--acc-300);
+  border-color: var(--acc-200);
+  box-shadow: var(--inset-top), 0 4px 16px -5px var(--acc-glow);
+}
+
+.btn-primary:active:not(:disabled),
+.cf-join-btn:active:not(:disabled) {
+  background-color: var(--acc-600);
+  border-color: var(--acc-700);
+}
+
+/* -- Secondary ----------------------------------------------------------- */
+/* A raised neutral. It reads as pressable without competing with the primary
+   for attention. */
+
+.btn-secondary,
+.cf-view-btn,
+.cf-topbar-btn,
+.cf-bot-btn {
+  background-color: var(--panel3);
+  border-color: var(--line);
+  color: var(--txt);
+  box-shadow: var(--inset-top);
+}
+
+.btn-secondary:hover:not(:disabled):not([aria-disabled='true']),
+.cf-view-btn:hover:not(:disabled),
+.cf-topbar-btn:hover:not(:disabled),
+.cf-bot-btn:hover:not(:disabled) {
+  background-color: var(--ds-n-5);
+  border-color: var(--line-strong);
+}
+
+.btn-secondary:active:not(:disabled),
+.cf-view-btn:active:not(:disabled) {
+  background-color: var(--ds-n-4);
+}
+
+/* -- Ghost --------------------------------------------------------------- */
+/* Text with a surface on hover. For the third option beside two buttons, and
+   for toolbars where every action is equally weighted. */
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--mut);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--panel3);
+  color: var(--txt);
+}
+
+/* -- Status -------------------------------------------------------------- */
+
+.btn-danger {
+  background-color: var(--red-dim);
+  border-color: var(--red);
+  color: #fff;
+  box-shadow: var(--inset-top);
+}
+.btn-danger:hover:not(:disabled) {
+  background-color: var(--red);
+  border-color: var(--red);
+}
+
+.btn-success {
+  background-color: var(--grn-dim);
+  border-color: var(--grn);
+  color: #fff;
+  box-shadow: var(--inset-top);
+}
+.btn-success:hover:not(:disabled) {
+  background-color: var(--grn);
+  border-color: var(--grn);
+}
+
+/* A destructive action on a page that also holds valuable things gets an
+   outline instead of a fill, so it cannot be hit by muscle memory. */
+.btn-danger-ghost {
+  background-color: transparent;
+  border-color: color-mix(in srgb, var(--red) 40%, transparent);
+  color: var(--red);
+}
+.btn-danger-ghost:hover:not(:disabled) {
+  background-color: var(--red-soft);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ============================================================================
+   Form controls
+   ========================================================================= */
+
+.input,
+.select,
+.textarea,
+input[type='text'],
+input[type='number'],
+input[type='password'],
+input[type='search'],
+input[type='email'],
+select,
+textarea {
+  width: 100%;
+  min-height: var(--ctl-h);
+  padding: 0 var(--ctl-px);
+  background-color: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--ctl-radius);
+  color: var(--txt);
+  font-size: var(--fs-md);
+  transition:
+    border-color var(--dur-1) var(--ease-1),
+    background-color var(--dur-1) var(--ease-1),
+    box-shadow var(--dur-1) var(--ease-1);
+}
+
+textarea {
+  padding: 10px var(--ctl-px);
+  line-height: var(--lh-base);
+  resize: vertical;
+}
+
+.input::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: var(--faint);
+}
+
+.input:hover,
+input:hover,
+select:hover,
+textarea:hover {
+  border-color: var(--line-strong);
+}
+
+.input:focus,
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--acc);
+  background-color: var(--panel3);
+  box-shadow: 0 0 0 3px var(--acc-soft);
+}
+
+.input:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* A select needs its own chevron. The native one is drawn for a white
+   dropdown list and disappears against a dark field. */
+.select,
+select {
+  appearance: none;
+  padding-right: 34px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--mut) 50%),
+    linear-gradient(135deg, var(--mut) 50%, transparent 50%);
+  background-position:
+    right 16px center,
+    right 11px center;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+
+/* ============================================================================
+   Tabs
+   ========================================================================= */
+
+/* A recessed track. The selected tab is raised out of it rather than filled
+   with the accent - an accent fill here competes with the primary action on
+   the page, and a tab is not an action. */
+.tab-list,
+.cf-topbar-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background-color: var(--bg0);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.tab-btn,
+.cf-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 28px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--mut);
+  font-family: var(--font-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-1) var(--ease-1),
+    color var(--dur-1) var(--ease-1),
+    border-color var(--dur-1) var(--ease-1);
+}
+
+.tab-btn:hover,
+.cf-tab:hover {
+  background-color: var(--panel2);
+  color: var(--txt);
+}
+
+.tab-btn.active,
+.tab-btn[aria-selected='true'],
+.cf-tab.cf-tab-active {
+  background-color: var(--panel3);
+  border-color: var(--line);
+  color: var(--acc-bright);
+  box-shadow: var(--inset-top);
+  font-weight: var(--fw-semi);
+}
+
+/* ============================================================================
+   Modals
+   ========================================================================= */
+
+/* A scrim, not a blur. On a near-black page a backdrop-filter buys nothing
+   visually, costs a compositing layer on every scroll, and made the nav behind
+   it unreadable in headless Chrome. */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-7);
+  background: rgba(4, 6, 10, 0.72);
+  animation: modal-scrim-in var(--dur-2) var(--ease-1) both;
+}
+
+.modal,
+.modal-content,
+.cf-view-modal,
+.cf-join-modal,
+.cf-history-modal,
+.cf-value-modal {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  max-height: min(86dvh, 900px);
+  display: flex;
+  flex-direction: column;
+  background-color: var(--panel);
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.008) 20%,
+    transparent 50%
+  );
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-xl);
+  box-shadow: var(--elev-4), var(--inset-top);
+  overflow: hidden;
+  animation: modal-in var(--dur-3) var(--ease-3) both;
+}
+
+/* Only the body scrolls. The header stays put so "close" and the title are
+   always reachable, however long the content gets. */
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-6);
+  border-bottom: 1px solid var(--line-soft);
+  flex-shrink: 0;
+}
+
+.modal-header h2,
+.modal-header h3 {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
+}
+
+.modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-6);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-6);
+  border-top: 1px solid var(--line-soft);
+  background-color: color-mix(in srgb, var(--bg0) 40%, transparent);
+  flex-shrink: 0;
+}
+
+.modal-close,
+.modal-close-btn,
+.close-modal {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--mut);
+  font-size: var(--fs-lg);
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-1) var(--ease-1),
+    color var(--dur-1) var(--ease-1);
+}
+
+.modal-close:hover,
+.modal-close-btn:hover,
+.close-modal:hover {
+  background-color: var(--panel3);
+  color: var(--txt);
+}
+
+@keyframes modal-scrim-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes modal-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ============================================================================
+   Badges and chips
+   ========================================================================= */
+
+.badge,
+.status-badge,
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-full);
+  background-color: var(--panel3);
+  color: var(--mut);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  line-height: 1.5;
+  letter-spacing: var(--tracking-wide);
+  white-space: nowrap;
+}
+
+.badge-success {
+  background-color: var(--grn-soft);
+  border-color: color-mix(in srgb, var(--grn) 34%, transparent);
+  color: var(--grn);
+}
+
+.badge-danger {
+  background-color: var(--red-soft);
+  border-color: color-mix(in srgb, var(--red) 34%, transparent);
+  color: var(--red);
+}
+
+.badge-gold {
+  background-color: var(--gold-soft);
+  border-color: color-mix(in srgb, var(--gold) 34%, transparent);
+  color: var(--gold);
+}
+
+.badge-accent {
+  background-color: var(--acc-soft);
+  border-color: color-mix(in srgb, var(--acc) 34%, transparent);
+  color: var(--acc-bright);
+}
+
+/* ============================================================================
+   Statistics
+   ========================================================================= */
+
+/* A figure has to be legible before it is impressive. No gradient fill, no
+   condensed display face - just weight, size and tabular figures so a column
+   of them lines up. */
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5) var(--sp-5);
+  background-color: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--elev-1), var(--inset-top);
+}
+
+.stat-label {
+  color: var(--mut);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.stat-number,
+.stat-value,
+.stat-gem {
+  font-family: var(--font-display);
+  font-size: var(--fs-2xl);
+  font-weight: var(--fw-bold);
+  line-height: var(--lh-2xl);
+  letter-spacing: var(--tracking-tight);
+  color: var(--txt);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-sub {
+  color: var(--dim);
+  font-size: var(--fs-sm);
+}
+
+.stat-sub.is-up   { color: var(--grn); }
+.stat-sub.is-down { color: var(--red); }
+
+/* ============================================================================
+   Tables
+   ========================================================================= */
+
+/* Tables stay tables. Turning one into a stack of cards is a common
+   "responsive" move that costs more than it gives once there are more than
+   four columns. Instead the wrapper scrolls horizontally, which keeps the
+   relationships between columns intact. */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--fs-sm);
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: var(--sp-3) var(--sp-4);
+  background-color: var(--panel2);
+  border-bottom: 1px solid var(--line);
+  color: var(--mut);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--txt);
+  vertical-align: middle;
+}
+
+.table tbody tr {
+  transition: background-color var(--dur-1) var(--ease-1);
+}
+
+.table tbody tr:hover {
+  background-color: var(--panel2);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* A numeric column. Right-aligned with tabular figures, so the digits form a
+   clean edge down the page instead of a ragged one. */
+.table .num,
+.table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================================
+   Empty and loading states
+   ========================================================================= */
+
+/* An empty lobby is a normal state, not an error, and it must not look like
+   one. No card, no icon, no apology - just a centred sentence with enough
+   space around it to read as deliberate.
+
+   Critically it reserves no height. An empty state given the padding of a
+   section makes a page with nothing to show look like a page with a great
+   deal to show. */
+.empty-state,
+.empty-row,
+.cf-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 0;
+  padding: var(--sp-9) var(--sp-6);
+  border: 1px dashed var(--line);
+  border-radius: var(--r-lg);
+  background-color: color-mix(in srgb, var(--panel) 55%, transparent);
+  color: var(--mut);
+  font-size: var(--fs-md);
+  text-align: center;
+}
+
+.empty-state > *,
+.empty-row > * {
+  margin-block: 0;
+}
+
+.empty-state strong,
+.empty-row strong {
+  color: var(--txt);
+  font-weight: var(--fw-semi);
+}
+
+.empty-state .empty-hint,
+.empty-row .empty-hint {
+  color: var(--dim);
+  font-size: var(--fs-sm);
+  max-width: 44ch;
+}
+
+/* A skeleton is a shape that will become content. It uses the surface colour
+   so it reads as part of the panel it sits in, and its shimmer travels the
+   short way - left to right - because that is the direction content arrives
+   from. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--panel2);
+  border-radius: var(--r-sm);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
+  animation: skeleton-sweep 1.4s var(--ease-1) infinite;
+}
+
+@keyframes skeleton-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* ============================================================================
+   Focus
+   ========================================================================= */
+
+/* One ring for the product. Two pixels of accent with a two-pixel gap of the
+   page colour behind it, so the ring is legible on a panel, on a filled
+   button, and on the page itself. Declared here rather than per-component
+   because a focus style that varies by control is not a focus style. */
+.app :focus-visible,
+.modal-overlay :focus-visible {
+  outline: 2px solid var(--acc-bright);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* ============================================================================
+   Section headers
+   ========================================================================= */
+
+.section-title,
+.panel-title,
+.card-title {
+  color: var(--txt);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+/* A section header and the thing it heads are one unit, so the gap between
+   them is set by the rule below rather than by whatever margin each happens
+   to carry. */
+.section-title + * {
+  margin-top: var(--sp-4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay,
+  .modal,
+  .modal-content {
+    animation: none;
+  }
+  .skeleton::after {
+    animation: none;
+  }
+}

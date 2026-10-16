@@ -29,11 +29,6 @@
 /* ── Shared timing ───────────────────────────────────────────────────────── */
 
 :root {
-  --mo-fast: 120ms;
-  --mo-base: 180ms;
-  --mo-slow: 260ms;
-  --mo-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --mo-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* ── 1. Buttons: the controls people touch most ──────────────────────────── */

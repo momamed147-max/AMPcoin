@@ -90,9 +90,32 @@ const PAGES = [
   'RegisterPage'
 ];
 
-// Loaded by index.js, therefore present on every route.
-const GLOBAL = ['index.css', 'ui-polish.css', 'theme.css', 'theme-new.css', 'App.css', 'tokens.css', 'ui.css']
-  .map((n) => path.join(SRC, n));
+// Every stylesheet reachable from index.js, and therefore present on every
+// route.
+//
+// Resolved from the entry point rather than written out by hand. The hardcoded
+// list went stale the moment a sheet was added or renamed - it still named
+// ui/tokens.css after that file was deleted, and had no idea ui/components.css
+// existed - so it reported classes as "styled but unloaded" when they load on
+// every single page, and would have missed a genuine miss entirely.
+const GLOBAL = (function resolveMainBundle(entry) {
+  const css = new Set();
+  const seen = new Set();
+  const stack = [entry];
+  while (stack.length) {
+    const f = stack.pop();
+    if (seen.has(f) || !f.endsWith('.js')) continue;
+    seen.add(f);
+    const src = read(f);
+    for (const m of src.matchAll(IMPORT_RE)) {
+      const r = resolve(f, m[1]);
+      if (!r) continue;
+      if (r.endsWith('.css')) css.add(r);
+      else stack.push(r);
+    }
+  }
+  return [...css];
+})(path.join(SRC, 'index.js'));
 
 let pass = 0;
 let fail = 0;

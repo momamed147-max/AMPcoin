@@ -260,19 +260,39 @@ a.cf-tab {
    highlight for the "lit from above" edge, real elevation on hover, and a
    left accent rail that only appears when the row means something (you are in
    it, or it is yours). */
+/* A lobby row carries three different kinds of information: who is betting,
+   what they have staked, and what it is worth plus what you can do about it.
+   Laid out as one flexible strip the eye travels the full width between the
+   first and the last, and nothing lines up between rows.
+
+   The fix is fixed-width end columns. Because .cf-row-players and
+   .cf-row-action are the same width on every row, everything between them
+   starts at the same x position, so a column of rows scans vertically - which
+   is how a list is actually read. The middle keeps whatever width is left.
+
+   Fixed end columns rather than grid tracks on purpose. The pages sharing
+   this row disagree about what goes in the middle: coinflip wraps the stake in
+   a .cf-row-wager, while RPS and blackjack put tiles and the figure in as
+   siblings, side by side. Grid can only give one of those the middle track;
+   flex gives both.
+
+   Padding lives on the cells rather than the row, which is what lets the
+   dividers between columns run the full height of the card. */
 .cf-row {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: var(--sp-5);
-  padding: var(--sp-4) var(--sp-6);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%),
-    var(--panel);
+  align-items: stretch;
+  /* Zero, because padding belongs to the cells - that is what lets the column
+     dividers run the full height of the card. An older layer in ui-polish.css
+     still sets 14px/18px here; since the cells now carry it, the row has to
+     say so explicitly rather than inherit it. */
+  padding: 0;
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
   margin-bottom: var(--sp-3);
-  box-shadow: var(--elev-1), inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  overflow: hidden;
+  box-shadow: var(--elev-1), var(--inset-top);
   animation: cf-row-in var(--dur-3) var(--ease-out) both;
   max-height: 500px;
   transition:
@@ -330,25 +350,42 @@ a.cf-tab {
   border-left: 2px solid var(--grn);
 }
 
-/* Players area */
+/* Players column. Centred on desktop because the avatars are the visual
+   anchor of the row and two players at the far left leave the rest of the
+   row looking bottom-heavy. */
 .cf-row-players {
+  flex: 0 0 200px;
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 8px;
-  min-width: 148px;
-  flex-shrink: 0;
+  justify-content: center;
+  gap: 10px;
+  padding: var(--sp-4) 14px;
+  border-right: 1px solid var(--line-soft);
+  /* A barely-there top-down wash, so the column reads as recessed rather
+     than as a differently coloured box. */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 70%);
 }
 
+/* One player: avatar on top, name beneath.
+   This was sized to the avatar, which gave the name a 52px box to sit in, so
+   names wrapped onto a second line and did it inconsistently from row to row.
+   It is sized to the name now, and truncated, so every row is the same height
+   and no name ever pushes the layout around. */
 .cf-row-player {
   position: relative;
-  width: 44px;
-  height: 44px;
-  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 96px;
 }
 
 .cf-row-avatar-ring {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: 2px solid rgba(148, 163, 184, 0.22);
   background: var(--bg1);
@@ -358,55 +395,47 @@ a.cf-tab {
   justify-content: center;
 }
 
+/* Heads and tails. A 2px ring at full saturation was the loudest thing in the
+   row - two saturated circles per row, six rows deep - so the eye went to the
+   decoration instead of to the value.
+
+   The side genuinely matters, so the colour stays. It is carried at reduced
+   saturation on a thinner ring, and the real emphasis is reserved for the
+   settled states below, where a colour change actually means something has
+   happened. */
 .ring-heads {
-  border-color: var(--orange);
-  box-shadow: 0 0 0 1px rgba(236, 127, 36, 0.25);
+  border-color: color-mix(in srgb, var(--orange) 72%, var(--line));
 }
-
 .ring-tails {
-  border-color: var(--acc);
-  box-shadow: 0 0 0 1px rgba(47, 129, 247, 0.25);
+  border-color: color-mix(in srgb, var(--acc) 72%, var(--line));
 }
 
+/* Settled. Now a colour change carries information, so it can afford weight. */
 .ring-winner {
   border-color: var(--grn) !important;
-  box-shadow: 0 0 10px rgba(63, 185, 80, 0.55), 0 0 0 1px rgba(63, 185, 80, 0.3);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--grn) 30%, transparent);
 }
-
 .ring-lost {
   border-color: var(--line);
 }
-
-.ring-lost img, .ring-lost .cf-row-avatar-empty {
-  filter: brightness(0.5);
+.ring-lost img,
+.ring-lost .cf-row-avatar-empty {
+  filter: brightness(0.45) saturate(0.4);
 }
 
-.cf-row-chip-badge {
-  position: absolute;
-  top: -7px;
-  left: -9px;
-  width: 20px;
-  height: 20px;
-  z-index: 3;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
-}
-
-.cf-row-player:last-child .cf-row-chip-badge {
-  left: auto;
-  right: -9px;
-}
-
+/* Sits inside the 48px ring with a couple of pixels to spare, so the ring's
+   border is the thing you see rather than the image edge. */
 .cf-row-avatar {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
   display: block;
 }
 
 .cf-row-avatar-empty {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: rgba(148, 163, 184, 0.08);
   border: 1.5px dashed rgba(148, 163, 184, 0.3);
@@ -418,12 +447,38 @@ a.cf-tab {
   font-weight: 700;
 }
 
-.cf-row-vs {
+/* One line, always. A name that wraps changes the height of the row, which
+   makes a column of rows ragged and makes the eye work to stay in its lane.
+   Long names truncate; the full name is in the title attribute. */
+.cf-row-player-name {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: center;
+  color: var(--txt);
+  font-size: 0.72rem;
+  font-weight: var(--fw-medium);
+  line-height: 1.3;
+}
+
+.cf-row-player-name.is-waiting {
   color: var(--dim);
-  font-size: 0.68rem;
-  font-weight: 800;
+  font-style: italic;
+}
+
+/* Sits on the avatars' baseline rather than floating between them, so it does
+   not push the two names apart by whatever width it happens to take. */
+.cf-row-vs {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  margin-top: 14px;
+  color: var(--faint);
+  font-size: 0.6rem;
+  font-weight: var(--fw-bold);
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
 }
 
 /* Items area */
@@ -449,57 +504,120 @@ a.cf-tab {
   border-left: 1px solid var(--line);
 }
 
+/* A tile is the image and what it is worth, and nothing else.
+
+   The item's name is not printed under it. It was, and with six tiles that
+   made every row 167px tall - about four bets visible on a laptop, for a
+   screen whose job is comparing bets. The name is one hover away in the
+   tooltip that already exists, and the rarity pip carries the tier at a
+   glance, so the line of sight stays on the thing people are actually
+   comparing: what is staked and what it is worth.
+
+   The value stays because it is the one per-item figure that has to be
+   readable - it is how you check that the total adds up before you commit. */
 .cf-row-thumb-wrap {
   position: relative;
-  flex-shrink: 0;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 50px;
+  padding: 4px 3px 5px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background-color: var(--bg2);
+  transition:
+    transform var(--mo-slow) var(--mo-out),
+    border-color var(--dur-2) var(--ease-1),
+    background-color var(--dur-2) var(--ease-1);
+}
+
+.cf-row:hover .cf-row-thumb-wrap {
+  border-color: var(--line);
+  background-color: var(--panel2);
+}
+
+.cf-row:hover .cf-row-thumb-wrap .cf-row-thumb-name {
+  /* The name appears on hover in the space the tile already has, rather than
+     only inside the tooltip - so reading the stake does not need a pointer,
+     while the default row stays scannable. */
+  display: block;
 }
 
 .cf-row-thumb {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--r-sm);
   object-fit: cover;
   background: var(--bg0);
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-soft);
   display: block;
+  transform: none !important;
+}
+
+.cf-row-thumb-stack {
+  position: relative;
+  display: block;
+  line-height: 0;
 }
 
 .cf-row-thumb-rarity {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 15px;
-  height: 15px;
+  left: 3px;
+  bottom: 3px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.45rem;
-  font-weight: 800;
-  color: #fff;
-  border: 1.5px solid var(--panel);
-  z-index: 1;
+  box-shadow: 0 0 0 1.5px var(--bg2);
 }
 
-.cf-row-thumb-rarity.rarity-legendary {
-  background: var(--orange);
+/* The item's name. Hidden by default and revealed on hover, which is why the
+   tile reserves no height for it - see .cf-row-thumb-wrap. */
+.cf-row-thumb-name {
+  display: none;
+  width: 100%;
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 0.56rem;
+  font-weight: var(--fw-semi);
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.cf-row-thumb-rarity.rarity-ultra_rare {
-  background: #c026d3;
+.cf-row:hover .cf-row-thumb-name {
+  color: var(--txt);
 }
 
-.cf-row-thumb-rarity.rarity-rare {
-  background: var(--acc);
+.cf-row-thumb-value {
+  color: var(--dim);
+  font-size: 0.56rem;
+  font-weight: var(--fw-semi);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
 }
 
-.cf-row-thumb-rarity.rarity-uncommon {
-  background: var(--grn);
-}
+/* The tiles lift in sequence rather than as a block, so a row of six ripples
+   instead of jumping. Each delay is small enough that the whole wave finishes
+   inside the hover. */
+.cf-row:hover .cf-row-thumb-wrap { transform: translateY(-3px); }
+.cf-row:hover .cf-row-thumb-wrap:nth-child(2) { transition-delay: 30ms; }
+.cf-row:hover .cf-row-thumb-wrap:nth-child(3) { transition-delay: 60ms; }
+.cf-row:hover .cf-row-thumb-wrap:nth-child(4) { transition-delay: 90ms; }
+.cf-row:hover .cf-row-thumb-wrap:nth-child(5) { transition-delay: 120ms; }
+.cf-row:hover .cf-row-thumb-wrap:nth-child(6) { transition-delay: 150ms; }
 
-.cf-row-thumb-rarity.rarity-common {
-  background: var(--dim);
-}
+/* Rarity colours come from the system's rarity ramp rather than from literals
+   written here, so the pip and the badge elsewhere agree and a theme can move
+   them together. */
+.cf-row-thumb-rarity.rarity-legendary { background: var(--rarity-legendary); }
+.cf-row-thumb-rarity.rarity-ultra_rare { background: var(--violet); }
+.cf-row-thumb-rarity.rarity-epic      { background: var(--rarity-epic); }
+.cf-row-thumb-rarity.rarity-rare      { background: var(--rarity-rare); }
+.cf-row-thumb-rarity.rarity-uncommon  { background: var(--rarity-uncommon); }
+.cf-row-thumb-rarity.rarity-common    { background: var(--rarity-common); }
 
 .cf-row-more {
   font-size: 0.7rem;
@@ -510,37 +628,99 @@ a.cf-tab {
   white-space: nowrap;
 }
 
-/* ─── Value area ─── */
+/* ─── Stake column ─── */
 
-/* The value column: the right-hand block of a lobby row. The amount on top, the
-   join band and any item cap stacked underneath.
+/* Everything the creator has put up, on one line: how many items, what they
+   are, what they come to.
 
-   It has to be a COLUMN. Coinflip, RPS and Blackjack all nest the amount, the
-   join range and the item cap as siblings here, so a row layout put them side by
-   side and every row read "600  600 - 600" - the amount and its own range
-   appearing to be two different numbers. */
+   One line rather than a count above and the tiles below. A header row of its
+   own cost 24px of height per row, and with six tiles underneath it the lobby
+   only showed four bets on a laptop - so the thing you came to compare had to
+   be scrolled to. Inline, the row reads left to right as a sentence and about
+   six fit on screen. */
+.cf-row-wager {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--sp-5);
+  min-width: 0;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.cf-row-wager-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.cf-row-wager-label {
+  color: var(--mut);
+  font-size: 0.64rem;
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cf-row-items {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-start;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* The value. A column, because coinflip, RPS and Blackjack all nest the amount,
+   the range and the cap as siblings here - a row layout put them side by side
+   and every row read "600  600 - 600", the amount and its own range looking
+   like two unrelated numbers.
+
+   Sized to its content rather than given a fixed track, so a 5-figure wager
+   does not wrap and a 3-figure one does not leave a hole. */
 .cf-row-value {
   display: flex;
+  flex: 0 0 auto;
   flex-direction: column;
   align-items: flex-end;
   gap: 2px;
-  min-width: 110px;
-  flex-shrink: 0;
-  padding-left: 14px;
+  min-width: 0;
+  padding-left: var(--sp-5);
   border-left: 1px solid var(--line-soft);
   color: var(--txt);
-  font-size: 0.95rem;
-  font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
 
-/* The amount itself: a diamond and the figure, on one line. */
+/* When the value is a direct child of the row rather than inside a wager
+   column - RPS and blackjack put it there - it is a flex item, so grid-area
+   above does not apply and it needs its own sizing. */
+.cf-row > .cf-row-value {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+/* The amount itself: a diamond and the figure, on one line.
+   This is the number people are comparing between rows, so it is the largest
+   type in the row - larger than either player's name, and set in the display
+   face so it reads as a figure rather than as a word. Tabular figures keep the
+   digits from shifting as the value changes under a live socket. */
 .cf-row-total {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
+  font-family: var(--font-display);
+  font-size: 1.22rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.1;
 }
 
 .cf-row-range {
@@ -568,53 +748,102 @@ a.cf-tab {
   white-space: nowrap;
 }
 
-/* Action buttons */
+/* Action column. One job: the answer to "what can I do about this?".
+
+   Narrower than it was, because the value it used to carry has moved into the
+   stake column, and a column sized for two jobs leaves a hole once it has
+   one. The divider stays so the column still reads as a distinct zone. */
 .cf-row-action {
+  flex: 0 0 132px;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  min-width: 88px;
-  flex-shrink: 0;
+  gap: 7px;
   align-items: stretch;
+  justify-content: center;
+  padding: var(--sp-4) var(--sp-4);
+  border-left: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 70%);
 }
 
+/* The stake. Coinflip wraps the tiles in a .cf-row-wager so it can carry a
+   header above them; RPS and blackjack put the tiles and the figure in
+   directly. Either way this is the part that absorbs the leftover width. */
+.cf-row-wager {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cf-row-items,
+.cf-row-value {
+  min-width: 0;
+}
+
+/* The row's primary action. Full width of the action column, because it is the
+   one thing the column exists for.
+
+   These mirror ui/components.css but read tokens directly, for a reason worth
+   knowing: this stylesheet rides along inside the lazy coinflip chunk, which
+   webpack injects after the whole main bundle. So it beats components.css on
+   specificity alone, and anything it writes in a literal colour - it used to
+   write rgba(47, 129, 247, ...) on every rule - silently becomes a fixed
+   colour that no theme can reach. */
 .cf-join-btn {
-  padding: 8px 16px;
-  background: var(--acc);
-  border: 1px solid rgba(47, 129, 247, 0.7);
-  border-radius: var(--r-sm);
-  color: #fff;
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 var(--sp-4);
+  background-color: var(--acc);
+  border: 1px solid var(--acc-300);
+  border-radius: var(--r-md);
+  color: var(--on-accent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-wide);
   cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 2px 10px rgba(47, 129, 247, 0.3);
-  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s, transform 0.08s;
   white-space: nowrap;
+  box-shadow: var(--inset-top), 0 2px 10px -4px var(--acc-glow);
+  transition:
+    background-color var(--dur-1) var(--ease-1),
+    border-color var(--dur-1) var(--ease-1),
+    box-shadow var(--dur-1) var(--ease-1),
+    transform var(--dur-1) var(--ease-1);
 }
 
 .cf-join-btn:hover:not(:disabled) {
-  background: #3b8bff;
-  border-color: var(--acc);
-  color: #fff;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 2px 14px rgba(47,129,247,.45);
+  background-color: var(--acc-300);
+  border-color: var(--acc-200);
+  box-shadow: var(--inset-top), 0 4px 16px -5px var(--acc-glow);
+}
+
+.cf-join-btn:active:not(:disabled) {
+  background-color: var(--acc-600);
+  border-color: var(--acc-700);
 }
 
 .cf-join-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
+/* "View" is the fallback, not a second decision. Stacked under a full-width
+   Join it read as two competing calls to action, so it is now a text link: the
+   same target, a fraction of the visual weight. */
 .cf-view-btn {
-  padding: 5px 16px;
+  padding: 2px 0;
   background: none;
   border: none;
-  color: var(--mut);
-  font-size: 0.74rem;
-  font-weight: 600;
+  color: var(--dim);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-medium);
   cursor: pointer;
-  transition: color 0.12s;
+  transition: color var(--dur-1) var(--ease-1);
   white-space: nowrap;
+}
+
+.cf-view-btn:hover {
+  color: var(--acc-bright);
 }
 
 .cf-view-btn:hover {
@@ -1876,6 +2105,20 @@ a.cf-tab {
 }
 
 /* - Responsive - */
+
+/* The end columns are fixed so that they line up between rows. Below roughly
+   1100px that 372px of fixed column leaves too little for the stake, and the
+   tiles start truncating. Narrow the ends rather than dropping them - the
+   alignment across rows is worth more than the pixels. */
+@media (max-width: 1100px) {
+  .cf-row-players { flex-basis: 168px; }
+  .cf-row-action  { flex-basis: 152px; }
+  .cf-row-avatar-ring { width: 54px; height: 54px; }
+  .cf-row-avatar,
+  .cf-row-avatar-empty { width: 44px; height: 44px; }
+  .cf-row-thumb { width: 44px; height: 44px; }
+}
+
 @media (max-width: 768px) {
   .cf-page {
     padding: 0;
@@ -1942,25 +2185,58 @@ a.cf-tab {
     padding: 10px 12px;
   }
 
-  .cf-row-players {
-    min-width: auto;
+  /* Below this the two fixed end columns - 372px of them - leave almost
+     nothing for the stake, which is the part of the row someone is actually
+     reading. The row becomes a stack instead: who, then what, then the
+     figure and its button on one line. The dividers turn horizontal. */
+  .cf-row {
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
   }
 
+  .cf-row-players {
+    flex: 0 0 auto;
+    align-self: stretch;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 12px 14px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .cf-row-wager,
   .cf-row-items {
-    flex-basis: 100%;
-    order: 3;
+    padding: 12px 14px;
   }
 
   .cf-row-value {
     min-width: auto;
     align-items: flex-start;
     border-left: none;
-    padding-left: 0;
+    padding-left: 14px;
   }
 
   .cf-row-action {
-    margin-left: auto;
-    min-width: 76px;
+    flex: 0 0 auto;
+    align-self: stretch;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-left: 0;
+    min-width: 0;
+    padding: 12px 14px;
+    border-left: 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .cf-row-action .cf-join-btn,
+  .cf-row-action .cf-view-btn,
+  .cf-row-action .cf-bot-btn {
+    width: auto;
+    min-width: 112px;
   }
 
   .cf-modal-overlay {
@@ -2097,10 +2373,9 @@ a.cf-tab {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 .cf-row {
-  padding: 14px 18px;
-  gap: 16px;
+  /* Padding lives on the cells, not here - see the main .cf-row above. */
   border-radius: var(--r-lg);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 45%), var(--bg2);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 45%), var(--panel);
   border: 1px solid var(--line);
   box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
@@ -2134,18 +2409,39 @@ a.cf-tab {
   white-space: nowrap;
   flex: 0 0 auto;
 }
-/* The control row is a separate band under the tabs, so it needs the same inset
-   as the tabs above it. Without this the right-hand controls sat ~10px from the
-   panel's edge while the tabs sat 12px in, which read as the buttons hanging
-   outside the panel rather than sitting inside it. */
+/* The bar is one line: the game tabs on the left, the controls on the right.
+   It was given a full-width second band for the controls at every viewport up
+   to 1600px, which stacked it into 111px of mostly empty panel on the very
+   screen the lobby is read on.
+
+   The controls move to their own line only when there is genuinely not enough
+   room for both - which is about when the tabs and the controls together stop
+   fitting, rather than at a viewport width that says nothing about it. */
 .cf-topbar-right {
   flex-wrap: nowrap;
   align-items: center;
   justify-content: flex-end;
-  padding-top: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
   padding-inline: 8px 10px;
   margin-inline: -2px;
 }
+
+@media (max-width: 1240px) {
+  .cf-topbar {
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .cf-topbar-right {
+    flex: 1 0 100%;
+    justify-content: flex-end;
+    padding-top: 7px;
+    padding-inline: 8px;
+    border-top: 1px solid var(--line-soft);
+  }
+}
+
 .cf-topbar-right .cf-sort-label,
 .cf-topbar-right .cf-topbar-btn {
   width: auto;

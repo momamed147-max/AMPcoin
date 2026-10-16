@@ -21,7 +21,6 @@ import '../ui/lobby.css';
 import './CoinflipPage.css';
 // Lobby row layout. Imported after the page stylesheet and after ui/motion.css
 // so the rebuilt row wins on order as well as on specificity.
-import '../ui/lobby-row.css';
 
 /* ── Rarity badge color helper ── */
 const RARITY_COLORS = {
@@ -697,9 +696,6 @@ const [sortBy] = useState('newest');
                         className="cf-row-avatar"
                         onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                       />
-                      <span className="cf-row-chip-badge">
-                        <CoinChip side={meta.creatorSide} size={20} />
-                      </span>
                     </div>
                     <span className="cf-row-player-name" title={meta.creatorName}>{meta.creatorName}</span>
                   </div>
@@ -716,9 +712,6 @@ const [sortBy] = useState('newest');
                       ) : (
                         <div className="cf-row-avatar cf-row-avatar-empty">?</div>
                       )}
-                      <span className="cf-row-chip-badge">
-                        <CoinChip side={meta.opponentSide} size={20} />
-                      </span>
                     </div>
                     <span className="cf-row-player-name is-waiting" title={meta.oppName}>
                       {meta.hasOpponent ? meta.oppName : 'Open seat'}
@@ -730,32 +723,56 @@ const [sortBy] = useState('newest');
                     read before the eye reaches the tiles, and each tile carries
                     its own name and value - three identical unlabelled diamonds
                     told you nothing about what you were betting. */}
+                {/* The stake, and what it is worth.
+
+                    Two things live here and they belong together: the items
+                    being offered, and the figure they add up to. With the total
+                    in the action column instead, it sat far from the tiles with
+                    a wide empty gap between them, so the two numbers read as
+                    unrelated and competed with the buttons for attention. Here
+                    the row scans left to right as a single thought. */}
                 <div className="cf-row-wager">
-                  <div className="cf-row-wager-head">
-                    <span className="cf-row-wager-label">
-                      {meta.thumbs.length} item{meta.thumbs.length === 1 ? '' : 's'} staked
-                    </span>
-                    </div>
-                  <div className="cf-row-items">
-                    {meta.thumbs.slice(0, 6).map((item, idx) => (
-                      <div key={idx} className="cf-row-thumb-wrap cf-tip-host">
-                        <span className="cf-row-thumb-stack">
-                          <img
-                            src={item.image || item.imageUrl || '/default-item.svg'}
-                            alt={item.name || item.itemName || 'item'}
-                            className="cf-row-thumb"
-                            onError={(e) => { e.target.src = '/default-item.svg'; }}
-                          />
-                          <span className="cf-row-thumb-rarity" style={{ background: getRarityColor(item.rarity) }}></span>
-                        </span>
-                        <span className="cf-row-thumb-name">{item.name || item.itemName || 'Item'}</span>
-                        <span className="cf-row-thumb-value">{formatCompact(Number(item.value || 0) * Number(item.quantity || 1))}</span>
-                        <span className="cf-tip-pop"><PetTooltip item={item} /></span>
+                    <div className="cf-row-wager-head">
+                      <span className="cf-row-wager-label">
+                        {meta.thumbs.length} item{meta.thumbs.length === 1 ? '' : 's'} staked
+                      </span>
                       </div>
-                    ))}
-                    {meta.thumbs.length > 6 && (
-                      <span className="cf-row-more">+{meta.thumbs.length - 6}</span>
-                    )}
+                    <div className="cf-row-items">
+                      {meta.thumbs.slice(0, 6).map((item, idx) => (
+                        <div key={idx} className="cf-row-thumb-wrap cf-tip-host">
+                          <span className="cf-row-thumb-stack">
+                            <img
+                              src={item.image || item.imageUrl || '/default-item.svg'}
+                              alt={item.name || item.itemName || 'item'}
+                              className="cf-row-thumb"
+                              onError={(e) => { e.target.src = '/default-item.svg'; }}
+                            />
+                            <span className="cf-row-thumb-rarity" style={{ background: getRarityColor(item.rarity) }}></span>
+                          </span>
+                          <span className="cf-row-thumb-name">{item.name || item.itemName || 'Item'}</span>
+                          <span className="cf-row-thumb-value">{formatCompact(Number(item.value || 0) * Number(item.quantity || 1))}</span>
+                          <span className="cf-tip-pop"><PetTooltip item={item} /></span>
+                        </div>
+                      ))}
+                      {meta.thumbs.length > 6 && (
+                        <span className="cf-row-more">+{meta.thumbs.length - 6}</span>
+                      )}
+                    </div>
+
+                  {/* The figure, with the qualifiers that turn it into a
+                      condition: the range the creator will accept, and the cap
+                      on how many items the joiner may bring. */}
+                  <div className="cf-row-value">
+                      <div className="cf-row-total">
+                        <span className="cf-diamond-sm"><Icon name="diamond" size={13} /></span>
+                        {formatCompact(meta.total)}
+                      </div>
+                      <div className="cf-row-range">
+                        {formatCompact(meta.creatorVal)} - {formatCompact(meta.oppVal || meta.creatorVal)}
+                      </div>
+                      {meta.maxJoinPets > 0 && !meta.isCompleted && (
+                        <span className="cf-row-cap">Max {meta.maxJoinPets} items</span>
+                      )}
                   </div>
                 </div>
 
@@ -775,23 +792,10 @@ const [sortBy] = useState('newest');
                     )}
                   </div>
                 )}
-
-                {/* Action. The value lives in here rather than floating as a
-                    sibling above: the grid gives it its own column beside the
-                    buttons, which is where you look when deciding whether to
-                    join. It used to sit in the wager header and then, before
-                    that, stranded at the far right of the row. */}
+                {/* Action. One job only. The value moved into the stake column
+                    beside the tiles it comes from, which leaves this column free
+                    to be the single answer to "what can I do about this?". */}
                 <div className="cf-row-action">
-                  <div className="cf-row-total">
-                    <span className="cf-diamond-sm"><Icon name="diamond" size={13} /></span>
-                    {formatCompact(meta.total)}
-                  </div>
-                  <div className="cf-row-range">
-                    {formatCompact(meta.creatorVal)} - {formatCompact(meta.oppVal || meta.creatorVal)}
-                  </div>
-                  {meta.maxJoinPets > 0 && !meta.isCompleted && (
-                    <span className="cf-row-cap">Max {meta.maxJoinPets} items</span>
-                  )}
                   {!meta.isCompleted && !meta.isUserCreator && (
                     <>
                       <button className="cf-join-btn" onClick={() => handleOpenJoinModal(coinflip)}>

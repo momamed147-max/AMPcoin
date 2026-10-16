@@ -112,18 +112,55 @@ textarea:focus-visible,
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--acc) 40%, transparent);
 }
 
-/* ── reduced motion ────────────────────────────────────────────────────────
-   A blanket rule: anything still animating under this preference is decorative. */
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
+/* ── the page measure ────────────────────────────────────────────────────────
+   A betting lobby has a natural reading width. Left to run to the edge of a
+   1600px display, a row ends up 1500px wide holding about 300px of content -
+   the eye travels a very long way from "who" to "what" to "how much", and
+   everything floats in the middle with nothing anchoring it.
+
+   The cap is on the children rather than on .page-content, because
+   .page-content is a growing flex child: max-width on it does nothing. */
+.page-content {
+  width: 100%;
+  padding-inline: var(--page-pad);
+}
+
+.page-content > * {
+  width: 100%;
+  max-width: var(--page-max);
+  margin-inline: auto;
+}
+
+/* ── the chat rail ──────────────────────────────────────────────────────────
+   It was a fixed 320px, which is a third of a laptop screen spent on a panel
+   that says "No messages yet" most of the time. Narrower, and it stops
+   dominating the layout it is supposed to sit beside.
+
+   The width, the background and the divider are all declared here. v3.css used
+   to hardcode all three, and because v3 loads after this sheet those literals
+   won and none of this applied. */
+.chat-column {
+  flex: 0 0 var(--chat-w);
+  width: var(--chat-w);
+  min-width: var(--chat-w);
+  max-width: var(--chat-w);
+  background: var(--bg1);
+  border-right: 1px solid var(--line-soft);
+}
+
+/* Below this the rail and the content cannot both be usable, so the content
+   wins and the rail becomes something you open deliberately. */
+@media (max-width: 900px) {
+  .chat-column {
+    flex-basis: 100%;
+    max-width: 100%;
   }
 }
+
+/* ── reduced motion ────────────────────────────────────────────────────────
+   Declared in index.css with the rest of the document-level reset. The rule
+   that used to live here was identical, and two copies of a
+   prefers-reduced-motion block is one more thing to forget to update. */
 
 /* ── small screens ──────────────────────────────────────────────────────────
    The page title was being squeezed to "Coi..." because the balance and

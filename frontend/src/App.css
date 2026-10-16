@@ -1,25 +1,5 @@
 /* AMPcoin — refined professional dark system (App.css) */
 
-:root {
-  --bg0: #070a11;
-  --bg1: #0b0f17;
-  --panel: #0e141d;
-  --panel2: #121924;
-  --line: rgba(148, 163, 184, .12);
-  --line-soft: rgba(148, 163, 184, .07);
-  --txt: #eef2f7;
-  --mut: #8b96a8;
-  --dim: #525d70;
-  --acc: #2f81f7;
-  --acc-soft: rgba(47, 129, 247, .12);
-  --grn: #3fb950;
-  --red: #f85149;
-  --gold: #d29922;
-  --r-sm: 8px;
-  --r-md: 10px;
-  --r-lg: 14px;
-}
-
 /* Reset */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -444,19 +424,30 @@ body {
 }
 
 /* ─── Chat column + panel ─── */
+/* -- Chat column + panel ---------------------------------------------------
+   The width, the sticky offset and the surface all come from the shell. They
+   used to be written here as 300px literals, which meant the shell's rule was
+   dead on every route - App.css rides in a lazy chunk, so it loads after the
+   whole main bundle and wins any tie.
+
+   The rail is a fixed-width left column beside the content rather than a panel
+   inside it, so it needs no min-width hack: the width does the job and the
+   content beside it takes whatever is left. 100dvh rather than 100vh because
+   on a phone 100vh is the viewport with the browser chrome still counted, and
+   the rail ends up taller than the space it is stuck in. */
 .chat-column {
-  width: 300px; min-width: 300px; max-width: 300px;
-  height: calc(100vh - 56px);
-  position: sticky; top: 56px;
-  border-right: 1px solid var(--line);
+  width: var(--chat-w);
+  min-width: var(--chat-w);
+  max-width: var(--chat-w);
+  height: calc(100dvh - var(--nav-h));
+  position: sticky;
+  top: var(--nav-h);
+  border-right: 1px solid var(--line-soft);
   background: var(--bg1);
-  display: flex; flex-direction: column;
-  overflow: hidden; flex-shrink: 0;
-}
-.chat-column .chat-panel {
-  position: relative !important; right: auto !important; top: auto !important;
-  height: 100% !important; width: 100% !important;
-  border-radius: 0 !important; border: none !important;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  flex-shrink: 0;
 }
 .chat-backdrop { display: none; }
 
@@ -465,6 +456,15 @@ body {
   border: none !important; border-radius: 0 !important;
   display: flex !important; flex-direction: column !important;
   height: 100% !important; min-height: 0;
+
+  /* Inside the rail the panel fills its column rather than floating over the
+     page. The mobile drawer treatment below positions .chat-column itself as
+     a fixed overlay, and without this the panel inherited that positioning
+     and slid out of the rail it is supposed to be inside. */
+  position: relative !important;
+  right: auto !important;
+  top: auto !important;
+  width: 100% !important;
 }
 .chat-header {
   display: flex; align-items: center; justify-content: space-between;

@@ -25,75 +25,6 @@
    Only the structural colours. Themes set their own --acc / --grn / --red /
    --gold afterwards and win, because they are more specific. */
 
-:root {
-  /* Surfaces, darkest to lightest. The old app had one panel colour for
-     everything; this is the single biggest reason the layers now read. */
-  --bg0: #05070c;          /* page floor */
-  --bg1: #0a0e16;          /* chrome: header, chat rail */
-  --bg2: #10151f;          /* raised: cards, rows */
-  --panel: #141b27;        /* overlay: modals, popovers */
-  --panel2: #1b2432;       /* hovered / nested surface */
-  --panel3: #222d3d;       /* pressed, selected */
-
-  --line: rgba(148, 168, 200, 0.14);
-  --line-soft: rgba(148, 168, 200, 0.08);
-  --line-strong: rgba(148, 168, 200, 0.26);
-
-  --txt: #f2f6fc;
-  --mut: #9aa8bd;
-  --dim: #63718a;
-
-  /* Accent ramp. A single hue used at four strengths, so emphasis is
-     consistent everywhere instead of every screen inventing its own blue. */
-  --acc-100: #e8f1ff;
-  --acc-300: #7fb0ff;
-  --acc: #3b82f6;
-  --acc-600: #2563eb;
-  --acc-700: #1d4ed8;
-  --acc-soft: rgba(59, 130, 246, 0.14);
-  --acc-glow: rgba(59, 130, 246, 0.32);
-
-  --grn: #22c55e;
-  --grn-soft: rgba(34, 197, 94, 0.14);
-  --red: #f43f5e;
-  --red-soft: rgba(244, 63, 94, 0.14);
-  --gold: #fbbf24;
-  --gold-soft: rgba(251, 191, 36, 0.14);
-  --orange: #fb923c;
-  --violet: #a78bfa;
-  --pink: #f472b6;
-  --cyan: #22d3ee;
-
-  /* Bigger, more generous radii. The old 8/10/14 was too tight for cards. */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 18px;
-  --r-xl: 24px;
-  --r-full: 999px;
-
-  /* Real elevation. Each step is visible, where before they were almost
-     identical and the layering was invisible. */
-  --elev-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --elev-2: 0 4px 14px rgba(0, 0, 0, 0.45), 0 1px 2px rgba(0, 0, 0, 0.3);
-  --elev-3: 0 16px 40px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.35);
-  --elev-4: 0 32px 80px rgba(0, 0, 0, 0.65), 0 8px 20px rgba(0, 0, 0, 0.4);
-
-  /* Type. The old scale bottomed out at 0.69rem, which is unreadable on a
-     laptop and impossible on a phone. */
-  --fs-xs: 0.75rem;
-  --fs-sm: 0.84rem;
-  --fs-md: 0.95rem;
-  --fs-lg: 1.05rem;
-  --fs-xl: 1.3rem;
-  --fs-2xl: 1.6rem;
-  --fs-3xl: 2.1rem;
-
-  --ctl-h: 40px;
-  --ctl-h-sm: 32px;
-  --ctl-h-lg: 48px;
-}
-
 /* ══ 2. The page ══════════════════════════════════════════════════════════════ */
 
 .app {
@@ -239,13 +170,10 @@
 
 /* ══ 5. Chat ═════════════════════════════════════════════════════════════════ */
 
-.chat-column {
-  width: 330px;
-  min-width: 330px;
-  max-width: 330px;
-  background: var(--bg1);
-  border-right: 1px solid var(--line);
-}
+/* The rail's width is owned by ui/shell.css and read from --chat-w. This sheet
+   used to hardcode 330px here, and because v3 loads after shell.css the
+   hardcoded value won - so the shell's rule was silently doing nothing and the
+   rail stayed a third of a laptop screen wide. One owner, one token. */
 
 .chat-panel {
   background: var(--bg1);
@@ -355,52 +283,25 @@ button:active:not(:disabled) { transform: scale(0.97); }
   box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* The lobby row is the most-repeated object on the site.
-   NOTE: lobby.css ships in a lazy page chunk, which loads AFTER this file, so
-   an equal-specificity rule here would lose. These selectors carry an extra
-   element for that reason - see the note in the tool that writes v3. */
-html body .cf-row {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 45%), var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  padding: 14px 18px;
-  gap: 16px;
-}
-html body .cf-row:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 45%), var(--panel2);
-  border-color: color-mix(in srgb, var(--acc) 42%, var(--line));
-  transform: translateY(-2px);
-  box-shadow: var(--elev-3), inset 0 1px 0 rgba(255, 255, 255, 0.07);
-}
+/* The lobby row, the empty state and their children used to be restyled here
+   with `html body .cf-*` selectors.
 
-html body .cf-row::before {
-  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
-  width: 3px;
-  top: 12px;
-  bottom: 12px;
-}
+   That was a specificity hack, added because lobby.css rides along in a lazy
+   page chunk and loads after this file, so an equal-specificity rule here
+   would lose. It worked, and it cost a great deal: it put a second,
+   higher-specificity definition of the most-repeated object on the site in a
+   global stylesheet, so every change to the row had to be made in two places
+   and the one that silently stopped applying was whichever lost the cascade.
+   The padding it set was still 14px 18px long after the row moved its padding
+   onto its cells - and because `html body .cf-row` outranks a plain `.cf-row`,
+   saying `padding: 0` in lobby.css did nothing at all.
 
-html body .cf-row-value {
-  min-width: 120px;
-  font-size: var(--fs-md);
-  gap: 3px;
-}
-html body .cf-row-total { font-size: var(--fs-lg); font-weight: 800; }
-html body .cf-row-range { font-size: var(--fs-xs); color: var(--dim); }
+   The row belongs to lobby.css, which is the last thing to load on any route
+   that has one. Nothing here.
 
-html body .cf-empty {
-  background: radial-gradient(120% 90% at 50% 0%, color-mix(in srgb, var(--acc) 10%, transparent), transparent 70%), var(--bg2);
-  border: 1px solid var(--line);
-  border-radius: var(--r-xl);
-  box-shadow: var(--elev-2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
-}
-html body .cf-empty-icon {
-  background: var(--acc-soft);
-  border-color: color-mix(in srgb, var(--acc) 36%, transparent);
-  color: var(--acc-300);
-  box-shadow: 0 0 0 10px color-mix(in srgb, var(--acc) 5%, transparent);
-}
+   The empty state moved to ui/components.css along with every other primitive;
+   that is where a shared object belongs, not in a global layer that outranks
+   the page that owns it. */
 
 /* ══ 8. Inputs ══════════════════════════════════════════════════════════════ */
 
