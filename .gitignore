@@ -35,3 +35,7 @@ tools/shots-polish/
 tools/perf-report.json
 tests/shots-polish/
 tools/motion-report.json
+tools/shots-design/
+tools/shots-design2/
+tools/shots-design3/
+.commitmsg.txt

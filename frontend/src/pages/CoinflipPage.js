@@ -19,6 +19,9 @@ import '../components/ModBadges.css';
 // import this file too.
 import '../ui/lobby.css';
 import './CoinflipPage.css';
+// Lobby row layout. Imported after the page stylesheet and after ui/motion.css
+// so the rebuilt row wins on order as well as on specificity.
+import '../ui/lobby-row.css';
 
 /* ── Rarity badge color helper ── */
 const RARITY_COLORS = {
@@ -683,6 +686,8 @@ const [sortBy] = useState('newest');
                     the rows this player can actually join - the single most useful thing to
                     know at a glance. */}
                 {/* Players */}
+                {/* Both sides are named. Two unlabelled avatars told you nothing about
+                    who you were about to bet against. */}
                 <div className="cf-row-players">
                   <div className="cf-row-player">
                     <div className={`cf-row-avatar-ring ${showCreatorRing ? 'ring-winner' : ''} ${creatorLost ? 'ring-lost' : ''} ring-${meta.creatorSide}`}>
@@ -696,6 +701,7 @@ const [sortBy] = useState('newest');
                         <CoinChip side={meta.creatorSide} size={20} />
                       </span>
                     </div>
+                    <span className="cf-row-player-name" title={meta.creatorName}>{meta.creatorName}</span>
                   </div>
                   <span className="cf-row-vs">VS</span>
                   <div className="cf-row-player">
@@ -714,26 +720,47 @@ const [sortBy] = useState('newest');
                         <CoinChip side={meta.opponentSide} size={20} />
                       </span>
                     </div>
+                    <span className="cf-row-player-name is-waiting" title={meta.oppName}>
+                      {meta.hasOpponent ? meta.oppName : 'Open seat'}
+                    </span>
                   </div>
                 </div>
 
-                {/* Item thumbnails */}
-                <div className="cf-row-items">
-                  {meta.thumbs.slice(0, 8).map((item, idx) => (
-                    <div key={idx} className="cf-row-thumb-wrap cf-tip-host">
-                      <img
-                        src={item.image || item.imageUrl || '/default-item.svg'}
-                        alt={item.name || item.itemName || 'item'}
-                        className="cf-row-thumb"
-                        onError={(e) => { e.target.src = '/default-item.svg'; }}
-                      />
-                      <span className="cf-row-thumb-rarity" style={{ background: getRarityColor(item.rarity) }}></span>
-                      <span className="cf-tip-pop"><PetTooltip item={item} /></span>
-                    </div>
-                  ))}
-                  {meta.thumbs.length > 8 && (
-                    <span className="cf-row-more">+{meta.thumbs.length - 8}</span>
-                  )}
+                {/* The wager. A header states how much is at stake so the number is
+                    read before the eye reaches the tiles, and each tile carries
+                    its own name and value - three identical unlabelled diamonds
+                    told you nothing about what you were betting. */}
+                <div className="cf-row-wager">
+                  <div className="cf-row-wager-head">
+                    <span className="cf-row-wager-label">
+                      {meta.thumbs.length} item{meta.thumbs.length === 1 ? '' : 's'} staked
+                    </span>
+                    <span className="cf-row-wager-total">
+                      <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span>
+                      {formatCompact(meta.total)}
+                    </span>
+                  </div>
+                  <div className="cf-row-items">
+                    {meta.thumbs.slice(0, 6).map((item, idx) => (
+                      <div key={idx} className="cf-row-thumb-wrap cf-tip-host">
+                        <span className="cf-row-thumb-stack">
+                          <img
+                            src={item.image || item.imageUrl || '/default-item.svg'}
+                            alt={item.name || item.itemName || 'item'}
+                            className="cf-row-thumb"
+                            onError={(e) => { e.target.src = '/default-item.svg'; }}
+                          />
+                          <span className="cf-row-thumb-rarity" style={{ background: getRarityColor(item.rarity) }}></span>
+                        </span>
+                        <span className="cf-row-thumb-name">{item.name || item.itemName || 'Item'}</span>
+                        <span className="cf-row-thumb-value">{formatCompact(Number(item.value || 0) * Number(item.quantity || 1))}</span>
+                        <span className="cf-tip-pop"><PetTooltip item={item} /></span>
+                      </div>
+                    ))}
+                    {meta.thumbs.length > 6 && (
+                      <span className="cf-row-more">+{meta.thumbs.length - 6}</span>
+                    )}
+                  </div>
                 </div>
 
                 {/* The landed coin.
@@ -753,21 +780,16 @@ const [sortBy] = useState('newest');
                   </div>
                 )}
 
-                {/* Value */}
-                <div className="cf-row-value">
-                  <div className="cf-row-total">
-                    <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {formatCompact(meta.total)}
-                  </div>
-                  <div className="cf-row-range">
-                    {formatCompact(meta.creatorVal)} - {formatCompact(meta.oppVal || meta.creatorVal)}
-                  </div>
-                  {meta.maxJoinPets && (
-                    <div className="cf-row-cap">Max {meta.maxJoinPets} items</div>
-                  )}
-                </div>
+                {/* The wager total now sits in the cf-row-wager header, beside
+                    the items it describes. It used to live out here, stranded
+                    at the far right of a wide row with ~500px of nothing
+                    between it and the items it was a total of. */}
 
                 {/* Action */}
                 <div className="cf-row-action">
+                  {meta.maxJoinPets > 0 && !meta.isCompleted && (
+                    <span className="cf-row-cap">Max {meta.maxJoinPets}</span>
+                  )}
                   {!meta.isCompleted && !meta.isUserCreator && (
                     <>
                       <button className="cf-join-btn" onClick={() => handleOpenJoinModal(coinflip)}>

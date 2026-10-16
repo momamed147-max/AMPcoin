@@ -1,0 +1,264 @@
+/* ============================================================================
+   Lobby row layout
+   ----------------------------------------------------------------------------
+   The row used to be two bare avatars, a "VS", a few unlabelled thumbnails,
+   then roughly 500px of dead space before a number and a Join button. On a
+   1600px screen that is about 40% of the row doing nothing, and none of it
+   answered the three questions a player actually has: who is betting, what is
+   staked, and for how much.
+
+   The layout below gives each of those an answer and lets the row use its
+   width, rather than stretching a fixed left cluster across a wide screen.
+   ========================================================================= */
+
+.app .cf-row {
+  align-items: stretch;
+  gap: 18px;
+  padding: 14px 16px;
+}
+
+/* ── Players ─────────────────────────────────────────────────────────────── */
+
+.app .cf-row-players {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 0 0 auto;
+  min-width: 190px;
+  padding-right: 16px;
+  border-right: 1px solid var(--line-soft);
+}
+
+.app .cf-row-player {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 86px;
+  min-width: 0;
+}
+
+/* The name was the single biggest omission: two unlabelled avatars said nothing
+   about who you were about to bet against. */
+.app .cf-row-player-name {
+  display: block;
+  width: 100%;
+  flex: 0 0 auto;
+  min-height: 14px;
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--txt);
+  font-size: 0.68rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color 0.18s var(--ease-out);
+}
+
+.app .cf-row-player-name.is-waiting {
+  color: var(--dim);
+  font-weight: 600;
+}
+
+.app .cf-row:hover .cf-row-player-name {
+  color: #fff;
+}
+
+.app .cf-row-vs {
+  align-self: center;
+  margin-top: 19px;
+  color: var(--dim);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.app .cf-row-avatar {
+  width: 42px;
+  height: 42px;
+}
+
+.app .cf-row-avatar-ring {
+  width: 50px;
+  height: 50px;
+}
+
+/* ── Wager ───────────────────────────────────────────────────────────────── */
+
+/* Takes the space the dead gap used to occupy. */
+.app .cf-row-wager {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.app .cf-row-wager-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  min-width: 0;
+}
+
+.app .cf-row-wager-label {
+  color: var(--dim);
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* The value now sits with the wager it describes, instead of being stranded at
+   the far right of a very wide row. */
+.app .cf-row-wager-total {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line-soft);
+  color: var(--txt);
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.app .cf-row-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+/* ── Item tiles ──────────────────────────────────────────────────────────── */
+
+/* Now a small card rather than a bare square: image, name, value. A tile with
+   only a picture forced you to hover for the one thing you wanted. */
+.app .cf-row-thumb-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 84px;
+  padding: 6px 4px 7px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--panel2);
+  transition:
+    transform var(--mo-slow, 260ms) var(--mo-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
+    border-color 0.18s var(--ease-out),
+    background-color 0.18s var(--ease-out);
+}
+
+.app .cf-row:hover .cf-row-thumb-wrap {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.app .cf-row-thumb-stack {
+  position: relative;
+  display: block;
+  line-height: 0;
+}
+
+.app .cf-row-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  object-fit: cover;
+  background: var(--bg1);
+  /* The lift moved from the image to the whole tile: scaling just the picture
+     inside a card leaves the card's edges behind and it looks torn. */
+  transform: none !important;
+}
+
+.app .cf-row-thumb-rarity {
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1.5px var(--panel2);
+}
+
+.app .cf-row-thumb-name {
+  width: 100%;
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 0.58rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app .cf-row-thumb-value {
+  color: var(--dim);
+  font-size: 0.55rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.app .cf-row:hover .cf-row-thumb-name {
+  color: var(--txt);
+}
+
+/* Stagger the tile lift so a row of them ripples rather than moving as a block.
+   The whole tile lifts, not the image inside it. */
+.app .cf-row:hover .cf-row-thumb-wrap {
+  transform: translateY(-3px);
+}
+
+.app .cf-row:hover .cf-row-thumb-wrap:nth-child(2) { transition-delay: 30ms; }
+.app .cf-row:hover .cf-row-thumb-wrap:nth-child(3) { transition-delay: 60ms; }
+.app .cf-row:hover .cf-row-thumb-wrap:nth-child(4) { transition-delay: 90ms; }
+.app .cf-row:hover .cf-row-thumb-wrap:nth-child(5) { transition-delay: 120ms; }
+.app .cf-row:hover .cf-row-thumb-wrap:nth-child(6) { transition-delay: 150ms; }
+
+/* ── Action ──────────────────────────────────────────────────────────────── */
+
+.app .cf-row-action {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  min-width: 132px;
+  padding-left: 16px;
+  border-left: 1px solid var(--line-soft);
+}
+
+/* ── Narrow screens ──────────────────────────────────────────────────────── */
+
+@media (max-width: 860px) {
+  .app .cf-row {
+    flex-wrap: wrap;
+  }
+
+  .app .cf-row-players {
+    min-width: 0;
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .app .cf-row-wager {
+    flex-basis: 100%;
+    order: 3;
+  }
+
+  .app .cf-row-action {
+    margin-left: auto;
+    padding-left: 0;
+    border-left: none;
+  }
+}
