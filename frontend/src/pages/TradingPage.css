@@ -26,8 +26,6 @@
 .tr-page :where(.tr-total,.tr-thumb-val,.tr-offer-val,.tr-val) { font-variant-numeric: tabular-nums; }
 
 .tr-topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); flex-wrap: wrap; }
-.tr-topbar .cf-topbar-tabs { display: flex; gap: 6px; }
-
 /* Trade cards */
 .tr-list { display: flex; flex-direction: column; gap: var(--sp-3); }
 .tr-card {

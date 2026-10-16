@@ -69,19 +69,6 @@
 }
 
 /* Tabs */
-.jp-tabs { display: flex; gap: 6px; margin-bottom: 16px; }
-.jp-tab, .jp-active {
-  padding: 9px 18px; background: var(--panel); border: 1px solid var(--line);
-  border-radius: var(--r-sm); color: var(--mut); font-size: .85rem; font-weight: 700;
-  letter-spacing: .06em; text-transform: uppercase; cursor: pointer;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04); transition: color .15s, border-color .15s, background .15s;
-}
-.jp-tab:hover { color: var(--txt); border-color: rgba(148,163,184,.25); }
-.jp-tab.active, .jp-active {
-  background: var(--panel2); color: var(--txt); border-color: rgba(47,129,247,.45);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -2px 0 var(--acc);
-}
-
 /* Pot section */
 .jp-pot-section {
   display: flex; flex-direction: column; align-items: center;
@@ -269,10 +256,7 @@
   .jp-wheel-avatar { width: 32px; height: 32px; }
   .jp-pot-value { font-size: 1.3rem; }
   .jp-wheel-avatar { width: 32px; height: 32px; }
-  .jp-inventory-grid { grid-template-columns: repeat(auto-fill,minmax(70px,1fr)); }
-  .jp-tabs { flex-wrap: wrap; }
-  .jp-tab { padding: 8px 14px; font-size: .78rem; }
-  .jp-player-card { padding: 10px 12px; }
+  .jp-inventory-grid { grid-template-columns: repeat(auto-fill,minmax(70px,1fr)); }  .jp-player-card { padding: 10px 12px; }
   .jp-bottom-bar { flex-wrap: wrap; gap: 10px; }
   .jp-btn-primary { flex: 1; text-align: center; }
   .jp-select { padding: 12px; }

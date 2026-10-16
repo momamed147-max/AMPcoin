@@ -35,48 +35,6 @@
 }
 
 /* ── tabs ── */
-.oc-tabs {
-  display: flex;
-  gap: 4px;
-  padding: 4px;
-  border-radius: var(--r-md);
-  background: var(--bg0);
-  border: 1px solid var(--line-soft);
-}
-
-.oc-tab {
-  flex: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  padding: 10px 14px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: transparent;
-  color: var(--mut);
-  font-family: var(--font-display);
-  font-size: var(--fs-sm);
-  font-weight: 700;
-  cursor: pointer;
-  transition: color var(--dur-1) var(--ease-1), background var(--dur-1) var(--ease-1);
-}
-.oc-tab:hover { color: var(--txt); background: rgba(255, 255, 255, 0.04); }
-
-.oc-tab.is-active {
-  color: #fff;
-  background: linear-gradient(180deg, var(--acc-300), var(--acc-600));
-  box-shadow: 0 4px 14px var(--acc-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
-
-.oc-tab-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: var(--r-full);
-  background: var(--panel3);
-  transition: background var(--dur-1) var(--ease-1), box-shadow var(--dur-1) var(--ease-1);
-}
-.oc-tab-dot.is-on { background: var(--grn); box-shadow: 0 0 8px var(--grn); }
 
 .oc-panel-wrap { animation: oc-slide var(--dur-3, 240ms) var(--ease-1); }
 @keyframes oc-slide {
@@ -423,9 +381,25 @@
 
 @media (max-width: 700px) {
   .outcome-control { padding: var(--sp-4); }
-  .oc-tabs { flex-direction: column; }
-  .oc-tab { justify-content: flex-start; }
   .oc-sides { grid-template-columns: 1fr; }
   .oc-log-row { grid-template-columns: 62px 44px 1fr; }
   .oc-log-at { display: none; }
+}
+/* A small lamp beside each tab showing whether that game's outcome control
+   is armed. Not a tab style - a status indicator - so it stays here rather
+   than moving into the shared tab control. */
+.oc-tab-dot {
+  width: 6px;
+  height: 6px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background-color: var(--ds-n-6);
+  transition:
+    background-color var(--dur-2) var(--ease-1),
+    box-shadow var(--dur-2) var(--ease-1);
+}
+
+.oc-tab-dot.is-on {
+  background-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
 }

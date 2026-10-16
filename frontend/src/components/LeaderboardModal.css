@@ -74,41 +74,6 @@
   overflow-y: auto;
 }
 
-.leaderboard-tabs {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 4px;
-  margin-bottom: 14px;
-  padding: 4px;
-  border: 1px solid var(--line-soft);
-  border-radius: 11px;
-  background: var(--bg1);
-}
-
-.leaderboard-tabs .tab-btn {
-  min-height: 36px;
-  padding: 7px 10px;
-  color: var(--mut);
-  font-size: 0.78rem;
-  font-weight: 700;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  cursor: pointer;
-  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
-}
-
-.leaderboard-tabs .tab-btn:hover {
-  color: var(--txt);
-  background: rgba(148, 163, 184, 0.06);
-}
-
-.leaderboard-tabs .tab-btn.active {
-  color: #dbeafe;
-  border-color: rgba(76, 141, 255, 0.24);
-  background: rgba(76, 141, 255, 0.13);
-}
-
 .leaderboard-modal .table-responsive {
   overflow-x: auto;
   border: 1px solid var(--line-soft);
@@ -224,5 +189,4 @@
     border-radius: 18px 18px 0 0;
   }
   .leaderboard-modal > .modal-body { padding: 12px 12px 18px; }
-  .leaderboard-tabs .tab-btn { padding-inline: 7px; font-size: 0.73rem; }
 }

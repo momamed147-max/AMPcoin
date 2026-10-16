@@ -193,33 +193,10 @@
    two were different components - a full-bleed underlined strip here, a
    recessed pill track there - so the product had three tab idioms across it.
    ═══════════════════════════════════════════════════════════════════════════ */
-.ui-tabs {
-  display: flex;
-  max-width: 100%;
-  overflow-x: auto;
-  scrollbar-width: none;
-  /* Scroll by touch on a phone and by wheel or trackpad on a desktop, without
-     a scrollbar ever appearing. */
-  overscroll-behavior-x: contain;
-  scroll-padding-inline: var(--sp-2);
-}
-.ui-tabs::-webkit-scrollbar { display: none; }
-
 /* ui/components.css draws the active tab as a raised pill and gives every tab a
    transparent 1px border. The old rule here set a 2px bottom border, which
    would survive underneath it and draw a line under every tab including the
    selected one. */
-.ui-tab {
-  border-bottom: 0;
-  scroll-margin-inline: var(--sp-2);
-}
-
-.ui-tab:focus-visible {
-  outline: 2px solid var(--acc-bright);
-  outline-offset: 2px;
-}
-
-
 /* ── Progress ───────────────────────────────────────────────────────────────── */
 .ui-progress-wrap { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
 .ui-progress-head { display: flex; justify-content: space-between; gap: var(--sp-3); font-size: var(--fs-xs); }

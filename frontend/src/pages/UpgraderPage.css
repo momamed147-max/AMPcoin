@@ -8,15 +8,6 @@
 }
 .ug-loading { display: grid; place-items: center; min-height: 60vh; }
 
-.ug-tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); }
-.ug-tab {
-  background: none; border: none; border-bottom: 2px solid transparent;
-  color: var(--mut); font-weight: 700; font-size: .88rem;
-  padding: 9px 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
-}
-.ug-tab:hover { color: var(--txt); }
-.ug-tab.active { color: var(--txt); border-bottom-color: var(--acc); }
-
 .ug-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr);

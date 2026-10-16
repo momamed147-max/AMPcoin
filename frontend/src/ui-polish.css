@@ -918,48 +918,21 @@ textarea:focus-visible,
 .jp-tabs,
 .admin-tabs,
 .leaderboard-tabs,
-.fair-tabs {
-  border-color: var(--line-soft) !important;
-  background: rgba(5, 10, 18, 0.48) !important;
-}
-
 .cf-tab,
 .jp-tab,
 .jp-active,
 .tab-btn,
 .tab-button,
-.vc-rarity-tab {
-  color: var(--mut) !important;
-  border-color: transparent !important;
-  border-radius: 8px !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease !important;
-}
-
 .cf-tab:hover,
 .jp-tab:hover,
 .tab-btn:hover:not(.active),
 .tab-button:hover,
-.vc-rarity-tab:hover {
-  color: var(--txt) !important;
-  border-color: var(--line-soft) !important;
-  background: rgba(148, 163, 184, 0.06) !important;
-}
-
 .cf-tab-active,
 .cf-tab.cf-tab-active,
 .jp-tab.active,
 .jp-active.active,
 .tab-btn.active,
 .tab-button.active,
-.vc-rarity-tab.active {
-  color: #dbeafe !important;
-  border-color: rgba(76, 141, 255, 0.24) !important;
-  background: linear-gradient(180deg, rgba(76, 141, 255, 0.16), rgba(76, 141, 255, 0.08)) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
-}
-
 .cf-tab-count {
   color: var(--mut) !important;
   border-color: var(--line-soft) !important;
@@ -967,12 +940,6 @@ textarea:focus-visible,
 }
 
 .cf-tab-active .cf-tab-count,
-.cf-tab.cf-tab-active .cf-tab-count {
-  color: #a9c8ff !important;
-  border-color: rgba(76, 141, 255, 0.26) !important;
-  background: rgba(76, 141, 255, 0.13) !important;
-}
-
 .btn,
 .cf-topbar-btn,
 .cf-join-btn,
@@ -1881,14 +1848,6 @@ textarea:focus,
   padding: 20px !important;
 }
 
-.admin-tabs {
-  position: sticky;
-  top: 0;
-  z-index: 15;
-  padding: 5px !important;
-  backdrop-filter: blur(12px);
-}
-
 .table-responsive,
 .users-table {
   overflow-x: auto;
@@ -2168,12 +2127,6 @@ textarea:focus,
     position: static;
     gap: 8px;
     padding: 8px !important;
-  }
-
-  .cf-topbar-tabs {
-    width: 100%;
-    overflow-x: auto;
-    flex-wrap: nowrap;
   }
 
   .cf-topbar-right {

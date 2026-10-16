@@ -298,9 +298,28 @@
    Form controls
    ========================================================================= */
 
+/* A generic rule that forces every input in the product to be full width is
+   wrong, and it was quietly breaking specialised controls.
+
+   `input[type='number']` is specificity (0,1,1) - the type attribute plus the
+   element - so it beats a component's own `.qt-input` at (0,1,0). The quantity
+   stepper's field was therefore stretched to fill its flex row, which squeezed
+   the pet thumbnail beside it down to a sliver and pushed each row to 110px.
+   Nothing about the stepper looked broken; the row it sat in had been resized
+   by a rule meant for a form.
+
+   So: appearance is set here for every control, and width is set only where a
+   field is genuinely a form field - on .input, .field, and on the bare inputs
+   inside a .form or a labelled .field-row. A control that sizes itself keeps
+   doing so. */
 .input,
-.select,
+.field,
 .textarea,
+select,
+textarea,
+.form input,
+.form select,
+.form textarea,
 input[type='text'],
 input[type='number'],
 input[type='password'],
@@ -308,7 +327,6 @@ input[type='search'],
 input[type='email'],
 select,
 textarea {
-  width: 100%;
   min-height: var(--ctl-h);
   padding: 0 var(--ctl-px);
   background-color: var(--bg2);
@@ -320,6 +338,21 @@ textarea {
     border-color var(--dur-1) var(--ease-1),
     background-color var(--dur-1) var(--ease-1),
     box-shadow var(--dur-1) var(--ease-1);
+}
+
+/* Width is a decision about context, not about the element. A field in a form
+   or on a panel spans the column it is given; a stepper's number input, a
+   search box inside a toolbar and a checkbox do not. */
+.input,
+.field,
+.textarea,
+.form input,
+.form select,
+.form textarea,
+.field-row input,
+.field-row select,
+.field-row textarea {
+  width: 100%;
 }
 
 textarea {
@@ -335,14 +368,16 @@ textarea::placeholder {
 }
 
 .input:hover,
-input:hover,
+.field:hover,
+.form input:hover,
 select:hover,
 textarea:hover {
   border-color: var(--line-strong);
 }
 
 .input:focus,
-input:focus,
+.field:focus,
+.form input:focus,
 select:focus,
 textarea:focus {
   outline: none;
@@ -352,7 +387,8 @@ textarea:focus {
 }
 
 .input:disabled,
-input:disabled,
+.field:disabled,
+.form input:disabled,
 select:disabled,
 textarea:disabled {
   opacity: 0.5;
@@ -379,41 +415,92 @@ select {
    Tabs
    ========================================================================= */
 
-/* A recessed track. The selected tab is raised out of it rather than filled
-   with the accent - an accent fill here competes with the primary action on
-   the page, and a tab is not an action.
+/* ── Tabs ────────────────────────────────────────────────────────────────
+   One control, ten class names.
 
-   .ui-tabs is the primitive from ui/primitives.js. .cf-topbar-tabs is the same
-   control written by the coinflip lobby, so both are listed here to keep them
-   identical rather than to leave two subtly different tab bars in the product. */
+   The product had nine separate tab implementations - the ui-tabs primitive,
+   cf-tabs on the three game lobbies, jp-tabs, ug-tabs, admin-tabs, fair-tabs,
+   leaderboard-tabs, oc-tabs and the value checker's rarity filter. Each had
+   its own container rule, its own item rule and its own spelling for the
+   selected state: is-active, cf-tab-active, and plain active. Four of them
+   were an underlined strip; three were a recessed pill track; two were neither.
+
+   So moving between two pages felt like moving between two products, and no
+   amount of restyling any one of them fixed that, because the problem was
+   that there were nine.
+
+   All ten names are listed here and given one appearance. That is deliberate:
+   the class names are load-bearing in nine stylesheets and in the markup, and
+   renaming them all would be a large diff with a large chance of a silent
+   regression in a route nobody is looking at. What matters to a user is that
+   they look and behave the same, and now they do.
+
+   pages/*.css still carries its own tab rules. They are the reason this works:
+   a page sheet rides in a lazy chunk and loads after this file, so it wins
+   where it overlaps. Unifying therefore means removing the duplicates, not
+   adding a selector here - which is what tests/css-tabs.js enforces. */
+
 .ui-tabs,
-.cf-topbar-tabs {
+.cf-topbar-tabs,
+.jp-tabs,
+.ug-tabs,
+.admin-tabs,
+.fair-tabs,
+.leaderboard-tabs,
+.oc-tabs,
+.vc-rarity-tabs,
+.moderator-tabs {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  max-width: 100%;
   padding: 3px;
   background-color: var(--bg0);
   border: 1px solid var(--line-soft);
   border-radius: var(--r-md);
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  /* Scrolls rather than wrapping when there are more tabs than room. A tab
+     strip that wraps onto three lines pushes the page's content down by a
+     height that changes with the viewport, which is worse than a scrollbar. */
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.ui-tabs::-webkit-scrollbar,
+.cf-topbar-tabs::-webkit-scrollbar,
+.jp-tabs::-webkit-scrollbar,
+.ug-tabs::-webkit-scrollbar,
+.admin-tabs::-webkit-scrollbar,
+.fair-tabs::-webkit-scrollbar,
+.leaderboard-tabs::-webkit-scrollbar,
+.oc-tabs::-webkit-scrollbar,
+.vc-rarity-tabs::-webkit-scrollbar,
+.moderator-tabs::-webkit-scrollbar {
+  display: none;
 }
 
-/* The stats screen's tabs were full-bleed underlined text with no track at
-   all, which is a third tab idiom in a product that already had two. */
 .ui-tab,
-.cf-tab {
+.cf-tab,
+.jp-tab,
+.ug-tab,
+.tab-btn,
+.tab-button,
+.oc-tab,
+.vc-rarity-tab {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: var(--sp-3);
   min-height: 30px;
   padding: 0 12px;
+  background: transparent;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
-  background: transparent;
   color: var(--mut);
   font-family: var(--font-body);
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
+  line-height: 1;
   cursor: pointer;
   white-space: nowrap;
   transition:
@@ -423,14 +510,28 @@ select {
 }
 
 .ui-tab:hover,
-.cf-tab:hover {
+.cf-tab:hover,
+.jp-tab:hover,
+.ug-tab:hover,
+.tab-btn:hover,
+.tab-button:hover,
+.oc-tab:hover,
+.vc-rarity-tab:hover {
   background-color: var(--panel2);
   color: var(--txt);
 }
 
+/* The selected tab is raised out of the track rather than filled with the
+   accent. An accent fill here competes with the page's primary action, and a
+   tab is not an action - it is a choice about what you are looking at. */
 .ui-tab.is-active,
 .ui-tab[aria-selected='true'],
-.cf-tab.cf-tab-active {
+.cf-tab.cf-tab-active,
+.jp-tab.active,
+.ug-tab.active,
+.tab-btn.active,
+.tab-button.active,
+.oc-tab.is-active {
   background-color: var(--panel3);
   border-color: var(--line);
   color: var(--acc-bright);
@@ -438,6 +539,7 @@ select {
   font-weight: var(--fw-semi);
 }
 
+/* A count beside a tab label, where one is present. */
 .ui-tab-count,
 .cf-tab-count {
   display: inline-flex;
@@ -461,6 +563,24 @@ select {
   background-color: var(--acc-soft);
   border-color: color-mix(in srgb, var(--acc) 32%, transparent);
   color: var(--acc-bright);
+}
+
+/* The rarity filter is a set of chips rather than a track: each one is a
+   standalone target with its own colour, and wrapping them reads better than
+   pretending they are pages. It keeps its own container so the rest of the
+   rule above does not fight it. */
+.vc-rarity-tabs {
+  flex-wrap: wrap;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
+.vc-rarity-tab {
+  border-color: var(--line);
+  background-color: var(--panel2);
 }
 
 /* ============================================================================

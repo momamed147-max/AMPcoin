@@ -71,35 +71,6 @@
 }
 
 /* Tabs */
-.admin-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 20px;
-  overflow-x: auto;
-  padding: 4px;
-  background: var(--bg1);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
-}
-.tab-btn {
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--mut);
-  padding: 9px 15px;
-  border-radius: var(--r-sm);
-  cursor: pointer;
-  transition: all .15s ease;
-  white-space: nowrap;
-  font-weight: 700;
-  font-size: .83rem;
-}
-.tab-btn:hover:not(.active) { background: rgba(148,163,184,.08); color: var(--txt); }
-.tab-btn.active {
-  background: var(--acc-soft);
-  color: #7db3ff;
-  border-color: rgba(47,129,247,.35);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-}
 .admin-tab-content { min-height: 400px; }
 
 /* Section labels */
@@ -558,12 +529,6 @@ select.form-control[multiple] { min-height: 130px; }
   margin-bottom: 18px;
 }
 
-.moderator-tabs .tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-}
-
 .moderator-stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -751,8 +716,6 @@ select.form-control[multiple] { min-height: 130px; }
   .admin-role-pill { align-self: flex-start; }
   .admin-panel { padding: 0; }
   .admin-content { padding: 12px; border-radius: 0; border-left: none; border-right: none; }
-  .admin-tabs { flex-direction: row !important; overflow-x: auto; gap: 6px; padding-bottom: 6px; }
-  .tab-btn { white-space: nowrap; padding: 8px 12px !important; font-size: .78rem !important; flex-shrink: 0; }
   .admin-dashboard, .admin-stats-grid { grid-template-columns: 1fr 1fr !important; gap: 8px; }
   .stat-card { padding: 12px !important; }
   .stat-number { font-size: 1.2rem !important; }
