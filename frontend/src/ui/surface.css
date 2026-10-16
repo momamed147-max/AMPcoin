@@ -32,7 +32,7 @@
 /* Two soft light sources plus a vignette, fixed so they do not scroll with the
    content. This is the single biggest change: it gives every flat panel
    something to sit on. */
-.app {
+html[data-theme] .app {
   position: relative;
   background-image:
     radial-gradient(1100px 700px at 12% -8%, rgba(47, 129, 247, 0.17), transparent 58%),
@@ -45,7 +45,7 @@
 /* A very fine grid over the whole page. Barely visible alone; what it does is
    give the eye something to resolve against, so large empty areas stop looking
    like an image that failed to load. */
-.app::after {
+html[data-theme] .app::after {
   content: '';
   position: fixed;
   inset: 0;
@@ -69,7 +69,7 @@
 .app .cf-view-modal,
 .app .cf-join-modal,
 .app .cf-history-modal,
-.app .cp-panel {
+html[data-theme] .app .cp-panel {
   background-color: #101724;
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.012) 24%, transparent 56%),
@@ -85,7 +85,7 @@
 /* ── Lobby rows ──────────────────────────────────────────────────────────── */
 
 /* The rows are what a player looks at most, so they get the most treatment. */
-.app .cf-row {
+html[data-theme] .app .cf-row {
   background-color: #101724;
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.01) 30%, transparent 60%),
@@ -97,7 +97,7 @@
     0 10px 26px -16px rgba(0, 0, 0, 0.85);
 }
 
-.app .cf-row:hover {
+html[data-theme] .app .cf-row:hover {
   background-color: #16202f;
   background-image:
     linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.018) 30%, transparent 60%),
@@ -112,7 +112,7 @@
 
 /* Your own bet gets a green rim. Finding "mine" in a full lobby should not
    require reading every name. */
-.app .cf-row:has(.cf-row-own-btns) {
+html[data-theme] .app .cf-row:has(.cf-row-own-btns) {
   border-color: rgba(63, 185, 80, 0.42);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
@@ -127,7 +127,7 @@
    tell of an unstyled interface. */
 .app .cf-join-btn,
 .app .btn.btn-primary,
-.app .btn-primary {
+html[data-theme] .app .btn-primary {
   background-image: linear-gradient(180deg, #6ba5ff 0%, #3485fb 55%, #1c62d0 100%);
   border: 1px solid rgba(140, 185, 255, 0.6);
   color: #ffffff;
@@ -139,7 +139,7 @@
 }
 
 .app .cf-join-btn:hover:not(:disabled),
-.app .btn.btn-primary:hover:not(:disabled) {
+html[data-theme] .app .btn.btn-primary:hover:not(:disabled) {
   background-image: linear-gradient(180deg, #8ab8ff 0%, #4b93ff 55%, #2470e0 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.45),
@@ -152,7 +152,7 @@
 .app .cf-topbar-btn,
 .app .cf-bot-btn,
 .app .btn.btn-secondary,
-.app .btn-secondary {
+html[data-theme] .app .btn-secondary {
   background-image: linear-gradient(180deg, #1d2839 0%, #151f2d 100%);
   border: 1px solid rgba(148, 163, 184, 0.2);
   color: #eef2f7;
@@ -163,7 +163,7 @@
 
 .app .cf-view-btn:hover:not(:disabled),
 .app .cf-topbar-btn:hover:not(:disabled),
-.app .btn.btn-secondary:hover:not(:disabled) {
+html[data-theme] .app .btn.btn-secondary:hover:not(:disabled) {
   background-image: linear-gradient(180deg, #27354f 0%, #1c2739 100%);
   border-color: rgba(148, 163, 184, 0.35);
   box-shadow:
@@ -172,7 +172,7 @@
 }
 
 .app .btn.btn-danger,
-.app .btn-danger {
+html[data-theme] .app .btn-danger {
   background-image: linear-gradient(180deg, #f4706a 0%, #d93a33 100%);
   border: 1px solid rgba(255, 150, 142, 0.5);
   color: #ffffff;
@@ -183,7 +183,7 @@
 
 /* ── Tabs ────────────────────────────────────────────────────────────────── */
 
-.app .cf-topbar-tabs {
+html[data-theme] .app .cf-topbar-tabs {
   background-color: #080d15;
   background-image: linear-gradient(180deg, #0c121b 0%, #070b12 100%);
   border: 1px solid rgba(148, 163, 184, 0.12);
@@ -191,7 +191,7 @@
 }
 
 .app .cf-tab-active,
-.app .tab-btn.active {
+html[data-theme] .app .tab-btn.active {
   background-image: linear-gradient(180deg, #6ba5ff 0%, #2f81f7 100%);
   color: #ffffff;
   box-shadow:
@@ -201,7 +201,7 @@
 
 /* ── Item tiles ──────────────────────────────────────────────────────────── */
 
-.app .cf-row-thumb-wrap {
+html[data-theme] .app .cf-row-thumb-wrap {
   background-color: #131c29;
   background-image: linear-gradient(180deg, #1c2637 0%, #131b28 100%);
   border-color: rgba(148, 163, 184, 0.12);
@@ -210,7 +210,7 @@
     0 3px 8px -3px rgba(0, 0, 0, 0.75);
 }
 
-.app .cf-row:hover .cf-row-thumb-wrap {
+html[data-theme] .app .cf-row:hover .cf-row-thumb-wrap {
   border-color: rgba(76, 141, 255, 0.42);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.09),
@@ -218,7 +218,7 @@
     0 0 24px -10px rgba(47, 129, 247, 0.55);
 }
 
-.app .cf-row-thumb {
+html[data-theme] .app .cf-row-thumb {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
@@ -227,7 +227,7 @@
 /* The values are the reason people are here, so they get the type: a gradient
    fill that reads as lit metal rather than flat white. */
 .app .cf-row-wager-total,
-.app .cf-row-total {
+html[data-theme] .app .cf-row-total {
   background-image: linear-gradient(180deg, #ffffff 0%, #b3c7e2 100%);
   -webkit-background-clip: text;
   background-clip: text;
@@ -237,7 +237,7 @@
   letter-spacing: -0.02em;
 }
 
-.app .cf-row-wager-label {
+html[data-theme] .app .cf-row-wager-label {
   color: rgba(148, 163, 184, 0.72);
   letter-spacing: 0.14em;
 }
@@ -247,7 +247,7 @@
 /* Permanent furniture should sit behind the content, not compete with it. */
 .app .header,
 .app .chat-column,
-.app .chat-panel {
+html[data-theme] .app .chat-panel {
   background-color: #090e16;
   background-image: linear-gradient(180deg, #0d131d 0%, #070b12 100%);
   border-color: rgba(148, 163, 184, 0.12);
@@ -255,7 +255,7 @@
 }
 
 .app .cf-page-title,
-.app .page-title {
+html[data-theme] .app .page-title {
   font-weight: 800;
   letter-spacing: -0.02em;
   background-image: linear-gradient(180deg, #ffffff 0%, #aebfd6 100%);
@@ -268,7 +268,7 @@
 
 /* An empty lobby is a normal state, not an error, so it should look designed. */
 .app .cf-empty,
-.app .empty-state {
+html[data-theme] .app .empty-state {
   background-color: #0f1622;
   background-image:
     radial-gradient(120% 100% at 50% 0%, rgba(47, 129, 247, 0.1), transparent 62%),
@@ -281,7 +281,7 @@
 
 /* ── Focus ───────────────────────────────────────────────────────────────── */
 
-.app :focus-visible {
+html[data-theme] .app :focus-visible {
   outline: 2px solid #6ba5ff;
   outline-offset: 2px;
   box-shadow: 0 0 0 5px rgba(47, 129, 247, 0.22);

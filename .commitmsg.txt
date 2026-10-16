@@ -1,0 +1,36 @@
+Style the auth screen, and fix why the surface layers did nothing
+
+THE ACTUAL BUG
+--------------
+Every style change I made to the lobby looked like it had no effect. It was
+being silently discarded, for two separate reasons:
+
+1. theme.css wraps 146 rules in `html[data-theme]`, which is specificity
+   (0,2,1). Every plain class selector in the new layers is (0,1,0) and simply
+   loses. The signature was a rule applying only in part - auth-card picked up
+   backdrop-filter from the new file and kept the OLD background from the theme.
+
+2. LoginPage is a lazy route, and the CSS a lazy chunk brings is injected after
+   the entire main bundle. A global stylesheet cannot outrank it at any
+   specificity, which is why the sign-in screen - the first thing anyone sees -
+   was completely untouched by all of this.
+
+Fixes: the surface layer's selectors are now prefixed `html[data-theme]` to
+outrank the theme, and the auth overrides moved into pages/AuthPage.css at the
+end, so source order settles them instead of a specificity war.
+
+The auth screen had its own class vocabulary - .auth-page, .auth-card, .auth-btn
+- which nothing in the surface layer targeted, so it was never in scope.
+
+The card now composes the 420px highlight it already had instead of replacing
+it. A background lists its topmost layer first, so replacing it was the reason
+the card still read as the generic page radial.
+
+The auth screen is the first impression and was the weakest screen: lit
+background, a glass card with a bright top hairline, gradient buttons, inputs
+that lift on focus.
+
+tools/compare-live.js asks the browser what the computed styles actually are on
+the deployed site versus a local build. That is how this was found: every
+earlier check had been indirect - grep a bundle, count a colour, read a
+screenshot - and all of them can pass while the page looks identical.
