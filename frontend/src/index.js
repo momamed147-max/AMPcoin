@@ -48,6 +48,10 @@ import './ui/surface.css';
   // column, which are structural rather than cosmetic, and it needs to beat the
   // flex definitions in lobby.css to do it.
   import './ui/layout.css';
+  // Shared page layout. Fixes the problems that repeat across pages - a
+  // duplicated title, empty panels reserving 400px, items floating in
+  // oversized boxes - once, rather than page by page.
+  import './ui/page-layout.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

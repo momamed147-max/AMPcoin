@@ -1,38 +1,30 @@
-Re-grid the lobby rows and re-measure the page
+Shared page layout: kill the repeated problems, not one page at a time
 
-Colour was not the problem and I kept treating it as if it were.
+Four things repeat across pages, so they are fixed once in ui/page-layout.css
+rather than page by page.
 
-The layout was this: page content stretched edge to edge, so on a 1600px screen
-a lobby row came out ~1500px wide holding about 300px of content. The eye
-travelled a very long way from "who" to "what" to "how much" and everything
-floated in the middle with nothing anchoring it. No amount of gradient fixes
-that.
+1. Duplicated title. The header band already says "Statistics" with the icon and
+   the purpose underneath; the page repeated it as an <h1> a few pixels below.
+   Two titles saying the same word.
 
-What changed:
+2. Empty panels reserving height. "No finished bets yet" was occupying ~400px,
+   so a page with nothing to show looked like a page with a lot to show.
 
-- The lobby row is a real three-column grid - who is betting | what is staked |
-  what it is worth and what you can do about it - with explicit tracks, dividers
-  between the columns, and a tinted background on the outer two. Previously it
-  was a flex strip that happened to end with a large gap.
-- The value moved into the action column, where you look when deciding whether
-  to join. It had been a floating sibling, then briefly in the wager header,
-  and printed twice at one point. It is in one place now, full width.
-- Join and View are stacked full-width buttons rather than a wide button next
-  to a small link, so the secondary no longer reads as an afterthought.
-- The content column has a real measure (1180px) instead of running to the edge
-  of the display. max-width on .page-content did nothing because it is a flex
-  child that grows, so the cap is on the inner column.
-- Proportion: avatars 42 to 52px, tiles 40 to 52px, wider name/value columns.
-  Everything had been sized for a phone and never scaled up.
-- Chat column trimmed 320px to 268px. It said "No messages yet" most of the time
-  while taking a third of the screen.
+3. Items floating in oversized boxes. Trading's SELLING panel held two small
+   tiles in a container sized for a dozen, which reads as missing content rather
+   than as a small trade.
 
-The players column went vertical on the first attempt, which read as a list
-rather than a matchup - it is a row again.
+4. Panels padded differently on every page, so nothing lined up when moving
+   between them.
 
-css-palette.js asserted "v3.css is the last stylesheet imported". That was true
-until three override layers were added after it deliberately. It now asserts
-both directions: v3 comes after the layers it must outrank, and the override
-layers come after v3, or they do nothing.
+Two mistakes while doing it, both caught by screenshot rather than by test:
+
+- The empty-state rule used [class*='empty'], which also matched a PANEL whose
+  class merely contains that substring, and squashed the whole Recent results
+  panel down to a column. Scoped to an actual empty message now.
+
+- Hiding only the h1 left a zero-height wrapper that kept its own positioning,
+  so the subtitle escaped upward and overlapped the header band. The whole block
+  collapses instead, and the subtitle is re-anchored in normal flow.
 
 415 tests pass across 14 suites.
