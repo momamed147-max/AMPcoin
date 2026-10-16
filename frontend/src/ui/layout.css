@@ -1,0 +1,229 @@
+/* ============================================================================
+   Layout
+   ----------------------------------------------------------------------------
+   Colour was never the problem. The layout is.
+
+   The page content stretches edge to edge on a 1600px screen, so a lobby row
+   ends up ~1500px wide holding about 300px of content - the eye travels a very
+   long way from "who" to "what" to "how much", and everything floats in the
+   middle with nothing anchoring it. That reads as unfinished no matter what
+   colour it is.
+
+   What changes here:
+     - a real max-width measure, so lines of content are a readable length
+     - the lobby row becomes a three-column grid with real columns, instead of a
+       flex strip that happens to end with a gap
+     - proportion: bigger avatars, bigger tiles, more generous padding
+     - the shell gets a proper column, so content is not fighting the chat panel
+   ========================================================================= */
+
+/* ── Measure ─────────────────────────────────────────────────────────────── */
+
+/* A betting lobby has a natural reading width. Letting it run to the edge of a
+   1600px display is what makes the rows look sparse. */
+.app .page-content {
+  width: 100%;
+  /* max-width alone does nothing on a flex child that is allowed to grow, so
+     the cap is on the inner measure instead. */
+  padding-inline: clamp(16px, 2.2vw, 32px);
+}
+
+.app .page-content > * {
+  width: 100%;
+  max-width: 1180px;
+  margin-inline: auto;
+}
+
+/* ── Shell ───────────────────────────────────────────────────────────────── */
+
+/* The chat column was a fixed 320px that said "No messages yet" most of the
+   time. It stays available but stops dominating the layout. */
+.app .chat-column {
+  flex: 0 0 268px;
+  max-width: 268px;
+}
+
+/* ── Lobby rows: a real grid ─────────────────────────────────────────────── */
+
+/* Three columns: who is betting | what is staked | what it is worth and what
+   you can do about it. Explicit tracks mean nothing floats. */
+.app .cf-row {
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr) 168px;
+  grid-template-areas:
+    'players wager action';
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.app .cf-row-players {
+  grid-area: players;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px 14px;
+  border-right: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 70%);
+}
+
+.app .cf-row-wager {
+  grid-area: wager;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 18px;
+  min-width: 0;
+}
+
+.app .cf-row-action {
+  grid-area: action;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 14px;
+  border-left: 1px solid var(--line-soft);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 70%);
+}
+
+/* The value belongs with the action, not floating above the tiles: that is
+   where you look when deciding whether to join. */
+.app .cf-row-action .cf-row-total {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.app .cf-row-action .cf-row-range {
+  color: var(--dim);
+  font-size: 0.66rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.app .cf-row-action .cf-row-cap {
+  color: var(--dim);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-align: center;
+  letter-spacing: 0.04em;
+}
+
+.app .cf-row-action .cf-join-btn,
+.app .cf-row-action .cf-view-btn,
+.app .cf-row-action .cf-bot-btn {
+  width: 100%;
+  justify-content: center;
+  min-height: 38px;
+}
+
+/* Two buttons side by side, not stacked - Join is the primary and View is a
+   fallback, and stacking them made the secondary look like a second CTA. */
+.app .cf-row-action .cf-row-own-btns,
+.app .cf-row-action > .cf-row-own-btns {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+/* ── Proportion ──────────────────────────────────────────────────────────── */
+
+/* Everything was sized for a phone and never scaled up. */
+.app .cf-row-avatar {
+  width: 52px;
+  height: 52px;
+}
+
+.app .cf-row-avatar-ring {
+  width: 62px;
+  height: 62px;
+}
+
+.app .cf-row-player-name {
+  font-size: 0.74rem;
+}
+
+.app .cf-row-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+}
+
+.app .cf-row-thumb-wrap {
+  width: 96px;
+  padding: 8px 6px 9px;
+}
+
+.app .cf-row-thumb-name {
+  font-size: 0.62rem;
+}
+
+.app .cf-row-thumb-value {
+  font-size: 0.58rem;
+}
+
+/* ── The wager header ────────────────────────────────────────────────────── */
+
+/* Becomes a real label row rather than a floating pair of words. */
+.app .cf-row-wager-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.app .cf-row-wager-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+}
+
+/* ── Narrow ──────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1100px) {
+  .app .cf-row {
+    grid-template-columns: 168px minmax(0, 1fr) 150px;
+  }
+  .app .cf-row-avatar-ring { width: 54px; height: 54px; }
+  .app .cf-row-avatar { width: 44px; height: 44px; }
+}
+
+@media (max-width: 860px) {
+  .app .cf-row {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'players'
+      'wager'
+      'action';
+  }
+  .app .cf-row-players,
+  .app .cf-row-action {
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .app .cf-row-players {
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 16px;
+  }
+  .app .cf-row-action {
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .app .cf-row-action .cf-join-btn,
+  .app .cf-row-action .cf-view-btn { width: auto; min-width: 110px; }
+}

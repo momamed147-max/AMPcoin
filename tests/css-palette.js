@@ -128,9 +128,23 @@ const indexJs = fs.readFileSync(path.join(SRC, 'index.js'), 'utf8');
   ok(indexJs.includes('ui/v3.css'), 'and index.js imports it');
   // v3 must be the last stylesheet index.js imports, or a later one wins.
   const cssImports = [...indexJs.matchAll(/import\s+['"](\.[^'"]+\.css)['"]/g)].map((m) => m[1]);
-  ok(cssImports[cssImports.length - 1] === './ui/v3.css',
-    'and it is imported last, so nothing overrides the palette',
-    `last import is ${cssImports[cssImports.length - 1]}`);
+  const idxV3 = cssImports.indexOf('./ui/v3.css');
+
+  // v3 must land after every layer it is meant to outrank. Those are the older
+  // design layers and the token/theme sheets, which sit earlier by design.
+  const v3MustBeat = ['./index.css', './theme.css', './ui/tokens.css', './ui/ui.css', './ui/shell.css'];
+  for (const sheet of v3MustBeat) {
+    ok(idxV3 > cssImports.indexOf(sheet),
+      `v3.css comes after ${sheet}, so v3 wins where it should`);
+  }
+
+  // And the deliberate override layers come after v3, or they do nothing. Each
+  // exists to beat v3 in the cascade, which is why they are imported last.
+  const overrides = ['./ui/surface.css', './ui/layout.css'];
+  for (const sheet of overrides) {
+    ok(cssImports.indexOf(sheet) > idxV3,
+      `${sheet} is imported after v3.css, or it would be discarded`);
+  }
 }
 
 console.log('\n=== themes still override the palette ===\n');

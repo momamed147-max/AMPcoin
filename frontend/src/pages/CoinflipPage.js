@@ -735,11 +735,7 @@ const [sortBy] = useState('newest');
                     <span className="cf-row-wager-label">
                       {meta.thumbs.length} item{meta.thumbs.length === 1 ? '' : 's'} staked
                     </span>
-                    <span className="cf-row-wager-total">
-                      <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span>
-                      {formatCompact(meta.total)}
-                    </span>
-                  </div>
+                    </div>
                   <div className="cf-row-items">
                     {meta.thumbs.slice(0, 6).map((item, idx) => (
                       <div key={idx} className="cf-row-thumb-wrap cf-tip-host">
@@ -780,15 +776,21 @@ const [sortBy] = useState('newest');
                   </div>
                 )}
 
-                {/* The wager total now sits in the cf-row-wager header, beside
-                    the items it describes. It used to live out here, stranded
-                    at the far right of a wide row with ~500px of nothing
-                    between it and the items it was a total of. */}
-
-                {/* Action */}
+                {/* Action. The value lives in here rather than floating as a
+                    sibling above: the grid gives it its own column beside the
+                    buttons, which is where you look when deciding whether to
+                    join. It used to sit in the wager header and then, before
+                    that, stranded at the far right of the row. */}
                 <div className="cf-row-action">
+                  <div className="cf-row-total">
+                    <span className="cf-diamond-sm"><Icon name="diamond" size={13} /></span>
+                    {formatCompact(meta.total)}
+                  </div>
+                  <div className="cf-row-range">
+                    {formatCompact(meta.creatorVal)} - {formatCompact(meta.oppVal || meta.creatorVal)}
+                  </div>
                   {meta.maxJoinPets > 0 && !meta.isCompleted && (
-                    <span className="cf-row-cap">Max {meta.maxJoinPets}</span>
+                    <span className="cf-row-cap">Max {meta.maxJoinPets} items</span>
                   )}
                   {!meta.isCompleted && !meta.isUserCreator && (
                     <>

@@ -44,6 +44,10 @@ import './ui/v3.css';
 // A theme still overrides it: a theme repaints the custom properties this
 // layer reads, not the rules themselves.
 import './ui/surface.css';
+  // Layout. Last of all: it re-grids the lobby rows and re-measures the page
+  // column, which are structural rather than cosmetic, and it needs to beat the
+  // flex definitions in lobby.css to do it.
+  import './ui/layout.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

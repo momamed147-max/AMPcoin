@@ -1,16 +1,38 @@
-Settle the sign-in card background
+Re-grid the lobby rows and re-measure the page
 
-Four separate sheets set `background` - the shorthand - on .auth-card:
-AuthPage.css, ui-polish.css, theme.css and ui/v3.css. A shorthand resets every
-background longhand beneath it, so no amount of source order or specificity could
-settle which background actually painted. That is why the card, specifically,
-kept reading as the old generic panel while the page behind it and the button
-in front of it changed correctly.
+Colour was not the problem and I kept treating it as if it were.
 
-One targeted !important on that single declaration ends the argument. Nothing
-else on the card needs it - border, shadow and backdrop blur were all applying
-normally the whole time, which is the signature of a rule winning on most
-properties and losing on one.
+The layout was this: page content stretched edge to edge, so on a 1600px screen
+a lobby row came out ~1500px wide holding about 300px of content. The eye
+travelled a very long way from "who" to "what" to "how much" and everything
+floated in the middle with nothing anchoring it. No amount of gradient fixes
+that.
 
-Also removes the now-superseded background-image longhand it replaced, so there
-is one authoritative declaration rather than two in a row.
+What changed:
+
+- The lobby row is a real three-column grid - who is betting | what is staked |
+  what it is worth and what you can do about it - with explicit tracks, dividers
+  between the columns, and a tinted background on the outer two. Previously it
+  was a flex strip that happened to end with a large gap.
+- The value moved into the action column, where you look when deciding whether
+  to join. It had been a floating sibling, then briefly in the wager header,
+  and printed twice at one point. It is in one place now, full width.
+- Join and View are stacked full-width buttons rather than a wide button next
+  to a small link, so the secondary no longer reads as an afterthought.
+- The content column has a real measure (1180px) instead of running to the edge
+  of the display. max-width on .page-content did nothing because it is a flex
+  child that grows, so the cap is on the inner column.
+- Proportion: avatars 42 to 52px, tiles 40 to 52px, wider name/value columns.
+  Everything had been sized for a phone and never scaled up.
+- Chat column trimmed 320px to 268px. It said "No messages yet" most of the time
+  while taking a third of the screen.
+
+The players column went vertical on the first attempt, which read as a list
+rather than a matchup - it is a row again.
+
+css-palette.js asserted "v3.css is the last stylesheet imported". That was true
+until three override layers were added after it deliberately. It now asserts
+both directions: v3 comes after the layers it must outrank, and the override
+layers come after v3, or they do nothing.
+
+415 tests pass across 14 suites.
