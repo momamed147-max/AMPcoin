@@ -17,7 +17,7 @@ import {
 } from '../lib/petMods';
 import './AdminPanel.css';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 function getFallbackAvatar(user) {
   if (user?.robloxUserId) {
@@ -1324,8 +1324,8 @@ function FullAdminPanel() {
     if (it.image || it.imageUrl) return it.image || it.imageUrl;
     const id = it.itemId || it.id;
     const found = (items || []).find((p) => p.id === id || p.itemId === id);
-    if (found) return found.imageUrl || found.image || '/default-item.png';
-    return '/default-item.png';
+    if (found) return found.imageUrl || found.image || '/default-item.svg';
+    return '/default-item.svg';
   };
 
   // Expand withdrawal lines into single-unit thumbs (multiples side by side)
@@ -1644,9 +1644,9 @@ function FullAdminPanel() {
                         <div key={item.id} className="inventory-item">
                           <img
                             className="admin-thumb"
-                            src={item.details?.imageUrl || item.image || item.imageUrl || '/default-item.png'}
+                            src={item.details?.imageUrl || item.image || item.imageUrl || '/default-item.svg'}
                             alt={item.details?.name || item.name || 'item'}
-                            onError={(e) => { e.target.src = '/default-item.png'; }}
+                            onError={(e) => { e.target.src = '/default-item.svg'; }}
                           />
                           <div className="inventory-item-info">
                             <div className="item-name">{item.details?.name || item.name}{(item.quantity || 1) > 1 && ` × ${item.quantity}`}</div>
@@ -1684,7 +1684,7 @@ function FullAdminPanel() {
                           return (
                             <div key={pid} className={`give-picker-item ${selected ? 'selected' : ''}`}>
                               <button type="button" className="give-picker-pick" onClick={() => togglePetSelection(pet)} aria-pressed={selected}>
-                                <img src={pet.imageUrl || pet.image || '/default-item.png'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.png'; }} />
+                                <img src={pet.imageUrl || pet.image || '/default-item.svg'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.svg'; }} />
                                 <span><strong>{pet.name || pet.itemName}</strong><small>{Number(pet.value || 0).toLocaleString()} AMP · {pet.rarity || 'common'}</small></span>
                                 {selected && <Icon name="check" size={14} />}
                               </button>
@@ -1732,7 +1732,7 @@ function FullAdminPanel() {
                       <div className="give-selection-chips">
                         {giveBundle.length === 0 ? <span className="give-empty-selection">No pets selected yet</span> : giveBundle.map((entry) => (
                           <span key={entry.id} className="give-selection-chip">
-                            <img src={entry.pet.imageUrl || entry.pet.image || '/default-item.png'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.png'; }} />
+                            <img src={entry.pet.imageUrl || entry.pet.image || '/default-item.svg'} alt="" onError={(e) => { e.currentTarget.src = '/default-item.svg'; }} />
                             <span>
                               <strong>{entry.name}</strong>
                               <small>× {entry.quantity}</small>
@@ -1885,7 +1885,7 @@ function FullAdminPanel() {
                                       src={txItemImage(u)}
                                       alt={u.name || u.itemName || 'item'}
                                       className="tx-thumb"
-                                      onError={(e) => { e.target.src = '/default-item.png'; }}
+                                      onError={(e) => { e.target.src = '/default-item.svg'; }}
                                     />
                                   ))}
                                   {left > 0 && <span className="tx-more">+{left}</span>}
@@ -1958,7 +1958,7 @@ function FullAdminPanel() {
                               <img
                                 src={txItemImage(it)}
                                 alt={it.name || it.itemName || 'item'}
-                                onError={(e) => { e.target.src = '/default-item.png'; }}
+                                onError={(e) => { e.target.src = '/default-item.svg'; }}
                               />
                             </div>
                             <div className="item-details">

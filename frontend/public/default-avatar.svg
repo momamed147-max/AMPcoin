@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Avatar unavailable">
+  <defs>
+    <!-- No double hyphens in this file's comments: an XML comment cannot contain
+         them, and the result is a file that serves fine but never renders. -->
+    <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4c8dff"/>
+      <stop offset="1" stop-color="#2f81f7"/>
+    </linearGradient>
+    <linearGradient id="body" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#7b8aa1"/>
+      <stop offset="1" stop-color="#4a5768"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="128" height="128" rx="14" fill="#0b0f17"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="url(#ring)" stroke-width="3.5"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1"/>
+
+  <!-- Same silhouette language as the raster this replaced, redrawn as vector so
+       it stays crisp at any size and costs about 1kb instead of 6kb. -->
+  <circle cx="64" cy="49" r="17" fill="url(#body)"/>
+  <path d="M26 108c0-20.4 17-35 38-35s38 14.6 38 35v6H26z" fill="url(#body)"/>
+</svg>

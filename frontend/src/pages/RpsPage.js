@@ -76,9 +76,9 @@ function ItemThumbs({ items = [], limit = 8 }) {
         <div className="cf-row-thumb-wrap cf-tip-host" key={`${item.itemId || item.id}-${index}`} data-tip={item.name || item.itemName || 'Item'}>
           <img
             className="cf-row-thumb"
-            src={item.image || item.imageUrl || '/default-item.png'}
+            src={item.image || item.imageUrl || '/default-item.svg'}
             alt={item.name || item.itemName || 'item'}
-            onError={(event) => { event.currentTarget.src = '/default-item.png'; }}
+            onError={(event) => { event.currentTarget.src = '/default-item.svg'; }}
           />
           <span className="cf-row-thumb-rarity" style={{ background: rarityColor(item.rarity) }} />
           <span className="cf-tip-pop"><PetTooltip item={item} /></span>
@@ -102,9 +102,9 @@ function RpsLobbyRow({ match, onJoin, onView, isSelf, hasActive }) {
           <div className={`cf-row-avatar-ring ${completed ? (match.winnerId === one.id ? 'ring-winner' : 'ring-lost') : 'ring-heads'}`}>
             <img
               className="cf-row-avatar"
-              src={one.avatar || '/default-avatar.png'}
+              src={one.avatar || '/default-avatar.svg'}
               alt={one.displayName || one.username}
-              onError={(event) => { event.currentTarget.src = '/default-avatar.png'; }}
+              onError={(event) => { event.currentTarget.src = '/default-avatar.svg'; }}
             />
             <span className="cf-row-chip-badge"><Icon name="rpsScissors" size={18} /></span>
           </div>
@@ -115,9 +115,9 @@ function RpsLobbyRow({ match, onJoin, onView, isSelf, hasActive }) {
             {two ? (
               <img
                 className="cf-row-avatar"
-                src={two.avatar || '/default-avatar.png'}
+                src={two.avatar || '/default-avatar.svg'}
                 alt={two.displayName || two.username}
-                onError={(event) => { event.currentTarget.src = '/default-avatar.png'; }}
+                onError={(event) => { event.currentTarget.src = '/default-avatar.svg'; }}
               />
             ) : (
               <div className="cf-row-avatar cf-row-avatar-empty">?</div>
@@ -164,10 +164,10 @@ function RpsItemColumn({ items, side }) {
   return items.map((item, index) => (
     <div key={`${side}-${item.itemId || item.id}-${index}`} className="cf-view-item-row cf-tip-host" data-tip={item.name || item.itemName || 'Item'}>
       <img
-        src={item.image || item.imageUrl || '/default-item.png'}
+        src={item.image || item.imageUrl || '/default-item.svg'}
         alt={item.name || 'item'}
         className="cf-view-item-icon"
-        onError={(event) => { event.currentTarget.src = '/default-item.png'; }}
+        onError={(event) => { event.currentTarget.src = '/default-item.svg'; }}
       />
       <span className="cf-view-item-name">
         {item.name || item.itemName || 'Item'}{(item.quantity || 1) > 1 ? ` ×${item.quantity}` : ''}
@@ -512,7 +512,7 @@ const RpsPage = ({ socket }) => {
                 <div className="cf-view-top">
                   <div className="cf-view-player">
                     <div className={`cf-view-avatar-ring ${completed && viewMatch.winnerId === one.id ? 'ring-winner' : 'ring-heads'}`}>
-                      <img src={one.avatar || '/default-avatar.png'} alt={one.displayName || one.username} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                      <img src={one.avatar || '/default-avatar.svg'} alt={one.displayName || one.username} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                       <span className="cf-view-chip-badge"><Icon name="rpsScissors" size={22} /></span>
                     </div>
                     <div className="cf-view-player-name">{one.displayName || one.username}</div>
@@ -539,7 +539,7 @@ const RpsPage = ({ socket }) => {
                   <div className="cf-view-player">
                     <div className={`cf-view-avatar-ring ${completed && viewMatch.winnerId === two?.id ? 'ring-winner' : 'ring-tails'}`}>
                       {two ? (
-                        <img src={two.avatar || '/default-avatar.png'} alt={two.displayName || two.username} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                        <img src={two.avatar || '/default-avatar.svg'} alt={two.displayName || two.username} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                       ) : (
                         <div className="cf-view-avatar cf-view-avatar-empty">?</div>
                       )}

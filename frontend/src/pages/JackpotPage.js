@@ -390,7 +390,7 @@ const JackpotPage = ({ socket }) => {
                       <img
                         src={slice.entry.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${slice.entry.userId}&width=100&height=100&format=png`}
                         alt={slice.entry.username}
-                        onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                        onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                       />
                       <span className="jp-wheel-pct">{slice.pct.toFixed(slice.pct < 10 ? 1 : 0)}%</span>
                     </div>
@@ -421,7 +421,7 @@ const JackpotPage = ({ socket }) => {
                     src={entry.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${entry.userId}&width=100&height=100&format=png`}
                     alt={entry.username}
                     className="jp-player-avatar"
-                    onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                    onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                   />
                   <div className="jp-player-info">
                     <span className="jp-player-name">{entry.username}</span>
@@ -482,9 +482,9 @@ const JackpotPage = ({ socket }) => {
                     title={`${item.name} — ${(item.value || 0).toLocaleString()} AMP`}
                   >
                     <img
-                      src={item.imageUrl || item.image || '/default-item.png'}
+                      src={item.imageUrl || item.image || '/default-item.svg'}
                       alt={item.name}
-                      onError={(e) => { e.target.src = '/default-item.png'; }}
+                      onError={(e) => { e.target.src = '/default-item.svg'; }}
                     />
                     <span className="jp-inv-name">{item.name}</span>
                     <ModBadges mods={item.mods} size={14} />

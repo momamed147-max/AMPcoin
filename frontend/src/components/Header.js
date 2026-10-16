@@ -20,7 +20,7 @@ import './WalletModal.css';
 // Pets shown per page in the wallet so a big inventory stays readable
 const WM_PAGE_SIZE = 24;
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 const Header = ({ socket }) => {
   const location = useLocation();

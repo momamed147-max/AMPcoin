@@ -60,8 +60,10 @@ const SUITES = [
   // of petMods.js (backend and frontend) from drifting apart.
   { file: 'mod-combinations.js', label: 'mod combinations', server: false },
   { file: 'mod-grant-e2e.js', label: 'mod grant e2e' },
+  { file: 'db-guard.js', label: 'db guard', server: false },
   { file: 'css-palette.js', label: 'css palette', server: false },
-  { file: 'css-reachability.js', label: 'css reachability', server: false }
+  { file: 'css-reachability.js', label: 'css reachability', server: false },
+  { file: 'ui-polish.js', label: 'ui polish' }
 ];
 
 let child = null;

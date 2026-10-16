@@ -5,7 +5,7 @@ import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
 import './ProfileModal.css';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 function formatCompact(n) {
   const v = Number(n) || 0;
@@ -142,7 +142,7 @@ const ProfileModal = ({ viewer, profileUser, isOwn, onClose }) => {
   if (!person) return null;
 
   const displayName = person.customDisplayName || person.displayName || person.robloxDisplayName || person.robloxUsername || 'Anonymous';
-  const avatarSrc = person.avatar || '/default-avatar.png';
+  const avatarSrc = person.avatar || '/default-avatar.svg';
   const idTag = person.robloxUserId ? `#${person.robloxUserId}` : `#${String(person.id || '').slice(0, 10)}`;
   const rank = getRank(stats.wager);
 

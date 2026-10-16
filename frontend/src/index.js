@@ -3,6 +3,10 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import './ui-polish.css';
+// Presentation polish. Sits before the V2/V3 layers: every rule in it is scoped
+// under .app so it outranks the shared layers by specificity rather than by
+// relying on import order, which keeps v3.css last as the palette authority.
+import './ui/polish.css';
 import './theme.css';
 // The V2 design layer goes last on purpose. theme.css must win over the token
 // defaults so a theme can repaint the primitives, and ui.css must sit after

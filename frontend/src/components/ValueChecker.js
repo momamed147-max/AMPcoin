@@ -222,10 +222,10 @@ const ValueChecker = ({ isOpen, onClose }) => {
                         <td className="vc-pet-cell">
                           <div className="vc-pet-info">
                             <img
-                              src={item.imageUrl || item.image || '/default-item.png'}
+                              src={item.imageUrl || item.image || '/default-item.svg'}
                               alt={name}
                               className="vc-pet-img"
-                              onError={(e) => { e.target.src = '/default-item.png'; }}
+                              onError={(e) => { e.target.src = '/default-item.svg'; }}
                             />
                             <div className="vc-pet-text">
                               <span className="vc-pet-name">{name}</span>

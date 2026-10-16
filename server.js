@@ -9,6 +9,53 @@ const fs = require('fs');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
+// Decide which database this process is allowed to touch, before anything can
+// connect to anything.
+//
+// dotenv loads .env into process.env, so clearing the shell variable is not
+// enough - a stray DATABASE_URL in .env is enough to point the whole server at
+// production. That is not hypothetical: a test run once created twelve accounts
+// in the live database, and those writes looked exactly like ordinary traffic.
+//
+// The test harness has its own guard, but that only protects the suites. This
+// protects every other way the server can be started, including by hand, which
+// is how that accident happened.
+//
+//   NODE_ENV=production          -> DATABASE_URL is required, LOCAL_JSON_MODE ignored
+//   LOCAL_JSON_MODE=true         -> DATABASE_URL is cleared and local JSON is used
+//   anything else with a URL     -> refuse, and say which host it found
+(function resolveDatabase() {
+  const local = String(process.env.LOCAL_JSON_MODE || '').toLowerCase() === 'true';
+  const production = process.env.NODE_ENV === 'production';
+
+  // Production must never silently run off a JSON file.
+  if (production && local) {
+    console.error('[db] NODE_ENV=production with LOCAL_JSON_MODE=true.');
+    console.error('[db] Refusing to boot: production cannot use the local JSON store.');
+    process.exit(1);
+  }
+
+  if (local) {
+    if (process.env.DATABASE_URL) {
+      console.warn('[db] LOCAL_JSON_MODE=true, so DATABASE_URL is being ignored.');
+      console.warn('[db] Using the local JSON store. Nothing will reach a real database.');
+      delete process.env.DATABASE_URL;
+    }
+    return;
+  }
+
+  const url = String(process.env.DATABASE_URL || '').trim();
+  if (!url) return;
+  if (process.env.ALLOW_REMOTE_DB) return;
+
+  const host = (() => { try { return new URL(url).hostname; } catch { return 'unknown'; } })();
+  console.error(`[db] NODE_ENV is not "production" and DATABASE_URL points at ${host}.`);
+  console.error('[db] Refusing to boot so local work cannot write to a live database.');
+  console.error('[db] Set LOCAL_JSON_MODE=true to use the local JSON store,');
+  console.error('[db] or ALLOW_REMOTE_DB=1 if you really mean to.');
+  process.exit(1);
+})();
+
 const dbManager = require('./backend/db/dbHelper');
 const { jwtSecret } = require('./backend/jwtSecret');
 
@@ -227,7 +274,12 @@ async function initDatabaseWithRetry(attempts = 12, baseDelayMs = 5000) {
 async function start() {
   try {
     await initDatabaseWithRetry();
-    console.log('PostgreSQL connected and data loaded');
+    // Say what actually happened. This line used to claim Postgres had
+    // connected even in local JSON mode, where no connection is made at all -
+    // which is a bad way to find out you are pointed at the wrong database.
+    console.log(dbManager.isSandbox()
+      ? '[Local JSON] Ready. No database connection was opened.'
+      : 'PostgreSQL connected and data loaded');
 
     // Auto-migrate: if no users exist, import from local JSON files if available
     const users = dbManager.getUsersDb();

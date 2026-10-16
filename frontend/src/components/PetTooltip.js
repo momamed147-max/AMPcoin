@@ -16,10 +16,10 @@ const PetTooltip = ({ item }) => {
     <div className="pet-tip">
       <div className="pet-tip-img-wrap">
         <img
-          src={item.image || item.imageUrl || '/default-item.png'}
+          src={item.image || item.imageUrl || '/default-item.svg'}
           alt={name}
           className="pet-tip-img"
-          onError={(e) => { e.target.src = '/default-item.png'; }}
+          onError={(e) => { e.target.src = '/default-item.svg'; }}
         />
         {showF && <span className="pet-tip-badge badge-f">F</span>}
         {showR && <span className="pet-tip-badge badge-r">R</span>}

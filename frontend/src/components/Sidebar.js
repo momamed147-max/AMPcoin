@@ -5,7 +5,7 @@ import ProfileModal from './ProfileModal';
 import Logo from './Logo';
 import Icon from './Icon';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 function getFallbackAvatar(user) {
   if (user?.robloxUserId) {

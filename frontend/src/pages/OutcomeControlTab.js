@@ -58,9 +58,9 @@ function Avatar({ user, size = 32 }) {
     <img
       className="oc-avatar"
       style={{ width: size, height: size }}
-      src={user?.avatar || '/default-avatar.png'}
+      src={user?.avatar || '/default-avatar.svg'}
       alt={name}
-      onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
+      onError={(e) => { e.currentTarget.src = '/default-avatar.svg'; }}
     />
   );
 }
@@ -78,9 +78,9 @@ function ItemThumbs({ items = [], total = 0 }) {
           title={`${item.name}${item.quantity > 1 ? ` ×${item.quantity}` : ''} - ${compact(item.value * item.quantity)} AMP`}
         >
           <img
-            src={item.image || '/default-item.png'}
+            src={item.image || '/default-item.svg'}
             alt={item.name}
-            onError={(e) => { e.currentTarget.src = '/default-item.png'; }}
+            onError={(e) => { e.currentTarget.src = '/default-item.svg'; }}
           />
           <span className="oc-thumb-rarity" style={{ background: RARITY[String(item.rarity).toLowerCase()] || RARITY.common }} />
         </div>

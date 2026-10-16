@@ -2205,3 +2205,68 @@ a.cf-tab {
   border-radius: var(--r-xl);
   box-shadow: var(--elev-4), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
+
+/* ============================================================================
+   Row polish
+   ----------------------------------------------------------------------------
+   These live here rather than in ui/polish.css because the pages that render
+   lobby rows are the pages that load this sheet, and a class styled only by a
+   stylesheet they never import is a class they cannot style.
+
+   They also have to sit late in the file: this one ships inside a lazy page
+   chunk that webpack injects after the main bundle, so an equal-specificity
+   rule in v3.css loses to anything here.
+   ========================================================================= */
+
+.app .cf-row-joinable::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 22%, rgba(47, 129, 247, 0.13) 50%, transparent 78%);
+  background-size: 220% 100%;
+  opacity: 0;
+  transition: opacity 0.2s var(--ease-out);
+}
+
+.app .cf-row-joinable:hover::after {
+  opacity: 1;
+  animation: row-sheen 1.6s var(--ease-out) infinite;
+}
+
+@keyframes row-sheen {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
+
+/* A short list used to stop dead, which reads as a page that failed to load the
+   rest rather than one with three rows on it. This closes it off. */
+.app .cf-list-end {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4, 12px);
+  margin: var(--sp-5, 18px) 0 var(--sp-3, 10px);
+  color: var(--dim);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.app .cf-list-end::before,
+.app .cf-list-end::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--line), transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Written here, after the animation it cancels. The equivalent rule in
+     ui/polish.css is imported earlier and would lose the cascade, leaving the
+     sheen running for players who asked for less motion. */
+  .app .cf-row-joinable:hover::after {
+    animation: none;
+  }
+}

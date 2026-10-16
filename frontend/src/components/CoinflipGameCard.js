@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { API_BASE } from '../apiConfig';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 const profileCache = new Map();
 const profilePending = new Map();
@@ -165,11 +165,11 @@ const CoinflipGameCard = ({ coinflip, onJoin }) => {
         {itemsToShow.map((item, index) => (
           <div key={index} className="item-card">
             <img
-              src={item.details?.imageUrl || item.imageUrl || item.image || '/default-item.png'}
+              src={item.details?.imageUrl || item.imageUrl || item.image || '/default-item.svg'}
               alt={item.details?.name || item.itemName || item.name}
               className="item-image"
               onError={(e) => {
-                e.target.src = '/default-item.png';
+                e.target.src = '/default-item.svg';
               }}
             />
             <div className="item-info">

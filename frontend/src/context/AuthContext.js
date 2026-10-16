@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { API_BASE } from '../apiConfig';
 
 const AuthContextDefault = createContext();
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 // Exported so a test can supply a user without standing up the whole provider.
 // createContext() is called with no default, so useAuth() outside a provider

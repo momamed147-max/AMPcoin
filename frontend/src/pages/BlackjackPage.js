@@ -326,9 +326,9 @@ const BlackjackPage = ({ socket }) => {
                 <div className="cf-row-avatar-ring ring-heads">
                   <img
                     className="cf-row-avatar"
-                    src={t.dealerSeat?.avatar || '/default-avatar.png'}
+                    src={t.dealerSeat?.avatar || '/default-avatar.svg'}
                     alt={t.dealerSeat?.username}
-                    onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }}
+                    onError={(e) => { e.currentTarget.src = '/default-avatar.svg'; }}
                   />
                   <span className="cf-row-chip-badge"><Icon name="card" size={18} /></span>
                 </div>
@@ -344,7 +344,7 @@ const BlackjackPage = ({ socket }) => {
             <div className="cf-row-items">
               {(t.creatorItems || []).slice(0, 4).map((i, n) => (
                 <span key={n} className="cf-item-thumb" title={i.name}>
-                  <img src={i.image || '/default-item.png'} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />
+                  <img src={i.image || '/default-item.svg'} alt="" onError={(e) => { e.target.style.visibility = 'hidden'; }} />
                 </span>
               ))}
             </div>
@@ -406,7 +406,7 @@ const BlackjackPage = ({ socket }) => {
                 <div className="bj-table-top">
                   <div className={`bj-seat ${iDeal ? 'me' : ''}`}>
                     {dSeat.avatar
-                      ? <img className="bj-seat-avatar" src={dSeat.avatar} alt="" onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }} />
+                      ? <img className="bj-seat-avatar" src={dSeat.avatar} alt="" onError={(e) => { e.currentTarget.src = '/default-avatar.svg'; }} />
                       : <span className="bj-seat-avatar fallback">{(dSeat.username || '?').slice(0, 1).toUpperCase()}</span>}
                     <span className="bj-seat-name">
                       {dSeat.username || 'Dealer'}
@@ -417,7 +417,7 @@ const BlackjackPage = ({ socket }) => {
                   <div className="bj-vs">VS</div>
                   <div className={`bj-seat ${iPlay ? 'me' : ''}`}>
                     {pSeat.avatar
-                      ? <img className="bj-seat-avatar" src={pSeat.avatar} alt="" onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }} />
+                      ? <img className="bj-seat-avatar" src={pSeat.avatar} alt="" onError={(e) => { e.currentTarget.src = '/default-avatar.svg'; }} />
                       : <span className="bj-seat-avatar fallback">{(pSeat.username || '?').slice(0, 1).toUpperCase()}</span>}
                     <span className="bj-seat-name">
                       {pSeat.username || 'Waiting'}

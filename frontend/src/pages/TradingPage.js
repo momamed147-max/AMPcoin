@@ -23,9 +23,9 @@ function ItemThumb({ item, onRemove }) {
   return (
     <div className="tr-thumb" title={`${item.name || item.itemName || 'Item'}`}>
       <img
-        src={item.image || item.imageUrl || '/default-item.png'}
+        src={item.image || item.imageUrl || '/default-item.svg'}
         alt={item.name || item.itemName || 'item'}
-        onError={(e) => { e.target.src = '/default-item.png'; }}
+        onError={(e) => { e.target.src = '/default-item.svg'; }}
       />
       <span className="tr-thumb-name">{item.name || item.itemName || 'Item'}{(item.quantity || 1) > 1 ? ` ×${item.quantity}` : ''}</span>
       <ModBadges mods={item.mods} size={13} />
@@ -327,10 +327,10 @@ const TradingPage = ({ socket }) => {
                       onClick={() => toggleHave(item)}
                     >
                       <img
-                        src={item.image || item.imageUrl || '/default-item.png'}
+                        src={item.image || item.imageUrl || '/default-item.svg'}
                         alt={item.name || 'item'}
                         className="cf-inv-img"
-                        onError={(e) => { e.target.src = '/default-item.png'; }}
+                        onError={(e) => { e.target.src = '/default-item.svg'; }}
                       />
                       <div className="cf-inv-name">{item.name || item.itemName}</div>
                       <ModBadges mods={item.mods} size={14} />
@@ -371,10 +371,10 @@ const TradingPage = ({ socket }) => {
                       onClick={() => toggleWant(item)}
                     >
                       <img
-                        src={item.image || item.imageUrl || '/default-item.png'}
+                        src={item.image || item.imageUrl || '/default-item.svg'}
                         alt={item.name || 'item'}
                         className="cf-inv-img"
-                        onError={(e) => { e.target.src = '/default-item.png'; }}
+                        onError={(e) => { e.target.src = '/default-item.svg'; }}
                       />
                       <div className="cf-inv-name">{item.name || item.itemName}</div>
                       <div className="cf-inv-val"><Icon name="diamond" size={10} />{Number(item.baseValue ?? item.value ?? 0).toLocaleString()}</div>
@@ -418,10 +418,10 @@ const TradingPage = ({ socket }) => {
               <div key={t.id} className="tr-card">
                 <div className="tr-card-head">
                   <img
-                    src={t.creatorAvatar || '/default-avatar.png'}
+                    src={t.creatorAvatar || '/default-avatar.svg'}
                     alt={t.creatorUsername}
                     className="tr-creator-avatar"
-                    onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                    onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                   />
                   <div className="tr-creator-meta">
                     <span className="tr-creator-name">{t.creatorUsername}</span>
@@ -478,10 +478,10 @@ const TradingPage = ({ socket }) => {
                     {(t.offers || []).map((o) => (
                       <div key={o.id} className="tr-offer">
                         <img
-                          src={o.avatar || '/default-avatar.png'}
+                          src={o.avatar || '/default-avatar.svg'}
                           alt={o.username}
                           className="tr-offer-avatar"
-                          onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                          onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                         />
                         <div className="tr-offer-body">
                           <div className="tr-offer-head">
@@ -526,10 +526,10 @@ const TradingPage = ({ socket }) => {
                   <span className="cf-join-vs-label">OFFERING TO</span>
                   <div className="cf-join-vs-user">
                     <img
-                      src={offerTrade.creatorAvatar || '/default-avatar.png'}
+                      src={offerTrade.creatorAvatar || '/default-avatar.svg'}
                       alt={offerTrade.creatorUsername}
                       className="cf-join-vs-avatar"
-                      onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                      onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                     />
                     <div className="cf-join-vs-meta">
                       <span className="cf-join-vs-name">{offerTrade.creatorUsername}</span>
@@ -542,10 +542,10 @@ const TradingPage = ({ socket }) => {
                     {offerTrade.offerItems.map((it, i) => (
                       <div key={i} className="cf-join-bet-item">
                         <img
-                          src={it.image || it.imageUrl || '/default-item.png'}
+                          src={it.image || it.imageUrl || '/default-item.svg'}
                           alt=""
                           className="cf-join-bet-item-img"
-                          onError={(e) => { e.target.src = '/default-item.png'; }}
+                          onError={(e) => { e.target.src = '/default-item.svg'; }}
                         />
                         <span className="cf-join-bet-item-name">{it.name || it.itemName}</span>
                         <span className="cf-join-bet-item-val"><Icon name="diamond" size={11} /> {itemVal(it).toLocaleString()}</span>
@@ -562,10 +562,10 @@ const TradingPage = ({ socket }) => {
                       return (
                         <div key={s.itemId} className="cf-join-bet-item">
                           <img
-                            src={it.image || it.imageUrl || '/default-item.png'}
+                            src={it.image || it.imageUrl || '/default-item.svg'}
                             alt=""
                             className="cf-join-bet-item-img"
-                            onError={(e) => { e.target.src = '/default-item.png'; }}
+                            onError={(e) => { e.target.src = '/default-item.svg'; }}
                           />
                           <span className="cf-join-bet-item-name">{it.name || it.itemName}</span>
                           <span className="cf-join-bet-item-val"><Icon name="diamond" size={11} /> {Number(it.value || 0).toLocaleString()}</span>
@@ -588,10 +588,10 @@ const TradingPage = ({ socket }) => {
                     return (
                       <div key={id} className={`cf-inv-tile ${added ? 'selected' : ''}`} onClick={() => toggleOffer(item)}>
                         <img
-                          src={item.image || item.imageUrl || '/default-item.png'}
+                          src={item.image || item.imageUrl || '/default-item.svg'}
                           alt=""
                           className="cf-inv-img"
-                          onError={(e) => { e.target.src = '/default-item.png'; }}
+                          onError={(e) => { e.target.src = '/default-item.svg'; }}
                         />
                         <div className="cf-inv-name">{item.name || item.itemName}</div>
                         <ModBadges mods={item.mods} size={14} />

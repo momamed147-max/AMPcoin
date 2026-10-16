@@ -164,7 +164,7 @@ const BlackjackModal = ({ mode, table, userInventory, onClose, onDone }) => {
                         role="presentation"
                       >
                         <img
-                          src={i.image || i.imageUrl || '/default-item.png'}
+                          src={i.image || i.imageUrl || '/default-item.svg'}
                           alt=""
                           onError={(e) => { e.target.style.visibility = 'hidden'; }}
                         />

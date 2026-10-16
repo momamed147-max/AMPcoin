@@ -1,0 +1,104 @@
+{
+  "summary": {
+    "label": "before",
+    "avgFcp": 438,
+    "avgLoad": 371,
+    "avgBytes": 560285,
+    "avgJs": 347626,
+    "avgCss": 200587,
+    "worstFcp": 524
+  },
+  "rows": [
+    {
+      "route": "/",
+      "fcp": 472,
+      "load": 313,
+      "js": 374738,
+      "css": 224461,
+      "img": 109893,
+      "cssFiles": 3,
+      "jsFiles": 3,
+      "dom": 699,
+      "requests": 34,
+      "bytes": 474203
+    },
+    {
+      "route": "/coinflip",
+      "fcp": 340,
+      "load": 294,
+      "js": 374738,
+      "css": 224461,
+      "img": 112162,
+      "cssFiles": 3,
+      "jsFiles": 3,
+      "dom": 699,
+      "requests": 35,
+      "bytes": 656024
+    },
+    {
+      "route": "/rps",
+      "fcp": 472,
+      "load": 425,
+      "js": 362918,
+      "css": 231300,
+      "img": 46520,
+      "cssFiles": 4,
+      "jsFiles": 3,
+      "dom": 272,
+      "requests": 29,
+      "bytes": 426776
+    },
+    {
+      "route": "/jackpot",
+      "fcp": 524,
+      "load": 474,
+      "js": 335711,
+      "css": 181371,
+      "img": 113932,
+      "cssFiles": 2,
+      "jsFiles": 2,
+      "dom": 407,
+      "requests": 33,
+      "bytes": 489001
+    },
+    {
+      "route": "/trading",
+      "fcp": 472,
+      "load": 418,
+      "js": 335176,
+      "css": 208708,
+      "img": 95309,
+      "cssFiles": 3,
+      "jsFiles": 2,
+      "dom": 299,
+      "requests": 32,
+      "bytes": 1062849
+    },
+    {
+      "route": "/stats",
+      "fcp": 376,
+      "load": 320,
+      "js": 332945,
+      "css": 169216,
+      "img": 46520,
+      "cssFiles": 2,
+      "jsFiles": 2,
+      "dom": 354,
+      "requests": 25,
+      "bytes": 403141
+    },
+    {
+      "route": "/leaderboard",
+      "fcp": 408,
+      "load": 351,
+      "js": 317156,
+      "css": 164590,
+      "img": 46520,
+      "cssFiles": 1,
+      "jsFiles": 1,
+      "dom": 220,
+      "requests": 21,
+      "bytes": 410001
+    }
+  ]
+}

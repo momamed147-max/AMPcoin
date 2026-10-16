@@ -37,6 +37,12 @@ let pool = createPool(process.env.DATABASE_URL);
 
 // ─── Schema init ─────────────────────────────────────────────────────
 async function initDatabase() {
+  // In the local JSON sandbox there is nothing to initialise. Creating a schema
+  // means opening a real connection, and pg falls back to localhost when there
+  // is no connection string, so a "local" run was quietly attempting a database
+  // it does not own.
+  if (LOCAL_JSON_MODE) return;
+
   const client = await pool.connect();
   try {
     await client.query(`

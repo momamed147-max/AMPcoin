@@ -5,7 +5,7 @@ import { API_BASE } from '../apiConfig';
 // the same rows. Importing the modal's stylesheet is what makes both match.
 import '../components/LeaderboardModal.css';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 const profileCache = new Map();
 const profilePending = new Map();

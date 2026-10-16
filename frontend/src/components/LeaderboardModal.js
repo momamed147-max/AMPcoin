@@ -5,7 +5,7 @@ import ModalPortal from './ModalPortal';
 import { playError } from '../sound';
 import './LeaderboardModal.css';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 const profileCache = new Map();
 const profilePending = new Map();

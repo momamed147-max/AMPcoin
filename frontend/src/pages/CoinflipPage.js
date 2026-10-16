@@ -459,11 +459,11 @@ const [sortBy] = useState('newest');
 
   const getBetMeta = (cf) => {
     const creatorName = cf.creator?.displayName || cf.creatorUsername || 'Unknown';
-    const creatorAvatar = cf.creator?.avatar || cf.creatorAvatar || '/default-avatar.png';
+    const creatorAvatar = cf.creator?.avatar || cf.creatorAvatar || '/default-avatar.svg';
     const creatorSide = (cf.sideChosen || cf.creatorSide || 'heads').toLowerCase() === 'tails' ? 'tails' : 'heads';
     const opponentSide = creatorSide === 'heads' ? 'tails' : 'heads';
     const oppName = cf.opponent?.displayName || cf.opponentUsername || null;
-    const oppAvatar = cf.opponent?.avatar || cf.opponentAvatar || '/default-avatar.png';
+    const oppAvatar = cf.opponent?.avatar || cf.opponentAvatar || '/default-avatar.svg';
     const hasOpponent = !!(cf.opponentId || oppName);
     const creatorVal = cf.creatorValue || 0;
     const oppVal = cf.opponentValue || 0;
@@ -659,7 +659,7 @@ const [sortBy] = useState('newest');
           </div>
           )
         ) : (
-          visibleGames.map((coinflip) => {
+          visibleGames.map((coinflip, rowIndex) => {
             const meta = getBetMeta(coinflip);
             const anim = chipAnim && chipAnim.id === coinflip.id ? chipAnim : null;
             const creatorWon = meta.isCompleted && meta.winnerId && meta.winnerId === coinflip.creatorId;
@@ -673,7 +673,15 @@ const [sortBy] = useState('newest');
             const showOppRing = oppWon && !flipping;
 
             return (
-              <div key={coinflip.id} className={`cf-row ${meta.isCompleted ? 'cf-row-done' : ''} ${freshBetId === coinflip.id ? 'cf-row-fresh' : ''} ${leavingBetId === coinflip.id ? 'cf-row-exit' : ''}`}>
+  <div
+    key={coinflip.id}
+    style={{ '--cf-row-index': Math.min(rowIndex, 12) }}
+    className={`cf-row ${meta.isCompleted ? 'cf-row-done' : ''} ${freshBetId === coinflip.id ? 'cf-row-fresh' : ''} ${leavingBetId === coinflip.id ? 'cf-row-exit' : ''} ${!meta.isCompleted && !meta.isUserCreator ? 'cf-row-joinable' : ''}`}
+  >
+                {/* --cf-row-index staggers the entry animation, so a refreshed lobby reads
+                    as rows arriving rather than as one static block. cf-row-joinable marks
+                    the rows this player can actually join - the single most useful thing to
+                    know at a glance. */}
                 {/* Players */}
                 <div className="cf-row-players">
                   <div className="cf-row-player">
@@ -682,7 +690,7 @@ const [sortBy] = useState('newest');
                         src={meta.creatorAvatar}
                         alt={meta.creatorName}
                         className="cf-row-avatar"
-                        onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                        onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                       />
                       <span className="cf-row-chip-badge">
                         <CoinChip side={meta.creatorSide} size={20} />
@@ -697,7 +705,7 @@ const [sortBy] = useState('newest');
                           src={meta.oppAvatar}
                           alt={meta.oppName}
                           className="cf-row-avatar"
-                          onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                          onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                         />
                       ) : (
                         <div className="cf-row-avatar cf-row-avatar-empty">?</div>
@@ -714,10 +722,10 @@ const [sortBy] = useState('newest');
                   {meta.thumbs.slice(0, 8).map((item, idx) => (
                     <div key={idx} className="cf-row-thumb-wrap cf-tip-host">
                       <img
-                        src={item.image || item.imageUrl || '/default-item.png'}
+                        src={item.image || item.imageUrl || '/default-item.svg'}
                         alt={item.name || item.itemName || 'item'}
                         className="cf-row-thumb"
-                        onError={(e) => { e.target.src = '/default-item.png'; }}
+                        onError={(e) => { e.target.src = '/default-item.svg'; }}
                       />
                       <span className="cf-row-thumb-rarity" style={{ background: getRarityColor(item.rarity) }}></span>
                       <span className="cf-tip-pop"><PetTooltip item={item} /></span>
@@ -789,6 +797,10 @@ const [sortBy] = useState('newest');
             );
           })
         )}
+        {/* Closes off the list. A short lobby used to stop dead, which reads as
+            a page that failed to load the rest rather than one with three rows
+            on it. */}
+        {visibleGames.length > 0 && <div className="cf-list-end">You have reached the end</div>}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════
@@ -812,7 +824,7 @@ const [sortBy] = useState('newest');
               <div className="cf-view-top">
                 <div className="cf-view-player">
                   <div className={`cf-view-avatar-ring ${showWinnerRing && creatorWon ? 'ring-winner' : ''} ring-${meta.creatorSide}`}>
-                    <img src={meta.creatorAvatar} alt={meta.creatorName} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                    <img src={meta.creatorAvatar} alt={meta.creatorName} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                     <span className="cf-view-chip-badge"><CoinChip side={meta.creatorSide} size={24} /></span>
                   </div>
                   <div className="cf-view-player-name">{meta.creatorName}</div>
@@ -829,7 +841,7 @@ const [sortBy] = useState('newest');
                 <div className="cf-view-player">
                   <div className={`cf-view-avatar-ring ${showWinnerRing && !creatorWon ? 'ring-winner' : ''} ring-${meta.opponentSide}`}>
                     {meta.hasOpponent ? (
-                      <img src={meta.oppAvatar} alt={meta.oppName} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                      <img src={meta.oppAvatar} alt={meta.oppName} className="cf-view-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                     ) : (
                       <div className="cf-view-avatar cf-view-avatar-empty">?</div>
                     )}
@@ -864,7 +876,7 @@ const [sortBy] = useState('newest');
                 <div className="cf-view-items-col">
                   {meta.creatorItems.length > 0 ? meta.creatorItems.map((item, i) => (
                     <div key={i} className="cf-view-item-row cf-tip-host" data-tip={item.name || item.itemName || 'Item'}>
-                      <img src={item.image || item.imageUrl || '/default-item.png'} alt={item.name || 'item'} className="cf-view-item-icon" onError={(e) => { e.target.src = '/default-item.png'; }} />
+                      <img src={item.image || item.imageUrl || '/default-item.svg'} alt={item.name || 'item'} className="cf-view-item-icon" onError={(e) => { e.target.src = '/default-item.svg'; }} />
                       <span className="cf-view-item-name">{item.name || item.itemName || 'Item'}{(item.quantity || 1) > 1 ? ` ×${item.quantity}` : ''}</span>
                       <ModBadges mods={item.mods} size={15} />
                       <span className="cf-view-item-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {((item.value || 0) * (item.quantity || 1)).toLocaleString()}</span>
@@ -875,7 +887,7 @@ const [sortBy] = useState('newest');
                 <div className="cf-view-items-col">
                   {meta.opponentItems.length > 0 ? meta.opponentItems.map((item, i) => (
                     <div key={i} className="cf-view-item-row cf-tip-host" data-tip={item.name || item.itemName || 'Item'}>
-                      <img src={item.image || item.imageUrl || '/default-item.png'} alt={item.name || 'item'} className="cf-view-item-icon" onError={(e) => { e.target.src = '/default-item.png'; }} />
+                      <img src={item.image || item.imageUrl || '/default-item.svg'} alt={item.name || 'item'} className="cf-view-item-icon" onError={(e) => { e.target.src = '/default-item.svg'; }} />
                       <span className="cf-view-item-name">{item.name || item.itemName || 'Item'}{(item.quantity || 1) > 1 ? ` ×${item.quantity}` : ''}</span>
                       <ModBadges mods={item.mods} size={15} />
                       <span className="cf-view-item-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {((item.value || 0) * (item.quantity || 1)).toLocaleString()}</span>
@@ -939,7 +951,7 @@ const [sortBy] = useState('newest');
                   <div className="cf-join-vs-head">
                     <span className="cf-join-vs-label">JOINING</span>
                     <div className="cf-join-vs-user">
-                      <img src={meta.creatorAvatar} alt={meta.creatorName} className="cf-join-vs-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                      <img src={meta.creatorAvatar} alt={meta.creatorName} className="cf-join-vs-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                       <div className="cf-join-vs-meta">
                         <span className="cf-join-vs-name">{meta.creatorName}</span>
                         <span className={`cf-join-vs-side side-${meta.creatorSide}`}>
@@ -960,10 +972,10 @@ const [sortBy] = useState('newest');
                       {(selectedBet.creatorItems || []).map((item, idx) => (
                         <div key={idx} className="cf-join-bet-item" title={`${item.name || item.itemName || 'Item'}`}>
                           <img
-                            src={item.image || item.imageUrl || '/default-item.png'}
+                            src={item.image || item.imageUrl || '/default-item.svg'}
                             alt={item.name || item.itemName || 'item'}
                             className="cf-join-bet-item-img"
-                            onError={(e) => { e.target.src = '/default-item.png'; }}
+                            onError={(e) => { e.target.src = '/default-item.svg'; }}
                           />
                           <span className="cf-join-bet-item-name">{item.name || item.itemName || 'Item'}{(item.quantity || 1) > 1 ? ` ×${item.quantity}` : ''}</span>
                           <span className="cf-join-bet-item-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {Number(item.value || 0).toLocaleString()}</span>
@@ -978,7 +990,7 @@ const [sortBy] = useState('newest');
                   {/* Player cards: them vs you */}
                   <div className="cf-join-player-cards">
                     <div className="cf-join-pcard">
-                      <img src={meta.creatorAvatar} alt="" className="cf-join-pcard-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                      <img src={meta.creatorAvatar} alt="" className="cf-join-pcard-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                       <div className="cf-join-pcard-info">
                         <span className="cf-join-pcard-name">{meta.creatorName}</span>
                         <span className="cf-join-pcard-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {meta.creatorVal.toLocaleString()}</span>
@@ -986,7 +998,7 @@ const [sortBy] = useState('newest');
                       <span className="cf-join-pcard-pct">{sidePct(meta.creatorVal, meta.total)}</span>
                     </div>
                     <div className="cf-join-pcard">
-                      <img src={user?.avatar || '/default-avatar.png'} alt="" className="cf-join-pcard-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                      <img src={user?.avatar || '/default-avatar.svg'} alt="" className="cf-join-pcard-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                       <div className="cf-join-pcard-info">
                         <span className="cf-join-pcard-name">{user?.customDisplayName || user?.displayName || user?.robloxDisplayName || 'You'}</span>
                         <span className="cf-join-pcard-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {totalVal.toLocaleString()}</span>
@@ -1030,7 +1042,7 @@ const [sortBy] = useState('newest');
                               className={`cf-inv-tile cf-tip-host ${isSelected ? 'selected' : ''}`}
                               onClick={() => toggleJoinUnit(key, i)}
                             >
-                              <img src={item.details?.imageUrl || item.image || item.imageUrl || '/default-item.png'} alt="" className="cf-inv-img" onError={(e) => { e.target.src = '/default-item.png'; }} />
+                              <img src={item.details?.imageUrl || item.image || item.imageUrl || '/default-item.svg'} alt="" className="cf-inv-img" onError={(e) => { e.target.src = '/default-item.svg'; }} />
                               <div className="cf-inv-name">{item.details?.name || item.name}</div>
                               <ModBadges mods={item.mods || item.details?.mods} size={15} />
                               <div className="cf-inv-val"><span className="cf-diamond-xs"><Icon name="diamond" size={10} /></span>{(item.value || item.details?.value || 0).toLocaleString()}</div>
@@ -1143,11 +1155,11 @@ const [sortBy] = useState('newest');
                           <div key={bet.id || index} className="cf-history-row">
                             <div className="cf-history-avatars">
                               <div className="cf-history-avatar-wrap winner">
-                                <img src={winnerAvatar} alt={winnerName} className="cf-history-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                                <img src={winnerAvatar} alt={winnerName} className="cf-history-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                                 <span className="cf-history-chip"><CoinChip side={winnerSide} size={18} /></span>
                               </div>
                               <div className="cf-history-avatar-wrap loser">
-                                <img src={loserAvatar} alt="" className="cf-history-avatar" onError={(e) => { e.target.src = '/default-avatar.png'; }} />
+                                <img src={loserAvatar} alt="" className="cf-history-avatar" onError={(e) => { e.target.src = '/default-avatar.svg'; }} />
                                 <span className="cf-history-chip"><CoinChip side={loserSide} size={18} /></span>
                               </div>
                             </div>
@@ -1155,10 +1167,10 @@ const [sortBy] = useState('newest');
                               {shown.map((item, i) => (
                                 <div key={i} className="cf-history-thumb-col">
                                   <img
-                                    src={item.image || item.imageUrl || '/default-item.png'}
+                                    src={item.image || item.imageUrl || '/default-item.svg'}
                                     alt={item.name || item.itemName || 'item'}
                                     className="cf-history-thumb"
-                                    onError={(e) => { e.target.src = '/default-item.png'; }}
+                                    onError={(e) => { e.target.src = '/default-item.svg'; }}
                                   />
                                   <ModBadges mods={item.mods} size={13} />
                                 </div>

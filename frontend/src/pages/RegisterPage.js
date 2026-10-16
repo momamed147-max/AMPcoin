@@ -167,10 +167,10 @@ const RegisterPage = () => {
           <div>
             <h3 className="auth-title">Is this u?</h3>
             <img
-              src={account.avatar || '/default-avatar.png'}
+              src={account.avatar || '/default-avatar.svg'}
               alt="Roblox avatar"
               className="auth-logo"
-              onError={(e) => { e.target.src = '/default-avatar.png'; }}
+              onError={(e) => { e.target.src = '/default-avatar.svg'; }}
             />
             <div className="auth-title">{account.displayName}</div>
             <div className="auth-sub">@{account.robloxUsername}</div>

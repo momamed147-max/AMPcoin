@@ -5,7 +5,7 @@ import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
 import { playError } from '../sound';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 const profileCache = new Map();
 const profilePending = new Map();
@@ -90,7 +90,7 @@ const GiveawayCard = ({ msg, user, onJoin, joining }) => {
   const eligible = user && (gw.eligibleUserIds || []).map(String).includes(String(user.id));
   const isOpen = gw.status === 'open';
   const itemName = gw.item?.name || gw.item?.itemName || 'Item';
-  const itemImg = gw.item?.imageUrl || gw.item?.image || '/default-item.png';
+  const itemImg = gw.item?.imageUrl || gw.item?.image || '/default-item.svg';
 
   const msLeft = gw.endsAt ? new Date(gw.endsAt).getTime() - Date.now() : 0;
   const secsLeft = Math.max(0, Math.ceil(msLeft / 1000));
@@ -124,7 +124,7 @@ const GiveawayCard = ({ msg, user, onJoin, joining }) => {
           className="gw-item-img"
           src={itemImg}
           alt=""
-          onError={(e) => { e.target.src = '/default-item.png'; }}
+          onError={(e) => { e.target.src = '/default-item.svg'; }}
         />
         <div className="gw-item-meta">
           <div className="gw-item-name">{itemName}{(gw.item?.quantity || 1) > 1 ? ` ×${gw.item.quantity}` : ''}</div>

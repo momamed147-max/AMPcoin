@@ -43,7 +43,7 @@ function ItemRow({ item, value, onChange, dimmed }) {
     <div className={`ug-item ${qty > 0 ? 'picked' : ''} ${dimmed ? 'dimmed' : ''}`}>
       <img
         className="ug-item-img"
-        src={item.image || item.imageUrl || '/default-item.png'}
+        src={item.image || item.imageUrl || '/default-item.svg'}
         alt=""
         onError={(e) => { e.target.style.visibility = 'hidden'; }}
       />
@@ -411,7 +411,7 @@ const UpgraderPage = ({ socket }) => {
                 className="ug-history-avatar"
                 src={h.avatar || `https://www.roblox.com/headshot-thumbnail/image?userId=${h.userId}&width=100&height=100&format=png`}
                 alt=""
-                onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                onError={(e) => { e.target.src = '/default-avatar.svg'; }}
               />
               <div className="ug-history-body">
                 <span className="ug-history-name">{h.username}</span>

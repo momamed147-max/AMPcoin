@@ -301,9 +301,9 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                 <div className="cf-join-vs-user">
                   <img
                     className="cf-join-vs-avatar"
-                    src={match?.playerOne?.avatar || '/default-avatar.png'}
+                    src={match?.playerOne?.avatar || '/default-avatar.svg'}
                     alt={match?.playerOne?.displayName || 'Player'}
-                    onError={(e) => { e.target.src = '/default-avatar.png'; }}
+                    onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                   />
                   <div className="cf-join-vs-meta">
                     <span className="cf-join-vs-name">{match?.playerOne?.displayName || match?.playerOne?.username || 'Player'}</span>
@@ -486,10 +486,10 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                   selectedEntries.map(({ item, qty }) => (
                     <div key={item.itemId || item.id} className="cf-join-bet-item">
                       <img
-                        src={item.details?.imageUrl || item.image || '/default-item.png'}
+                        src={item.details?.imageUrl || item.image || '/default-item.svg'}
                         alt={item.details?.name || item.name}
                         className="cf-join-bet-item-img"
-                        onError={(e) => { e.target.src = '/default-item.png'; }}
+                        onError={(e) => { e.target.src = '/default-item.svg'; }}
                       />
                       <span className="cf-join-bet-item-name">{item.details?.name || item.name}{qty > 1 ? ` ×${qty}` : ''}</span>
                       <span className="cf-join-bet-item-val"><span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {((item.value || item.details?.value || 0) * qty).toLocaleString()}</span>
@@ -558,11 +558,11 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                       onClick={() => toggleUnit(key, i)}
                     >
                       <img
-                        src={item.details?.imageUrl || item.image || '/default-item.png'}
+                        src={item.details?.imageUrl || item.image || '/default-item.svg'}
                         alt={item.details?.name || item.name}
                         className="cf-inv-img"
                         onError={(e) => {
-                          e.target.src = '/default-item.png';
+                          e.target.src = '/default-item.svg';
                         }}
                       />
                       <div className="cf-inv-name">{item.details?.name || item.name}</div>

@@ -7,7 +7,7 @@ import './AdminPetsTab.css';
 const RARITIES = ['all', 'common', 'uncommon', 'rare', 'ultra_rare', 'epic', 'legendary', 'mythic'];
 
 function itemImage(item) {
-  return item?.imageUrl || item?.image || '/default-item.png';
+  return item?.imageUrl || item?.image || '/default-item.svg';
 }
 
 function itemName(item) {
@@ -136,7 +136,7 @@ const AdminPetsTab = ({
             </div>
 
             <div className="pet-preview-card">
-              <img src={newPet.imageUrl || '/default-item.png'} alt="" onError={(event) => { event.currentTarget.src = '/default-item.png'; }} />
+              <img src={newPet.imageUrl || '/default-item.svg'} alt="" onError={(event) => { event.currentTarget.src = '/default-item.svg'; }} />
               <div><span className="pet-preview-label">Preview</span><strong>{newPet.name || 'Your new pet'}</strong><small>{newPet.rarity || 'common'} · {previewValue.toLocaleString()} AMP</small></div>
               <ModBadges mods={previewMods} size={17} />
             </div>
@@ -169,7 +169,7 @@ const AdminPetsTab = ({
               const shownValue = valueForMods(pet, mods);
               const petId = pet.id || pet.itemId;
               return <article className={`pet-catalog-item ${pet.isEnabled === false ? 'disabled' : ''}`} key={petId}>
-                <div className="pet-catalog-image"><img src={itemImage(pet)} alt={itemName(pet)} onError={(event) => { event.currentTarget.src = '/default-item.png'; }} /><span className={`pet-rarity-dot ${pet.rarity || 'common'}`} /></div>
+                <div className="pet-catalog-image"><img src={itemImage(pet)} alt={itemName(pet)} onError={(event) => { event.currentTarget.src = '/default-item.svg'; }} /><span className={`pet-rarity-dot ${pet.rarity || 'common'}`} /></div>
                 <div className="pet-catalog-copy"><strong title={itemName(pet)}>{itemName(pet)}</strong><span>{shownValue.toLocaleString()} AMP</span><small>{pet.description || `${pet.rarity || 'common'} pet`}</small></div>
                 <div className="pet-catalog-mods"><ModBadges mods={mods} size={15} /><span>base {baseValue.toLocaleString()}</span></div>
                 <div className="pet-catalog-mod-buttons">{['F', 'R', 'M', 'N'].map((mod) => <button type="button" key={mod} className={mods.includes(mod) ? 'active' : ''} disabled={modBusyId === petId} onClick={() => onTogglePetMod(pet, mod)} title={MOD_LABELS[mod]}>{mod}</button>)}</div>

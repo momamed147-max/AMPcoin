@@ -4,7 +4,7 @@ import Icon from '../components/Icon';
 import { API_BASE } from '../apiConfig';
 import './ProfilePage.css';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 function getFallbackAvatar(user) {
   if (user?.robloxUserId) {

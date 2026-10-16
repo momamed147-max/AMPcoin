@@ -34,7 +34,7 @@ const InventoryPickerModal = ({
     : items || [];
 
   const valueOf = (it) => Number(it.value || it.details?.value || 0) || 0;
-  const imgOf = (it) => it.details?.imageUrl || it.imageUrl || it.image || '/default-item.png';
+  const imgOf = (it) => it.details?.imageUrl || it.imageUrl || it.image || '/default-item.svg';
 
   return (
     <ModalPortal>
@@ -87,7 +87,7 @@ const InventoryPickerModal = ({
                   <img
                     src={imgOf(item)}
                     alt=""
-                    onError={(e) => { e.target.src = '/default-item.png'; }}
+                    onError={(e) => { e.target.src = '/default-item.svg'; }}
                   />
                   {qty > 1 && <span className="ipm-qty">×{qty}</span>}
                   <div className="ipm-item-name">

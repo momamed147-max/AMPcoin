@@ -7,8 +7,6 @@ import './giveaways-notifications.css';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Logo from './components/Logo';
-import ChatPanel from './components/ChatPanel';
-import ValueChecker from './components/ValueChecker';
 import AuthProvider, { useAuth } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -32,6 +30,13 @@ const ProvablyFairPage = lazy(() => import('./pages/ProvablyFairPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const AdminPanel = lazy(() => import('./pages/AdminPanel'));
+
+// The chat column and the value checker are 31kb and 12kb of source, and
+// neither is above the fold: both only mount once the player opens them. They
+// used to be eager imports, so every visitor - including someone on the login
+// screen who will never see either - paid to parse them before first paint.
+const ChatPanel = lazy(() => import('./components/ChatPanel'));
+const ValueChecker = lazy(() => import('./components/ValueChecker'));
 
 function RouteFallback() {
   return (
@@ -214,7 +219,9 @@ function AppContent() {
               onClick={() => setMobileChatOpen(false)}
             />
             <div className={`chat-column ${mobileChatOpen ? 'mobile-open' : ''}`}>
-              <ChatPanel socket={socket} chatOpen={true} />
+              <Suspense fallback={null}>
+                <ChatPanel socket={socket} chatOpen={true} />
+              </Suspense>
             </div>
           </>
         )}
@@ -272,7 +279,9 @@ function AppContent() {
           <Icon name={mobileChatOpen ? 'close' : 'chat'} size={18} />
         </button>
       )}
-      <ValueChecker isOpen={valuesOpen} onClose={() => setValuesOpen(false)} />
+      <Suspense fallback={null}>
+        <ValueChecker isOpen={valuesOpen} onClose={() => setValuesOpen(false)} />
+      </Suspense>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
     </div>
   );

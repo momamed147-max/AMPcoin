@@ -28,3 +28,9 @@ tools/shots-coin/
 tools/shots-nobalance/
 tools/shots-give/
 tools/shots-rps-modal/
+tools/shots-ui-before/
+tools/shots-ui-after/
+tools/shots-ui-after2/
+tools/shots-polish/
+tools/perf-report.json
+tests/shots-polish/

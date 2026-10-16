@@ -124,7 +124,7 @@ const AdminUpgraderTab = () => {
               const avail = Number(i.quantity) || 1;
               return (
                 <div key={id} className={`aut-row ${sel[id] ? 'picked' : ''}`}>
-                  <img className="aut-img" src={i.image || i.imageUrl || '/default-item.png'} alt=""
+                  <img className="aut-img" src={i.image || i.imageUrl || '/default-item.svg'} alt=""
                     onError={(e) => { e.target.style.visibility = 'hidden'; }} />
                   <div className="aut-row-body">
                     <span className="aut-name">{i.name || i.itemName}</span>
@@ -158,7 +158,7 @@ const AdminUpgraderTab = () => {
             )}
             {stock.map((i, idx) => (
               <div key={`${i.itemId}-${idx}`} className="aut-row shelf">
-                <img className="aut-img" src={i.image || i.imageUrl || '/default-item.png'} alt=""
+                <img className="aut-img" src={i.image || i.imageUrl || '/default-item.svg'} alt=""
                   onError={(e) => { e.target.style.visibility = 'hidden'; }} />
                 <div className="aut-row-body">
                   <span className="aut-name">{i.name}</span>

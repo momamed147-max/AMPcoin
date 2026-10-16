@@ -3,7 +3,7 @@ import AnimatedPopup from './AnimatedPopup';
 import Icon from './Icon';
 import { API_BASE } from '../apiConfig';
 
-const DEFAULT_AVATAR = '/default-avatar.png';
+const DEFAULT_AVATAR = '/default-avatar.svg';
 
 function fallbackAvatar(user) {
   if (user?.robloxUserId) {
