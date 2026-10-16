@@ -63,7 +63,8 @@ const SUITES = [
   { file: 'db-guard.js', label: 'db guard', server: false },
   { file: 'css-palette.js', label: 'css palette', server: false },
   { file: 'css-reachability.js', label: 'css reachability', server: false },
-  { file: 'ui-polish.js', label: 'ui polish' }
+  { file: 'ui-polish.js', label: 'ui polish' },
+  { file: 'ui-motion.js', label: 'ui motion' }
 ];
 
 let child = null;

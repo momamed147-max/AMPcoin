@@ -7,6 +7,10 @@ import './ui-polish.css';
 // under .app so it outranks the shared layers by specificity rather than by
 // relying on import order, which keeps v3.css last as the palette authority.
 import './ui/polish.css';
+// Motion layer. Targets the shared primitives rather than individual pages, so
+// one stylesheet moves every control in the site. Imported after polish.css so
+// its hover lifts and presses win.
+import './ui/motion.css';
 import './theme.css';
 // The V2 design layer goes last on purpose. theme.css must win over the token
 // defaults so a theme can repaint the primitives, and ui.css must sit after

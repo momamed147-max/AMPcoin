@@ -1,0 +1,59 @@
+Add a real motion layer
+
+The previous pass added three animations to one page. This adds motion to the
+controls people actually touch, site-wide.
+
+Measured first. An audit of what the browser actually starts while a player
+uses the site reported:
+
+  hovering a lobby row     0 animations
+  opening a modal          0 animations
+  running while idle       1 animation (a 12s background loop)
+
+The stylesheets already declared 40+ keyframes across 20 files. Almost none of
+them fire during normal use, which is why the site reads as static: the motion
+lives in modals, and on nothing at all in the lobby.
+
+ui/motion.css works on the shared primitives - .btn, .cf-row, .cf-tab, .modal,
+the panel surfaces - so one stylesheet moves the whole site instead of forty
+keyframes scattered where only the modal ones run.
+
+What it adds:
+
+- Every button lifts on hover and presses IN on click, shedding its shadow as
+  it goes. Press-in rather than press-out is deliberate: a control should come
+  toward you when offered and go away when taken.
+- A sheen across the top edge of the primary action, so a flat rectangle reads
+  as a physical key.
+- Lobby rows lift on hover; the accent rail wipes outward from the centre rather
+  than fading; item tiles lift with a small overshoot and a 25ms stagger, so a
+  list ripples instead of shifting in unison.
+- Tabs glint on activation, so switching reads as something moving.
+- Skeletons shimmer. One without a shimmer reads as a broken box.
+- Inputs lift a focus ring.
+- Page transitions, modal pop and backdrop fade.
+- Idle life at the edges of vision: the page glow drifts over 26s, the logo
+  breathes over 7s, the online dot pulses. Slow enough to be felt, not watched.
+
+Rules applied throughout: 120-260ms, because feedback past about 260ms reads as
+lag. transform and opacity only, so nothing reflows. Everything collapses under
+prefers-reduced-motion - not just the animations but the transforms, since a
+hover lift is motion whether or not it is animated.
+
+Two bugs this surfaced:
+
+- Modals render through ModalPortal onto document.body, so a scoped
+  ".app .modal" selector matched nothing. The create and join bet dialogs were
+  the one dialog with no entry animation for exactly that reason. Now unscoped,
+  with a comment saying why so it does not get re-scoped later.
+- Join refuses to open when you have nothing to wager - it raises a warning
+  popup instead - so a motion test that clicked Join was testing a popup. It
+  uses View now.
+
+tests/ui-motion.js (18) asserts the computed transform of each control before
+and after hover, because a screenshot cannot tell you whether a transition is
+actually declared. tests/ui-harness.js gives the two UI suites their own static
+server and their own lobby rows: three suites in this repo have now reported
+"0 passed" for quietly testing an empty page, which reads like a pass.
+
+409 tests pass across 14 suites.
