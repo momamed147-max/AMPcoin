@@ -1,0 +1,298 @@
+/* ============================================================================
+   Surface and depth
+   ----------------------------------------------------------------------------
+   This is the override layer for surfaces and elevation.
+
+   WHY IT IS LAST IN THE IMPORT LIST
+   ----------------------------------------------------------------------------
+   Five stylesheets target the same surfaces: index.css, ui-polish.css,
+   ui/v3.css, ui/lobby.css and ui/shell.css. v3.css writes the `background`
+   shorthand, and a shorthand resets every background longhand beneath it, so
+   load order decides which of these two is the real background. This file is
+   imported after all of them for that reason.
+
+   It deliberately does not use !important. It wins by being last, and adding
+   twenty-nine blanket !important declarations on top of that is how you end up
+   unable to change anything later.
+
+   THE RULES OF THE HOUSE, APPLIED THROUGHOUT
+     - a surface is a gradient, never a flat fill. The top is fractionally
+       lighter than the bottom so it catches light from above like a real panel.
+     - anything raised gets a highlight on its top edge AND a shadow beneath.
+       That pair is what separates one layer from the next; the shadow alone
+       just makes something darker.
+     - colour is rationed. The accent appears on things you can act on and on
+       numbers that matter, nowhere else.
+     - the background is lit. A flat #070a11 behind everything reads as an
+       unstyled page.
+   ========================================================================= */
+
+/* ── The page itself ─────────────────────────────────────────────────────── */
+
+/* Two soft light sources plus a vignette, fixed so they do not scroll with the
+   content. This is the single biggest change: it gives every flat panel
+   something to sit on. */
+.app {
+  position: relative;
+  background-image:
+    radial-gradient(1100px 700px at 12% -8%, rgba(47, 129, 247, 0.17), transparent 58%),
+    radial-gradient(900px 620px at 92% 6%, rgba(139, 92, 246, 0.12), transparent 56%),
+    radial-gradient(900px 900px at 50% 118%, rgba(16, 185, 129, 0.07), transparent 60%),
+    linear-gradient(180deg, #080c15 0%, #05070d 48%, #04060b 100%);
+  background-attachment: fixed;
+}
+
+/* A very fine grid over the whole page. Barely visible alone; what it does is
+   give the eye something to resolve against, so large empty areas stop looking
+   like an image that failed to load. */
+.app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.028) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 78%);
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, #000 20%, transparent 78%);
+}
+
+/* ── Panels ──────────────────────────────────────────────────────────────── */
+
+.app .panel,
+.app .card,
+.app .cf-topbar,
+.app .cf-empty,
+.app .cf-view-modal,
+.app .cf-join-modal,
+.app .cf-history-modal,
+.app .cp-panel {
+  background-color: #101724;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.012) 24%, transparent 56%),
+    linear-gradient(180deg, #151d2b 0%, #101724 100%);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.35),
+    0 1px 2px rgba(0, 0, 0, 0.4),
+    0 12px 32px -14px rgba(0, 0, 0, 0.75);
+}
+
+/* ── Lobby rows ──────────────────────────────────────────────────────────── */
+
+/* The rows are what a player looks at most, so they get the most treatment. */
+.app .cf-row {
+  background-color: #101724;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.01) 30%, transparent 60%),
+    linear-gradient(180deg, #172031 0%, #0f1622 100%);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 10px 26px -16px rgba(0, 0, 0, 0.85);
+}
+
+.app .cf-row:hover {
+  background-color: #16202f;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.075) 0%, rgba(255, 255, 255, 0.018) 30%, transparent 60%),
+    linear-gradient(180deg, #1c2839 0%, #121b29 100%);
+  border-color: rgba(76, 141, 255, 0.45);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.085),
+    0 0 0 1px rgba(76, 141, 255, 0.12),
+    0 20px 44px -20px rgba(0, 0, 0, 0.9),
+    0 0 36px -16px rgba(47, 129, 247, 0.45);
+}
+
+/* Your own bet gets a green rim. Finding "mine" in a full lobby should not
+   require reading every name. */
+.app .cf-row:has(.cf-row-own-btns) {
+  border-color: rgba(63, 185, 80, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(63, 185, 80, 0.14),
+    0 10px 28px -18px rgba(0, 0, 0, 0.85),
+    0 0 32px -18px rgba(63, 185, 80, 0.5);
+}
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+
+/* Gradient plus a real glow. A flat accent rectangle is the clearest single
+   tell of an unstyled interface. */
+.app .cf-join-btn,
+.app .btn.btn-primary,
+.app .btn-primary {
+  background-image: linear-gradient(180deg, #6ba5ff 0%, #3485fb 55%, #1c62d0 100%);
+  border: 1px solid rgba(140, 185, 255, 0.6);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
+    0 5px 16px -5px rgba(47, 129, 247, 0.65),
+    0 0 28px -8px rgba(47, 129, 247, 0.6);
+}
+
+.app .cf-join-btn:hover:not(:disabled),
+.app .btn.btn-primary:hover:not(:disabled) {
+  background-image: linear-gradient(180deg, #8ab8ff 0%, #4b93ff 55%, #2470e0 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 9px 26px -7px rgba(47, 129, 247, 0.75),
+    0 0 42px -6px rgba(47, 129, 247, 0.7);
+}
+
+/* Secondary actions get depth without shouting. */
+.app .cf-view-btn,
+.app .cf-topbar-btn,
+.app .cf-bot-btn,
+.app .btn.btn-secondary,
+.app .btn-secondary {
+  background-image: linear-gradient(180deg, #1d2839 0%, #151f2d 100%);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #eef2f7;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 2px 7px -2px rgba(0, 0, 0, 0.65);
+}
+
+.app .cf-view-btn:hover:not(:disabled),
+.app .cf-topbar-btn:hover:not(:disabled),
+.app .btn.btn-secondary:hover:not(:disabled) {
+  background-image: linear-gradient(180deg, #27354f 0%, #1c2739 100%);
+  border-color: rgba(148, 163, 184, 0.35);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.11),
+    0 7px 20px -7px rgba(0, 0, 0, 0.85);
+}
+
+.app .btn.btn-danger,
+.app .btn-danger {
+  background-image: linear-gradient(180deg, #f4706a 0%, #d93a33 100%);
+  border: 1px solid rgba(255, 150, 142, 0.5);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    0 5px 16px -5px rgba(217, 58, 51, 0.6);
+}
+
+/* ── Tabs ────────────────────────────────────────────────────────────────── */
+
+.app .cf-topbar-tabs {
+  background-color: #080d15;
+  background-image: linear-gradient(180deg, #0c121b 0%, #070b12 100%);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  box-shadow: inset 0 2px 7px rgba(0, 0, 0, 0.6);
+}
+
+.app .cf-tab-active,
+.app .tab-btn.active {
+  background-image: linear-gradient(180deg, #6ba5ff 0%, #2f81f7 100%);
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.32),
+    0 4px 14px -3px rgba(47, 129, 247, 0.6);
+}
+
+/* ── Item tiles ──────────────────────────────────────────────────────────── */
+
+.app .cf-row-thumb-wrap {
+  background-color: #131c29;
+  background-image: linear-gradient(180deg, #1c2637 0%, #131b28 100%);
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 3px 8px -3px rgba(0, 0, 0, 0.75);
+}
+
+.app .cf-row:hover .cf-row-thumb-wrap {
+  border-color: rgba(76, 141, 255, 0.42);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    0 12px 26px -11px rgba(0, 0, 0, 0.9),
+    0 0 24px -10px rgba(47, 129, 247, 0.55);
+}
+
+.app .cf-row-thumb {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+/* ── Numbers ─────────────────────────────────────────────────────────────── */
+
+/* The values are the reason people are here, so they get the type: a gradient
+   fill that reads as lit metal rather than flat white. */
+.app .cf-row-wager-total,
+.app .cf-row-total {
+  background-image: linear-gradient(180deg, #ffffff 0%, #b3c7e2 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 1.16rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.app .cf-row-wager-label {
+  color: rgba(148, 163, 184, 0.72);
+  letter-spacing: 0.14em;
+}
+
+/* ── Chrome ──────────────────────────────────────────────────────────────── */
+
+/* Permanent furniture should sit behind the content, not compete with it. */
+.app .header,
+.app .chat-column,
+.app .chat-panel {
+  background-color: #090e16;
+  background-image: linear-gradient(180deg, #0d131d 0%, #070b12 100%);
+  border-color: rgba(148, 163, 184, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+}
+
+.app .cf-page-title,
+.app .page-title {
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  background-image: linear-gradient(180deg, #ffffff 0%, #aebfd6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* ── Empty states ────────────────────────────────────────────────────────── */
+
+/* An empty lobby is a normal state, not an error, so it should look designed. */
+.app .cf-empty,
+.app .empty-state {
+  background-color: #0f1622;
+  background-image:
+    radial-gradient(120% 100% at 50% 0%, rgba(47, 129, 247, 0.1), transparent 62%),
+    linear-gradient(180deg, #151d2b 0%, #0e1622 100%);
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 14px 38px -20px rgba(0, 0, 0, 0.85);
+}
+
+/* ── Focus ───────────────────────────────────────────────────────────────── */
+
+.app :focus-visible {
+  outline: 2px solid #6ba5ff;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px rgba(47, 129, 247, 0.22);
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+
+/* The lighting is not motion and stays. Everything animated collapses in
+   motion.css. */
+@media (prefers-reduced-motion: reduce) {
+  .app {
+    background-attachment: scroll;
+  }
+}

@@ -25,6 +25,26 @@ import './ui/shell.css';
 // older stylesheet while themes still override the colour variables.
 import './ui/v3.css';
 
+// Surface and depth. This one is imported LAST, on purpose.
+//
+// It restyles the panel and action primitives that every other sheet also
+// styles, so load order decides the winner. Imported anywhere earlier and
+// ui/shell.css plus ui/v3.css both land on top of it and discard it - which
+// is exactly what happened, and why none of it was visible on the site.
+//
+// A theme still overrides it: a theme repaints the custom properties this
+// layer reads, not the rules themselves.
+// Surface and depth. Imported LAST, on purpose.
+//
+// It restyles the panel and action primitives that every other sheet also
+// styles, so load order decides the winner. Imported anywhere earlier and
+// ui/shell.css plus ui/v3.css both land on top of it and discard it - which is
+// what happened, and why none of it was visible on the site.
+//
+// A theme still overrides it: a theme repaints the custom properties this
+// layer reads, not the rules themselves.
+import './ui/surface.css';
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
