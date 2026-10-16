@@ -133,15 +133,27 @@ app.use(helmet({
 app.use(cors());
 
 // Rate limiting
+//
+// Never applied to a liveness check. A rate limiter on /api/health is a health
+// check that reports the service is down precisely when it is busiest, and it
+// is the one endpoint a monitor, a deploy script or a restart routine polls on
+// a timer. Exceeding the limit and getting a 429 there reads as "the server is
+// broken" and sends someone looking for an outage that does not exist.
+//
+// Socket.io is skipped because it holds one long-lived connection per client
+// and would otherwise consume the whole budget on its own.
+const isNotRateLimited = (req) =>
+  req.path.startsWith('/socket.io') || req.path === '/api/health';
+
 const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 1000,
-  skip: (req) => req.path.startsWith('/socket.io')
+  skip: isNotRateLimited
 });
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 2000,
-  skip: (req) => req.path.startsWith('/socket.io')
+  skip: isNotRateLimited
 });
 
 app.use('/api/', apiLimiter);

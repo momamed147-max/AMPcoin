@@ -84,7 +84,7 @@
   box-shadow: var(--elev-1);
   color: var(--txt);
 }
-.ui-panel-pad { padding: var(--sp-5); }
+.ui-panel-pad { /* padding lives on the children - see ui/components.css */ }
 .ui-panel-accent { border-color: color-mix(in srgb, var(--acc) 42%, var(--line)); }
 .ui-panel-danger { border-color: color-mix(in srgb, var(--red) 42%, var(--line)); }
 .ui-panel-success { border-color: color-mix(in srgb, var(--grn) 42%, var(--line)); }
@@ -92,7 +92,6 @@
 .ui-panel-head {
   display: flex; align-items: flex-start; justify-content: space-between;
   gap: var(--sp-4); flex-wrap: wrap;
-  margin-bottom: var(--sp-4);
 }
 .ui-panel-heading { min-width: 0; }
 .ui-panel-title {
@@ -183,32 +182,43 @@
 .ui-stat-gold .ui-stat-value { color: var(--gold); }
 .ui-stat-accent .ui-stat-value { color: var(--acc); }
 
-/* ── Tabs ───────────────────────────────────────────────────────────────────── */
+/* ══ Tabs ═══════════════════════════════════════════════════════════════════
+   The live definition of the tab strip moved to ui/components.css, which now
+   owns every shared primitive and loads after this file. What is left here is
+   only the two things that belong to the bar itself rather than to the
+   control: it can overflow on a narrow screen, and it never shows a scrollbar
+   while doing so.
+
+   The pill-track look is the same one the coinflip lobby uses. Previously the
+   two were different components - a full-bleed underlined strip here, a
+   recessed pill track there - so the product had three tab idioms across it.
+   ═══════════════════════════════════════════════════════════════════════════ */
 .ui-tabs {
-  display: flex; gap: var(--sp-1);
-  border-bottom: 1px solid var(--line);
+  display: flex;
+  max-width: 100%;
   overflow-x: auto;
   scrollbar-width: none;
+  /* Scroll by touch on a phone and by wheel or trackpad on a desktop, without
+     a scrollbar ever appearing. */
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: var(--sp-2);
 }
 .ui-tabs::-webkit-scrollbar { display: none; }
+
+/* ui/components.css draws the active tab as a raised pill and gives every tab a
+   transparent 1px border. The old rule here set a 2px bottom border, which
+   would survive underneath it and draw a line under every tab including the
+   selected one. */
 .ui-tab {
-  display: inline-flex; align-items: center; gap: 6px;
-  padding: var(--sp-3) var(--sp-4);
-  background: none; border: none; border-bottom: 2px solid transparent;
-  color: var(--mut); font-family: var(--font-body);
-  font-size: var(--fs-md); font-weight: 700;
-  cursor: pointer; white-space: nowrap;
-  transition: color var(--dur-1) var(--ease-1), border-color var(--dur-1) var(--ease-1);
+  border-bottom: 0;
+  scroll-margin-inline: var(--sp-2);
 }
-.ui-tab:hover { color: var(--txt); }
-.ui-tab.is-active { color: var(--txt); border-bottom-color: var(--acc); }
-.ui-tab:focus-visible { outline: none; box-shadow: var(--focus-ring-inset); }
-.ui-tab-count {
-  display: inline-grid; place-items: center; min-width: 17px; height: 17px;
-  padding: 0 5px; border-radius: var(--r-full);
-  background: var(--acc); color: var(--theme-on-accent, #fff);
-  font-size: var(--fs-xs); font-weight: 800;
+
+.ui-tab:focus-visible {
+  outline: 2px solid var(--acc-bright);
+  outline-offset: 2px;
 }
+
 
 /* ── Progress ───────────────────────────────────────────────────────────────── */
 .ui-progress-wrap { display: flex; flex-direction: column; gap: 5px; min-width: 0; }

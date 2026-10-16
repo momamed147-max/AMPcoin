@@ -131,11 +131,37 @@ const run = (file) => spawnSync('node', [path.join(__dirname, file)], {
   timeout: 5 * 60 * 1000
 });
 
+/* --fresh takes over the port instead of reusing whatever is listening.
+   See the note on isNotRateLimited in server.js for why a long-lived server
+   eventually stops answering, and seedlocal.js for why state matters too. */
+const FRESH = process.argv.includes('--fresh');
+
+async function freePortForFreshRun() {
+  if (!FRESH) return false;
+  try {
+    const { execSync } = require('child_process');
+    const out = execSync('netstat -ano -p tcp', { encoding: 'utf8' });
+    const line = out.split(/\r?\n/).find((l) => new RegExp(`[:.]${PORT}\\s+.*LISTENING`).test(l));
+    if (!line) return false;
+    const pid = Number(line.trim().split(/\s+/).pop());
+    if (!pid || pid === process.pid) return false;
+    process.kill(pid);
+    console.log(`  --fresh: stopped PID ${pid} holding :${PORT}\n`);
+    await new Promise((r) => setTimeout(r, 1500));
+    return true;
+  } catch (err) {
+    console.log(`  --fresh: could not free :${PORT} (${err.message})\n`);
+    return false;
+  }
+}
+
 (async () => {
   let totalPass = 0;
   let totalFail = 0;
   let broken = 0;
   const rows = [];
+
+  await freePortForFreshRun();
 
   for (const suite of SUITES) {
     const full = path.join(__dirname, suite.file);
@@ -160,12 +186,16 @@ const run = (file) => spawnSync('node', [path.join(__dirname, file)], {
         broken++;
         continue;
       }
-      // A restart wipes every account, because local state is in-memory. Suites
-      // that rely on a pre-seeded account - the operator's admin grant above all
-      // - would otherwise report zeroes that read like failures but mean only
-      // "the seed never ran". Re-seeding after each restart makes the run
-      // deterministic, and seedlocal is idempotent and fast.
-      if (serverOurs && suite.seed !== false) {
+      // A restart wipes every account, because local state is in-memory, so the
+      // seed has to follow one. But it also has to run when we REUSE a server
+      // that was already up: otherwise the run inherits whatever state that
+      // server happened to be in, and four account-dependent suites fail or
+      // report zero passes purely because a dev server was running. That made
+      // the suite green with no server up and red with one up, which is not a
+      // property a test run is allowed to have.
+      //
+      // seedlocal is idempotent and fast, so this costs nothing.
+      if (suite.seed !== false) {
         spawnSync('node', [path.join(ROOT, 'seedlocal.js')], {
           cwd: ROOT, encoding: 'utf8', timeout: 120000
         });
@@ -179,10 +209,24 @@ const run = (file) => spawnSync('node', [path.join(__dirname, file)], {
     const f = Number(line[2] || 0);
     totalPass += p;
     totalFail += f;
-    if (f > 0) {
+    // A suite reporting zero passes has not failed an assertion - it never got
+    // to run one. The usual cause is a reused server whose rate-limit budget is
+    // spent, which looks identical to a broken suite unless it is called out.
+    const rateLimited = /429|Too Many Requests/i.test(out);
+    if (rateLimited) {
+      rows.push([
+        suite.label,
+        `${p} passed, ${f} FAILED`,
+        'rate limited - rerun with --fresh'
+      ]);
+      broken++;
+    } else if (f > 0) {
       broken++;
       const firstFail = out.split('\n').find((l) => l.includes('FAIL'));
       rows.push([suite.label, `${p} passed, ${f} FAILED`, firstFail ? firstFail.trim().slice(0, 60) : '']);
+    } else if (p === 0) {
+      broken++;
+      rows.push([suite.label, '0 passed', 'ran nothing - see its output']);
     } else {
       rows.push([suite.label, `${p} passed`, '']);
     }
@@ -204,7 +248,17 @@ const run = (file) => spawnSync('node', [path.join(__dirname, file)], {
     } else {
       try {
         await startServer();
-        const verified = await portIsUp();
+        // startServer resolves on the child's "Server running" line, but the
+        // health endpoint is not necessarily accepting connections at that
+        // exact instant - the listener can be bound a moment before the route
+        // is mounted. One immediate probe therefore reported "started but not
+        // answering" and left nothing listening on :5000, which reads as a
+        // broken local setup rather than as a slow boot.
+        let verified = false;
+        for (let attempt = 0; attempt < 20 && !verified; attempt++) {
+          verified = await portIsUp();
+          if (!verified) await new Promise((r) => setTimeout(r, 300));
+        }
         console.log(verified
           ? '  backend started and left running on :5000\n'
           : '  (backend started but is not answering - check the log)\n');

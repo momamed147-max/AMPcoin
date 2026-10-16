@@ -18,20 +18,27 @@ const BASE = process.env.BASE_URL || 'http://localhost:3000';
 const OUT = path.resolve(__dirname, '..', process.argv[2] || 'tools/shots');
 const MOBILE = process.argv.includes('--mobile');
 
-const ROUTES = [
-  ['login', 'Login', true],
-  ['register', 'Register', true],
-  ['coinflip', 'Coinflip'],
-  ['blackjack', 'Blackjack'],
-  ['rps', 'RPS'],
-  ['jackpot', 'Jackpot'],
-  ['upgrader', 'Upgrader'],
-  ['trading', 'Trading'],
-  ['stats', 'Stats'],
-  ['profile', 'Profile'],
-  ['leaderboard', 'Leaderboard'],
-  ['provably-fair', 'Provably Fair']
-];
+/* Anonymous mode. Without this, /login and /register can never actually be
+   captured: the tool signs in first, and both routes redirect an authenticated
+   visitor to /coinflip. So every "login" screenshot was a picture of the
+   coinflip lobby, which is a comfortable way to never look at the auth screen
+   at all. */
+const ANON = process.argv.includes('--anon');
+
+const ROUTES = ANON
+  ? [['login', 'Login'], ['register', 'Register']]
+  : [
+      ['coinflip', 'Coinflip'],
+      ['blackjack', 'Blackjack'],
+      ['rps', 'RPS'],
+      ['jackpot', 'Jackpot'],
+      ['upgrader', 'Upgrader'],
+      ['trading', 'Trading'],
+      ['stats', 'Stats'],
+      ['profile', 'Profile'],
+      ['leaderboard', 'Leaderboard'],
+      ['provably-fair', 'Provably Fair']
+    ];
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -60,28 +67,31 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // against a dev server and against a production build alike.
   await page.goto(`${BASE}/login`, { waitUntil: 'networkidle2' });
   await sleep(1200);
+
   // The API is a different origin from the page (BASE is the frontend), so it
   // has to be passed in separately - defaulting to the local backend.
-  const signedIn = await page.evaluate(async (apiBase) => {
-    try {
-      const res = await fetch(`${apiBase}/api/auth/dev-login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: 'local-admin' })
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.token) {
-        return `dev-login failed (${res.status}) keys=${Object.keys(data).join(',') || 'none'}`;
+  if (!ANON) {
+    const signedIn = await page.evaluate(async (apiBase) => {
+      try {
+        const res = await fetch(`${apiBase}/api/auth/dev-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: 'local-admin' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.token) {
+          return `dev-login failed (${res.status}) keys=${Object.keys(data).join(',') || 'none'}`;
+        }
+        localStorage.setItem('token', data.token);
+        if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+        return 'ok';
+      } catch (err) {
+        return `dev-login threw: ${err.message}`;
       }
-      localStorage.setItem('token', data.token);
-      if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
-      return 'ok';
-    } catch (err) {
-      return `dev-login threw: ${err.message}`;
-    }
-  }, process.env.API_URL || 'http://localhost:5000');
-  if (signedIn !== 'ok') console.log(`  login: ${signedIn}`);
-  await sleep(2500);
+    }, process.env.API_URL || 'http://localhost:5000');
+    if (signedIn !== 'ok') console.log(`  login: ${signedIn}`);
+    await sleep(2500);
+  }
 
   const report = [];
   for (const [route, label, publicRoute] of ROUTES) {

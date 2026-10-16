@@ -1,347 +1,542 @@
-.auth-dev-panel { margin-top: 20px; padding: 12px; border: 1px solid rgba(155,124,255,.25); border-radius: 11px; background: rgba(139,92,246,.07); }
-.auth-dev-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.auth-dev-heading > span { display: inline-flex; align-items: center; gap: 6px; color: #c4b5fd; font-size: .68rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
-.auth-dev-heading small { color: var(--dim); font-size: .6rem; }
-.auth-dev-panel p { margin: 6px 0 9px; color: var(--mut); font-size: .7rem; line-height: 1.45; }
-.auth-dev-form { display: flex; gap: 6px; }
-.auth-dev-form input { min-width: 0; flex: 1; padding: 8px 9px; color: var(--txt); font-size: .74rem; border: 1px solid var(--line); border-radius: 7px; outline: 0; background: var(--bg0); }
-.auth-dev-form input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(139,92,246,.12); }
-.auth-dev-form .auth-btn-secondary { width: auto; flex: 0 0 auto; margin: 0; padding: 8px 9px; font-size: .67rem; }
-.auth-dev-note { display: block; margin-top: 7px; color: var(--dim); font-size: .6rem; line-height: 1.4; }
-@media (max-width: 440px) { .auth-dev-form { flex-direction: column; }.auth-dev-form .auth-btn-secondary { width: 100%; } }
-
-/* Auth page — premium centered card, refined inputs, glowing primary button */
-/* Legacy fallback palette, removed.
-   This file ships inside a lazy page chunk, so its :root loaded AFTER the
-   app-level palette in ui/v3.css and reverted the whole site to the old
-   colours the moment this route opened. The values live in v3.css now, with
-   per-theme overrides on top. */
-
-.auth-page {
-  min-height: calc(100vh - 56px);
-  display: flex; align-items: center; justify-content: center;
-  padding: 40px 20px;
-  background: radial-gradient(600px 300px at 50% 0%,rgba(47,129,247,.08),transparent 70%), var(--bg0);
-}
-.auth-card {
-  width: 100%; max-width: 420px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  padding: 34px 30px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 24px 64px rgba(0,0,0,.5);
-  font-variant-numeric: tabular-nums;
-}
-.auth-logo { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 22px; }
-.auth-logo-fire { font-size: 1.6rem; filter: drop-shadow(0 0 12px rgba(236,127,36,.5)); }
-.auth-logo-text { font-size: 1.45rem; font-weight: 800; color: var(--txt); letter-spacing: -.02em; }
-.auth-title { font-size: 1.25rem; font-weight: 800; color: var(--txt); margin: 0 0 6px 0; text-align: center; letter-spacing: -.01em; }
-.auth-sub { font-size: .85rem; color: var(--mut); text-align: center; margin: 0 0 22px 0; line-height: 1.55; }
-.auth-error {
-  background: rgba(248,81,73,.08); border: 1px solid rgba(248,81,73,.35);
-  color: #ff7b72; font-size: .82rem; font-weight: 600;
-  padding: 10px 14px; border-radius: var(--r-sm); margin-bottom: 16px;
-}
-.auth-label {
-  display: block; font-size: 11px; font-weight: 800; color: var(--mut);
-  margin-bottom: 7px; text-transform: uppercase; letter-spacing: .07em;
-}
-.auth-input {
-  width: 100%; padding: 12px 14px;
-  background: var(--bg0); border: 1px solid var(--line);
-  border-radius: var(--r-md); color: var(--txt);
-  font-size: .93rem; outline: none; margin-bottom: 16px; box-sizing: border-box;
-  transition: border-color .15s ease, box-shadow .15s ease;
-  font-variant-numeric: tabular-nums;
-}
-.auth-input::placeholder { color: var(--dim); }
-.auth-input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px var(--acc-soft); }
-.auth-btn {
-  width: 100%; padding: 13px;
-  background: var(--acc); border: 1px solid #1f6feb; border-radius: var(--r-md);
-  color: #fff; font-size: .93rem; font-weight: 800; cursor: pointer;
-  transition: filter .12s ease, transform .06s ease, box-shadow .15s ease;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 24px rgba(47,129,247,.35);
-}
-.auth-btn:hover:not(:disabled) { filter: brightness(1.1); box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 32px rgba(47,129,247,.5); }
-.auth-btn:active:not(:disabled) { transform: translateY(1px); }
-.auth-btn:disabled, .auth-btn.disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
-.auth-btn-secondary {
-  width: 100%; padding: 10px;
-  background: var(--panel2); border: 1px solid var(--line); border-radius: var(--r-md);
-  color: var(--mut); font-size: .83rem; font-weight: 700; cursor: pointer;
-  margin-top: 10px; transition: all .12s ease;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
-}
-.auth-btn-secondary:hover { color: var(--txt); border-color: rgba(148,163,184,.3); }
-.auth-code-box {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  background: var(--bg0); border: 1px dashed rgba(47,129,247,.5);
-  border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 16px; cursor: pointer;
-  transition: background .12s ease;
-}
-.auth-code-box:hover { background: var(--acc-soft); }
-.auth-code { font-family: ui-monospace,Menlo,monospace; font-size: 1rem; font-weight: 700; color: #7db3ff; word-break: break-all; }
-.auth-copy { font-size: 1.05rem; color: var(--mut); flex-shrink: 0; }
-.auth-steps { margin: 0 0 20px 20px; padding: 0; color: var(--mut); font-size: .83rem; line-height: 1.7; }
-.auth-steps strong { color: var(--txt); }
-.auth-steps li { margin-bottom: 4px; }
-.auth-steps li::marker { color: var(--acc); }
-
 /* ============================================================================
    Auth screen
    ----------------------------------------------------------------------------
-   These overrides live HERE, at the end of this file, rather than in a global
-   sheet, and that placement is the whole trick.
+   Login and Register, and the only screens most people will ever see.
 
-   LoginPage is a lazy route. The CSS a lazy chunk brings is injected AFTER the
-   entire main bundle, so a global stylesheet cannot outrank it no matter what
-   specificity it uses - .auth-card in this file kept winning against everything.
-   Being last in the same file settles it by source order instead, with no
-   specificity war.
+   WHY THIS IS A LAZY CHUNK'S STYLESHEET
+   ----------------------------------------------------------------------------
+   Both routes are code-split, so this file is injected after the whole main
+   bundle. It therefore outranks every global layer regardless of where it sits
+   in index.js. That is correct - an auth screen is not an authenticated
+   screen, and it does not share the app shell - but it also means the rule that
+   is painting here is this file, always. There is no cascade to negotiate and
+   nothing to inherit from ui/components.css except the tokens it reads.
 
-   The site was reading as unchanged for this reason: the auth screen - the
-   first thing anyone sees - kept the old surfaces no matter what the global
-   layers declared.
+   THE SCREEN
+   ----------------------------------------------------------------------------
+   One job: get someone signed in. That argues for almost nothing on the page.
+
+     - Full bleed. The old version sized the gradient to a container, so on a
+       wide monitor there was a visible rectangular edge where the background
+       stopped and the page behind it showed through. It read as a panel that
+       failed to fill.
+     - One light source, not three competing ones.
+     - No grid overlay. It was there to give the empty area something to
+       resolve against, which was treating the symptom. The composition is
+       centred and the emptiness is deliberate.
+     - The wordmark and the heading are one lockup, not two headings
+       competing at different sizes in the same column.
+     - The two steps are shown as steps, so the flow is legible before it is
+       used.
    ========================================================================= */
-.app .auth-page,
-html[data-theme] .auth-page {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 20px;
-  background-color: #05070d;
-  background-image:
-    radial-gradient(1000px 640px at 18% -10%, rgba(47, 129, 247, 0.24), transparent 60%),
-    radial-gradient(820px 600px at 86% 8%, rgba(139, 92, 246, 0.18), transparent 58%),
-    radial-gradient(900px 700px at 50% 115%, rgba(16, 185, 129, 0.1), transparent 62%),
-    linear-gradient(180deg, #0a1020 0%, #06080f 46%, #04060b 100%);
-  background-attachment: fixed;
+
+/* ── The page ────────────────────────────────────────────────────────────── */
+
+/* Full bleed.
+
+   The auth screen is rendered inside the app shell, which means it inherits
+   .page-content's measure - a 1240px cap and 32px of padding. On a 1600px
+   monitor that left the background stopping two hundred pixels short of each
+   edge, with a visible rectangular seam where it met the page behind it. It
+   read as a panel that had failed to fill, which is the last impression the
+   first screen of the product should leave.
+
+   100vw plus a half-viewport negative margin is the standard way to escape a
+   centred ancestor. The parent's own padding is neutralised in the same breath,
+   or it would still inset the content by 32px inside the full-bleed box. */
+.page-content:has(.auth-page) {
+  padding: 0;
 }
 
-/* The grid, so the large empty area above and below the card has something to
-   resolve against rather than reading as an image that failed to load. */
-html[data-theme] .auth-page::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0.6;
+.auth-page {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  max-width: none;
+  /* Pull the full viewport width out of the centred measure. Guarded against
+     a scrollbar, which would otherwise make this 100vw plus the scrollbar's
+     width and produce a horizontal scrollbar on the auth screen. */
+  margin-inline: calc(50% - 50vw);
+  min-height: 100dvh;
+  padding: var(--sp-8) var(--sp-5);
+  background-color: var(--bg0);
+  /* A single soft wash behind the card, offset so the light has a direction.
+     Fixed, so it does not slide under the card when the viewport scrolls on a
+     short window. */
   background-image:
-    linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
-  background-size: 54px 54px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 65% at 50% 42%, #000 15%, transparent 75%);
-  mask-image: radial-gradient(ellipse 80% 65% at 50% 42%, #000 15%, transparent 75%);
+    radial-gradient(1100px 720px at 50% 28%, var(--theme-glow-a), transparent 64%),
+    linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 52%);
+  background-attachment: fixed;
+  isolation: isolate;
+}
+
+/* A hairline horizon far below the card. It gives the lower third of a tall
+   screen something to sit on, which is the one place this layout went flat. */
+.auth-page::after {
+  content: '';
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, var(--line) 22%, var(--line) 78%, transparent);
+  opacity: 0.5;
 }
 
 /* ── The card ────────────────────────────────────────────────────────────── */
 
-.app .auth-card,
-html[data-theme] .auth-card {
+.auth-card {
   position: relative;
   z-index: 1;
   width: 100%;
-  max-width: 420px;
-  padding: 34px 32px 30px;
-  border-radius: 20px;
-  background-color: rgba(14, 20, 31, 0.72);
-  /* !important, and only here: four separate sheets set `background` - the
-     shorthand - on this one element, and a shorthand resets every background
-     longhand beneath it. Source order and specificity both failed to settle it
-     over several passes. Nothing else on the card needs this; border, shadow
-     and blur all apply normally. */
-  background: rgba(14, 20, 31, 0.72) !important;
-  background-image:
-    radial-gradient(420px 170px at 50% 0%, rgba(76, 141, 255, 0.16), transparent 100%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.018) 26%, transparent 58%),
-    linear-gradient(180deg, rgba(22, 32, 48, 0.95) 0%, rgba(11, 17, 27, 0.95) 100%) !important;
-  /* The 420px radial at the top is the highlight the card already had in
-     main.css. A background lists its topmost layer first, so keeping it here
-     and adding the panel gradient beneath is what actually changes the look -
-     replacing it was why this read as unchanged. */
-  
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    0 2px 6px rgba(0, 0, 0, 0.5),
-    0 40px 90px -30px rgba(0, 0, 0, 0.9),
-    0 0 90px -30px rgba(47, 129, 247, 0.4);
-  backdrop-filter: blur(18px) saturate(1.2);
-  -webkit-backdrop-filter: blur(18px) saturate(1.2);
-  animation: auth-card-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  max-width: 396px;
+  padding: var(--sp-8) var(--sp-7) var(--sp-7);
+  background-color: var(--panel);
+  /* One gradient, the same light-from-above cue every panel in the product
+     uses, so the card reads as belonging to it. */
+  background-image: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.04) 0%,
+    rgba(255, 255, 255, 0.008) 22%,
+    transparent 52%
+  );
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-2xl);
+  box-shadow: var(--elev-4), var(--inset-top);
+  animation: auth-card-in var(--dur-4) var(--ease-3) both;
 }
 
 @keyframes auth-card-in {
-  from { opacity: 0; transform: translateY(18px) scale(0.97); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
 }
 
-/* A bright hairline along the top edge: the single detail that most reads as
-   "this is a designed object" rather than "a box". */
-html[data-theme] .auth-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 12%;
-  right: 12%;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(120, 180, 255, 0.85), transparent);
+/* ── The lockup ──────────────────────────────────────────────────────────── */
+
+/* Wordmark and heading as one block with a deliberate gap, rather than a logo,
+   a big gap, then a heading at a different size competing for the same
+   attention. */
+.auth-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--sp-7);
 }
 
-/* ── Logo and headings ───────────────────────────────────────────────────── */
-
-html[data-theme] .auth-logo {
-  filter: drop-shadow(0 4px 16px rgba(47, 129, 247, 0.55));
-  animation: auth-logo-breathe 7s ease-in-out infinite;
-}
-
-@keyframes auth-logo-breathe {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 4px 16px rgba(47, 129, 247, 0.45)); }
-  50% { transform: scale(1.05); filter: drop-shadow(0 6px 24px rgba(47, 129, 247, 0.7)); }
-}
-
-html[data-theme] .auth-title {
+.auth-logo-text {
   font-family: var(--font-display);
-  font-size: 1.7rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  background-image: linear-gradient(180deg, #ffffff 0%, #a9c0e0 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1.35rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-tight);
+  color: var(--txt);
 }
 
-html[data-theme] .auth-sub {
-  color: rgba(148, 163, 184, 0.85);
-  font-size: 0.86rem;
-  line-height: 1.5;
+.auth-title {
+  margin: 0 0 var(--sp-2);
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: var(--fs-xl);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-tight);
+  color: var(--txt);
 }
 
-/* ── Inputs ──────────────────────────────────────────────────────────────── */
+.auth-sub {
+  margin: 0 0 var(--sp-6);
+  color: var(--mut);
+  font-size: var(--fs-md);
+  line-height: var(--lh-base);
+  text-align: center;
+  text-wrap: balance;
+}
 
-html[data-theme] .auth-input {
-  background-color: rgba(6, 10, 17, 0.7);
-  background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  color: #eef2f7;
+.auth-sub strong {
+  color: var(--txt);
+  font-weight: var(--fw-semi);
+}
+
+/* ── Progress ────────────────────────────────────────────────────────────────
+   Signing in is two steps and that was never visible until you were already
+   halfway through it - the second screen looked like a different product
+   rather than a continuation. Naming the steps means you know what is coming
+   and what you have already done.
+
+   This is separate from .auth-steps below, which is the instruction list for
+   step two. Two different jobs: one is progress, one is content. */
+
+/* A pair of dots joined by a rule. The rule is the track; the filled dot is
+   the position. No numbers, no checkmarks - at this scale a filled and an
+   outlined dot says the same thing as a tick and a circle and costs less. */
+.auth-progress {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  /* An <ol> with a flex display still renders its marker unless the list style
+     is cleared, and a lone "1." under the indicator is exactly the kind of
+     detail that makes a screen look unfinished. */
+  list-style: none;
+  margin: 0 0 var(--sp-6);
+  padding: 0;
+}
+
+.auth-progress-step {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  color: var(--faint);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  transition: color var(--dur-2) var(--ease-1);
+}
+
+.auth-progress-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1.5px solid var(--line-strong);
   transition:
-    border-color 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 180ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    background-color var(--dur-2) var(--ease-1),
+    border-color var(--dur-2) var(--ease-1),
+    box-shadow var(--dur-2) var(--ease-1);
 }
 
-html[data-theme] .auth-input:hover {
-  border-color: rgba(148, 163, 184, 0.34);
+.auth-progress-sep {
+  width: 26px;
+  height: 1px;
+  background: var(--line);
 }
 
-html[data-theme] .auth-input:focus {
-  outline: none;
-  border-color: #4c8dff;
-  background-color: rgba(8, 13, 22, 0.9);
-  box-shadow:
-    0 0 0 3px rgba(47, 129, 247, 0.26),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+.auth-progress-step.is-current {
+  color: var(--acc-bright);
+}
+.auth-progress-step.is-current .auth-progress-dot {
+  background: var(--acc);
+  border-color: var(--acc);
+  box-shadow: 0 0 0 3px var(--acc-soft);
 }
 
-html[data-theme] .auth-input::placeholder {
-  color: rgba(148, 163, 184, 0.45);
+.auth-progress-step.is-done {
+  color: var(--grn);
+}
+.auth-progress-step.is-done .auth-progress-dot {
+  background: var(--grn);
+  border-color: var(--grn);
 }
 
-html[data-theme] .auth-label {
-  color: rgba(148, 163, 184, 0.8);
-  font-weight: 700;
-  letter-spacing: 0.06em;
+/* ── The instructions for step two ──────────────────────────────────────── */
+
+.auth-steps {
+  margin: 0 0 var(--sp-6);
+  padding: 0;
+  list-style: none;
+  counter-reset: auth-step;
+  color: var(--mut);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-md);
+}
+
+.auth-steps li {
+  position: relative;
+  margin: 0 0 var(--sp-3);
+  padding-left: 26px;
+  counter-increment: auth-step;
+}
+
+/* The number sits in the text column's left gutter, so the instructions align
+   with each other and with nothing else on the card. */
+.auth-steps li::before {
+  content: counter(auth-step);
+  position: absolute;
+  left: 0;
+  top: 1px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--acc-soft);
+  border: 1px solid color-mix(in srgb, var(--acc) 30%, transparent);
+  border-radius: 50%;
+  color: var(--acc-bright);
+  font-size: 0.62rem;
+  font-weight: var(--fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.auth-steps li:last-child { margin-bottom: 0; }
+
+.auth-steps strong {
+  color: var(--txt);
+  font-weight: var(--fw-semi);
+}
+
+/* ── Fields ──────────────────────────────────────────────────────────────── */
+
+.auth-label {
+  display: block;
+  margin-bottom: var(--sp-3);
+  color: var(--mut);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-caps);
   text-transform: uppercase;
 }
 
-/* ── Buttons ─────────────────────────────────────────────────────────────── */
-
-html[data-theme] .auth-btn {
-  background-image: linear-gradient(180deg, #6ba5ff 0%, #3485fb 55%, #1c62d0 100%);
-  border: 1px solid rgba(140, 185, 255, 0.6);
-  color: #ffffff;
-  font-weight: 800;
-  border-radius: 12px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.22),
-    0 6px 18px -6px rgba(47, 129, 247, 0.7),
-    0 0 30px -8px rgba(47, 129, 247, 0.65);
+.auth-input {
+  display: block;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 var(--sp-4);
+  background-color: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--txt);
+  font-size: var(--fs-md);
   transition:
-    transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1),
-    filter 200ms ease;
+    border-color var(--dur-1) var(--ease-1),
+    background-color var(--dur-1) var(--ease-1),
+    box-shadow var(--dur-1) var(--ease-1);
 }
 
-html[data-theme] .auth-btn:hover:not(:disabled) {
-  background-image: linear-gradient(180deg, #8ab8ff 0%, #4b93ff 55%, #2470e0 100%);
-  transform: translateY(-2px);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 10px 28px -8px rgba(47, 129, 247, 0.8),
-    0 0 46px -6px rgba(47, 129, 247, 0.75);
+.auth-input::placeholder { color: var(--faint); }
+
+.auth-input:hover { border-color: var(--line-strong); }
+
+.auth-input:focus {
+  outline: none;
+  border-color: var(--acc);
+  background-color: var(--panel3);
+  box-shadow: 0 0 0 3px var(--acc-soft);
 }
 
-html[data-theme] .auth-btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.985);
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+.auth-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Actions ─────────────────────────────────────────────────────────────── */
+
+.auth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 42px;
+  margin-top: var(--sp-5);
+  padding: 0 var(--sp-5);
+  background-color: var(--acc);
+  border: 1px solid var(--acc-300);
+  border-radius: var(--r-md);
+  color: var(--on-accent);
+  font-size: var(--fs-md);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-wide);
+  cursor: pointer;
+  box-shadow: var(--inset-top), 0 2px 12px -5px var(--acc-glow);
+  transition:
+    background-color var(--dur-1) var(--ease-1),
+    border-color var(--dur-1) var(--ease-1),
+    box-shadow var(--dur-1) var(--ease-1),
+    transform var(--dur-1) var(--ease-1);
 }
 
-html[data-theme] .auth-btn:disabled {
-  filter: grayscale(0.6);
-  opacity: 0.6;
+.auth-btn:hover:not(:disabled) {
+  background-color: var(--acc-300);
+  border-color: var(--acc-200);
+  box-shadow: var(--inset-top), 0 4px 18px -6px var(--acc-glow);
 }
 
-html[data-theme] .auth-btn-secondary {
-  background-image: linear-gradient(180deg, #1d2839 0%, #151f2d 100%);
-  border: 1px solid rgba(148, 163, 184, 0.22);
-  color: #eef2f7;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.07),
-    0 3px 9px -3px rgba(0, 0, 0, 0.7);
+.auth-btn:active:not(:disabled) {
+  background-color: var(--acc-600);
+  border-color: var(--acc-700);
 }
 
-html[data-theme] .auth-btn-secondary:hover:not(:disabled) {
-  background-image: linear-gradient(180deg, #27354f 0%, #1c2739 100%);
-  border-color: rgba(148, 163, 184, 0.36);
-  transform: translateY(-2px);
+.auth-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-/* ── Error and code ──────────────────────────────────────────────────────── */
-
-html[data-theme] .auth-error {
-  background-color: rgba(217, 58, 51, 0.14);
-  border: 1px solid rgba(240, 101, 94, 0.4);
-  color: #ffb4ae;
-  border-radius: 10px;
+.auth-btn-secondary {
+  width: 100%;
+  margin-top: var(--sp-3);
+  background-color: transparent;
+  border-color: var(--line);
+  color: var(--mut);
+  box-shadow: none;
 }
 
-.auth-code-box,
-html[data-theme] .auth-dev-panel {
-  background-color: rgba(8, 13, 22, 0.7);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 12px;
+.auth-btn-secondary:hover:not(:disabled) {
+  background-color: var(--panel3);
+  border-color: var(--line-strong);
+  color: var(--txt);
+  box-shadow: none;
 }
 
-/* ── Reduced motion ──────────────────────────────────────────────────────── */
+/* ── The verification code ───────────────────────────────────────────────── */
+
+/* The code is the one thing on this screen the user has to copy, so it is the
+   one thing rendered large, monospaced, and given a whole block to itself. */
+.auth-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  width: 100%;
+  margin-bottom: var(--sp-5);
+  padding: var(--sp-4) var(--sp-5);
+  background-color: var(--bg2);
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color var(--dur-1) var(--ease-1),
+    background-color var(--dur-1) var(--ease-1);
+}
+
+.auth-code-box:hover {
+  border-color: var(--acc);
+  background-color: var(--panel3);
+}
+
+.auth-code {
+  font-family: var(--font-mono);
+  font-size: 1.15rem;
+  font-weight: var(--fw-bold);
+  letter-spacing: 0.08em;
+  color: var(--acc-bright);
+  word-break: break-all;
+}
+
+.auth-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  color: var(--mut);
+  font-size: var(--fs-xs);
+}
+
+/* ── Errors ──────────────────────────────────────────────────────────────── */
+
+.auth-error {
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  background-color: var(--red-soft);
+  border: 1px solid color-mix(in srgb, var(--red) 36%, transparent);
+  border-radius: var(--r-sm);
+  color: var(--red);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-md);
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────────── */
+
+.auth-alt {
+  margin: var(--sp-6) 0 0;
+  color: var(--dim);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.auth-alt a {
+  color: var(--acc-bright);
+  font-weight: var(--fw-semi);
+  text-decoration: none;
+}
+
+.auth-alt a:hover {
+  color: var(--acc-100);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Local test mode ─────────────────────────────────────────────────────── */
+
+/* Compiled out of a production build (LOCAL_DEV_TOOLS is NODE_ENV !==
+   'production'), so it is styled here rather than in a global layer because it
+   will never exist on the deployed site. */
+.auth-dev-panel {
+  margin-top: var(--sp-6);
+  padding: var(--sp-4);
+  background-color: color-mix(in srgb, var(--violet) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--violet) 26%, transparent);
+  border-radius: var(--r-md);
+}
+
+.auth-dev-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.auth-dev-heading > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--violet);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  letter-spacing: var(--tracking-caps);
+  text-transform: uppercase;
+}
+
+.auth-dev-heading small {
+  color: var(--faint);
+  font-size: 0.6rem;
+}
+
+.auth-dev-panel p {
+  margin: var(--sp-3) 0;
+  color: var(--mut);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-md);
+}
+
+.auth-dev-form {
+  display: flex;
+  gap: 6px;
+}
+
+.auth-dev-form input {
+  min-width: 0;
+  flex: 1;
+  padding: 7px 9px;
+  background: var(--bg0);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  color: var(--txt);
+  font-size: var(--fs-xs);
+}
+
+.auth-dev-form input:focus {
+  outline: none;
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--violet) 14%, transparent);
+}
+
+.auth-dev-form .auth-btn-secondary {
+  width: auto;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 7px 9px;
+  font-size: 0.67rem;
+}
+
+.auth-dev-note {
+  display: block;
+  margin-top: var(--sp-3);
+  color: var(--faint);
+  font-size: 0.6rem;
+  line-height: 1.4;
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-card {
-    animation: none;
-  }
-  .auth-logo {
-    animation: none;
-  }
-  .auth-btn,
-  .auth-btn-secondary {
-    transition: none;
-  }
-  .auth-btn:hover:not(:disabled),
-  .auth-btn-secondary:hover:not(:disabled) {
-    transform: none;
-  }
+  .auth-card { animation: none; }
 }

@@ -88,6 +88,36 @@ const PALETTE_VARS = /^--(bg\d?|panel\d?|line(-soft|-strong)?|txt|mut|dim|acc(-\
 // is then no way to tell which one the user is looking at.
 const PALETTE_OWNER = 'ui/system.css';
 
+/* A digit glued to a custom property means a bulk replace ran over the middle
+ * of a number: `38px` became `3var(--r-sm)`, `768px` became `76var(--r-sm)`.
+ *
+ * These do not fail to parse. The declaration is still valid CSS, the value is
+ * simply invalid, and the property is dropped - so the avatar silently fell
+ * back to its intrinsic size and grew to 120px. Grepping for "var(--" finds
+ * nothing wrong; only this does.
+ *
+ * Caught by noticing `8px` had been replaced with a radius token in
+ * TradingPage.css, then auditing every stylesheet rather than just the file
+ * being edited.
+ */
+{
+  const glued = [];
+  for (const file of walk(SRC)) {
+    const rel = path.relative(SRC, file).replace(/\\/g, '/');
+    const src = fs.readFileSync(file, 'utf8');
+    for (const m of src.matchAll(/(^|[^\w.-])(\d+)var\(--/g)) {
+      glued.push(`${rel}  ${m[2]}var(--`);
+    }
+  }
+  ok(glued.length === 0,
+    'no stylesheet has a number glued to a custom property',
+    glued.length
+      ? 'a bulk replace matched inside a number; the value is invalid so the\n' +
+        '        declaration is dropped and the property silently falls back\n        ' +
+        glued.slice(0, 8).join('\n        ')
+      : '');
+}
+
 console.log(`  main-bundle stylesheets (transitive from index.js): ${mainBundleCss.size}\n`);
 
 const offenders = [];

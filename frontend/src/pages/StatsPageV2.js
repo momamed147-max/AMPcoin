@@ -57,7 +57,6 @@ export default function StatsPage() {
   if (loading && !data) {
     return (
       <div className="sp2">
-        <div className="sp2-head"><h1>Statistics</h1></div>
         <Panel><SkeletonRows rows={4} h={56} /></Panel>
         <div className="sp2-grid-2">
           <Panel><SkeletonRows rows={3} h={90} /></Panel>
@@ -70,7 +69,6 @@ export default function StatsPage() {
   if (error) {
     return (
       <div className="sp2">
-        <div className="sp2-head"><h1>Statistics</h1></div>
         <Panel>
           <ErrorState title="Could not load your statistics" message={error.message} onRetry={reload} />
         </Panel>
@@ -81,12 +79,15 @@ export default function StatsPage() {
   return (
     <div className="sp2">
       <div className="sp2-head">
-        <div>
-          <h1>Statistics</h1>
-          <p className="sp2-sub">
-            Everything you have won and lost across every game, and what you have unlocked.
-          </p>
-        </div>
+        {/* No title here. The header band above already says "Statistics"
+            and carries the icon and a one-line purpose; repeating it eight
+            pixels below, larger, made the most prominent text on the screen
+            say the same word twice. This row is only the two things the
+            band does not have: the longer explanation, and a way to
+            refetch it. */}
+        <p className="sp2-sub">
+          Everything you have won and lost across every game, and what you have unlocked.
+        </p>
         <Button variant="ghost" icon="rpsRock" onClick={reload} loading={loading}>Refresh</Button>
       </div>
 

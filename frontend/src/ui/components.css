@@ -46,10 +46,14 @@
 /* A panel is the base unit of every screen. One definition, so a card on
    Trading lines up with one on Blackjack.
 
+   .ui-panel is the real primitive - ui/primitives.js builds it, and every
+   page that wants a titled box uses the Panel component rather than writing
+   the markup. .card and .cf-topbar are the two places that still hand-roll a
+   panel; they are listed here so they match until they are not needed.
+
    The gradient is the "lit from above" cue and nothing more. The hairline
    border does the actual separation work; the gradient only stops a large
    surface from reading as a hole cut in the page. */
-.panel,
 .card,
 .ui-panel,
 .cf-topbar,
@@ -66,6 +70,54 @@
   border-radius: var(--r-lg);
   box-shadow: var(--elev-1), var(--inset-top);
 }
+
+/* ── The panel header ────────────────────────────────────────────────────── */
+
+/* A panel's title, its subtitle and any action sit in one row above the body,
+   separated from it by a hairline. Without the rule the title reads as part of
+   the content rather than as a label for it - which is why the same title
+   rendered at different sizes on two panels on one screen looked like two
+   different components. */
+.ui-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-5) var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ui-panel-heading {
+  min-width: 0;
+}
+
+.ui-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semi);
+  letter-spacing: var(--tracking-tight);
+  line-height: var(--lh-lg);
+  color: var(--txt);
+}
+
+.ui-panel-sub {
+  margin: 2px 0 0;
+  color: var(--mut);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-md);
+}
+
+.ui-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-shrink: 0;
+}
+
+.ui-panel-pad > *:not(.ui-panel-head) { padding-inline: var(--sp-5); }
+.ui-panel-pad > *:last-child { padding-bottom: var(--sp-5); }
+.ui-panel-pad > *:first-of-type { padding-top: var(--sp-4); }
 
 /* Anything genuinely floating - a popover, a menu, a card that overlaps other
    content - is one elevation step up and carries a stronger border, because
@@ -329,8 +381,12 @@ select {
 
 /* A recessed track. The selected tab is raised out of it rather than filled
    with the accent - an accent fill here competes with the primary action on
-   the page, and a tab is not an action. */
-.tab-list,
+   the page, and a tab is not an action.
+
+   .ui-tabs is the primitive from ui/primitives.js. .cf-topbar-tabs is the same
+   control written by the coinflip lobby, so both are listed here to keep them
+   identical rather than to leave two subtly different tab bars in the product. */
+.ui-tabs,
 .cf-topbar-tabs {
   display: inline-flex;
   align-items: center;
@@ -342,12 +398,14 @@ select {
   box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
-.tab-btn,
+/* The stats screen's tabs were full-bleed underlined text with no track at
+   all, which is a third tab idiom in a product that already had two. */
+.ui-tab,
 .cf-tab {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-3);
-  min-height: 28px;
+  min-height: 30px;
   padding: 0 12px;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
@@ -364,20 +422,45 @@ select {
     border-color var(--dur-1) var(--ease-1);
 }
 
-.tab-btn:hover,
+.ui-tab:hover,
 .cf-tab:hover {
   background-color: var(--panel2);
   color: var(--txt);
 }
 
-.tab-btn.active,
-.tab-btn[aria-selected='true'],
+.ui-tab.is-active,
+.ui-tab[aria-selected='true'],
 .cf-tab.cf-tab-active {
   background-color: var(--panel3);
   border-color: var(--line);
   color: var(--acc-bright);
   box-shadow: var(--inset-top);
   font-weight: var(--fw-semi);
+}
+
+.ui-tab-count,
+.cf-tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  background-color: var(--bg0);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-full);
+  color: var(--mut);
+  font-size: 0.62rem;
+  font-weight: var(--fw-semi);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.ui-tab.is-active .ui-tab-count,
+.cf-tab.cf-tab-active .cf-tab-count {
+  background-color: var(--acc-soft);
+  border-color: color-mix(in srgb, var(--acc) 32%, transparent);
+  color: var(--acc-bright);
 }
 
 /* ============================================================================

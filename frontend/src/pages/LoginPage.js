@@ -103,6 +103,20 @@ const LoginPage = () => {
           <Logo size={44} textSize="1.7rem" />
         </div>
 
+        {/* Two steps, named. Without this the second screen reads as a
+            different product rather than as the next page of this one. */}
+        <ol className="auth-progress">
+          <li className={`auth-progress-step ${step === 1 ? 'is-current' : 'is-done'}`}>
+            <span className="auth-progress-dot" aria-hidden="true" />
+            Username
+          </li>
+          <li className="auth-progress-sep" aria-hidden="true" />
+          <li className={`auth-progress-step ${step === 2 ? 'is-current' : ''}`}>
+            <span className="auth-progress-dot" aria-hidden="true" />
+            Verify
+          </li>
+        </ol>
+
         {step === 1 ? (
           <form onSubmit={handleGetCode}>
             <h2 className="auth-title">Sign In</h2>

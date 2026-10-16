@@ -1,42 +1,63 @@
-/* Trading — refined professional dark */
+/* Trading
+   ----------------------------------------------------------------------------
+   This file used to open by redeclaring the entire palette on .tr-page:
+
+       --bg0:var(--bg0); --bg1:var(--bg1); --panel:var(--panel); --line:var(--line);
+       --txt:var(--txt); --mut:var(--mut); --dim:var(--dim); --acc:var(--acc); ...
+
+   A local copy, at the old values, on the one page whose whole job is to sit
+   next to other pages. It is why Trading looked like a different product:
+   its surfaces were the pre-redesign near-blacks, its muted text was the
+   2.9:1 value that failed contrast, and its accent was the old flat blue -
+   none of which any theme could reach, because a theme repaints :root and
+   this was redefining the same names one level down.
+
+   Nothing is declared here now. Every colour, radius and type size below
+   reads from ui/system.css, so this page repaints with the rest of the
+   product when a theme changes.
+   ---------------------------------------------------------------------------- */
+
 .tr-page {
-  --bg0:#070a11; --bg1:#0b0f17; --panel:#0e141d; --panel2:#121924;
-  --line:rgba(148,163,184,.12); --line-soft:rgba(148,163,184,.07);
-  --txt:#eef2f7; --mut:#8b96a8; --dim:#525d70;
-  --acc:#2f81f7; --acc-soft:rgba(47,129,247,.12);
-  --grn:#3fb950; --red:#f85149; --gold:#d29922;
-  --r-sm:8px; --r-md:10px; --r-lg:14px;
-  max-width: 1100px; margin: 0 auto; padding-bottom: 24px; color: var(--txt);
+  max-width: var(--page-max);
+  margin: 0 auto;
+  padding-bottom: var(--sp-8);
+  color: var(--txt);
 }
 .tr-page :where(.tr-total,.tr-thumb-val,.tr-offer-val,.tr-val) { font-variant-numeric: tabular-nums; }
 
-.tr-topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+.tr-topbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); margin-bottom: var(--sp-4); flex-wrap: wrap; }
 .tr-topbar .cf-topbar-tabs { display: flex; gap: 6px; }
 
 /* Trade cards */
-.tr-list { display: flex; flex-direction: column; gap: 10px; }
+.tr-list { display: flex; flex-direction: column; gap: var(--sp-3); }
 .tr-card {
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg);
-  padding: 14px 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  padding: var(--sp-4) 16px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
   transition: border-color .15s, transform .15s;
 }
-.tr-card:hover { border-color: rgba(148,163,184,.28); transform: translateY(-1px); }
-.tr-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.tr-card:hover { border-color: var(--line-strong); transform: translateY(-1px); }
+.tr-card-head { display: flex; align-items: center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
 .tr-creator-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); flex-shrink: 0; background: var(--bg1); }
 .tr-creator-meta { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .tr-creator-name { font-weight: 700; color: var(--txt); font-size: .88rem; }
 .tr-creator-time { font-size: .7rem; color: var(--dim); }
 .tr-total { display: flex; align-items: center; gap: 4px; font-weight: 800; color: var(--txt); font-size: .92rem; }
-.tr-cancel { padding: 6px 12px; font-size: .72rem; }
+.tr-cancel { padding: 6px var(--sp-4); font-size: .72rem; }
 
-/* Columns */
-.tr-cols { display: flex; align-items: stretch; gap: 10px; }
-.tr-col { flex: 1; min-width: 0; background: var(--bg1); border: 1px solid var(--line-soft); border-radius: var(--r-md); padding: 10px 12px; }
-.tr-col-title { font-size: .66rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
-.tr-col-title::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 8px rgba(47,129,247,.6); }
-.tr-col:last-child .tr-col-title::before { background: var(--gold); box-shadow: 0 0 8px rgba(210,153,34,.6); }
+/* The two halves of a trade: what is on offer, and what is wanted.
+
+   They sit side by side and take equal width, because a trade is a comparison
+   and giving one side more room would imply it matters more. But their height
+   is set by their content rather than by each other - a single offered pet
+   beside an empty "wanting" box left a 500px-wide panel with one small tile in
+   it, which read as missing content rather than as a small trade. */
+.tr-cols { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.tr-col { flex: 1; min-width: 0; background: var(--bg1); border: 1px solid var(--line-soft); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
+.tr-col-title { font-size: .66rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); margin-bottom: var(--r-sm); display: flex; align-items: center; gap: 6px; }
+.tr-col-title::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--acc); box-shadow: 0 0 var(--r-sm) color-mix(in srgb, var(--acc) 60%, transparent); }
+.tr-col:last-child .tr-col-title::before { background: var(--gold); box-shadow: 0 0 var(--r-sm) color-mix(in srgb, var(--gold) 60%, transparent); }
 .tr-swap { display: flex; align-items: center; font-size: 1.2rem; color: var(--acc); font-weight: 800; flex-shrink: 0; }
-.tr-items { display: flex; flex-wrap: wrap; gap: 8px; }
+.tr-items { display: flex; flex-wrap: wrap; gap: var(--r-sm); }
 .tr-want-text { color: var(--mut); font-size: .85rem; font-style: italic; }
 input.tr-want-text {
   font-style: normal; width: 100%; background: var(--bg0); border: 1px solid var(--line);
@@ -50,58 +71,58 @@ input.tr-want-text::placeholder { color: var(--dim); }
 .tr-thumb {
   position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px;
   width: 78px; padding: 7px 4px; background: var(--panel2); border: 1px solid var(--line);
-  border-radius: var(--r-sm); box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  border-radius: var(--r-sm); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 .tr-thumb img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; }
 .tr-thumb-name { font-size: .62rem; font-weight: 600; color: var(--txt); text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .tr-thumb-val { display: flex; align-items: center; gap: 3px; font-size: .65rem; font-weight: 700; color: var(--acc); }
 .tr-thumb-x {
   position: absolute; top: -7px; right: -7px; width: 20px; height: 20px; border-radius: 50%;
-  background: var(--red); border: 1px solid rgba(0,0,0,.4); color: #fff;
+  background: var(--red); border: 1px solid rgba(0, 0, 0, 0.4); color: #fff;
   font-size: .72rem; font-weight: 700; cursor: pointer; line-height: 1;
 }
 
 /* Footer + offers */
-.tr-card-foot { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.tr-card-foot { display: flex; align-items: center; gap: var(--sp-3); margin-top: var(--sp-3); }
 .tr-your-offer { font-size: .76rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--grn); }
-.tr-offers { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 8px; }
-.tr-no-offers { color: var(--dim); font-size: .82rem; text-align: center; padding: 10px; }
-.tr-offer { display: flex; gap: 10px; align-items: flex-start; background: var(--bg1); border: 1px solid var(--line-soft); border-radius: var(--r-md); padding: 10px 12px; }
+.tr-offers { margin-top: var(--sp-3); padding-top: var(--sp-3); border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: var(--r-sm); }
+.tr-no-offers { color: var(--dim); font-size: .82rem; text-align: center; padding: var(--sp-3); }
+.tr-offer { display: flex; gap: var(--sp-3); align-items: flex-start; background: var(--bg1); border: 1px solid var(--line-soft); border-radius: var(--r-md); padding: var(--sp-3) var(--sp-4); }
 .tr-offer-avatar { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex-shrink: 0; border: 1px solid var(--line); }
 .tr-offer-body { flex: 1; min-width: 0; }
-.tr-offer-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.tr-offer-head { display: flex; align-items: center; gap: var(--r-sm); margin-bottom: 6px; flex-wrap: wrap; }
 .tr-offer-name { font-weight: 700; font-size: .83rem; color: var(--txt); }
 .tr-offer-val { display: flex; align-items: center; gap: 4px; font-size: .78rem; font-weight: 700; color: var(--acc); }
 .tr-offer-actions { display: flex; flex-direction: column; gap: 6px; flex-shrink: 0; }
-.cf-confirm-btn.sm { padding: 7px 14px; font-size: .78rem; }
+.cf-confirm-btn.sm { padding: 7px var(--sp-4); font-size: .78rem; }
 
 /* Create */
 .tr-create {
-  display: flex; gap: 12px; flex-wrap: wrap;
+  display: flex; gap: var(--sp-4); flex-wrap: wrap;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg);
-  padding: 16px; box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
+  padding: 16px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
-.tr-create-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.tr-create-col { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--sp-3); }
 .tr-create-col h3 {
   color: var(--txt); font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
-  display: flex; align-items: center; gap: 8px; margin: 0; color: var(--mut);
+  display: flex; align-items: center; gap: var(--r-sm); margin: 0; color: var(--mut);
 }
 .tr-val { display: inline-flex; align-items: center; gap: 4px; color: var(--acc); font-size: .83rem; font-weight: 700; margin-left: auto; }
-.tr-pick-list { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.tr-pick-list { display: flex; flex-direction: column; gap: var(--r-sm); min-height: 0; }
 .tr-pick-selected {
-  display: flex; flex-wrap: wrap; gap: 8px; padding: 8px; min-height: 60px;
-  background: var(--acc-soft); border: 1px dashed rgba(47,129,247,.4); border-radius: var(--r-md);
+  display: flex; flex-wrap: wrap; gap: var(--r-sm); padding: var(--r-sm); min-height: 60px;
+  background: var(--acc-soft); border: 1px dashed color-mix(in srgb, var(--acc) 40%, transparent); border-radius: var(--r-md);
 }
-.tr-pick-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr)); gap: 8px; max-height: 380px; overflow-y: auto; padding: 2px; }
+.tr-pick-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(80px,1fr)); gap: var(--r-sm); max-height: 380px; overflow-y: auto; padding: 2px; }
 .tr-pick-grid.small { max-height: 300px; }
 .tr-create-bottom {
-  display: flex; align-items: center; justify-content: space-between; gap: 10px;
-  flex-basis: 100%; width: 100%; padding-top: 12px; margin-top: 4px;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3);
+  flex-basis: 100%; width: 100%; padding-top: var(--sp-4); margin-top: 4px;
   border-top: 1px solid var(--line-soft); flex-wrap: wrap;
 }
 
 @media (max-width: 768px) {
-  .tr-create { flex-direction: column; padding: 12px; }
+  .tr-create { flex-direction: column; padding: var(--sp-4); }
   .tr-cols { flex-direction: column; }
   .tr-swap { justify-content: center; transform: rotate(90deg); }
   .tr-offer { flex-wrap: wrap; }

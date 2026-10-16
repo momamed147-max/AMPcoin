@@ -765,6 +765,14 @@ a.cf-tab {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent 70%);
 }
 
+/* Inside the row, the primary action takes the column. Elsewhere - the trading
+   footer, the jackpot page - the same class is sized by its own label. */
+.cf-row-action .cf-join-btn,
+.cf-row-action .cf-view-btn,
+.cf-row-action .cf-bot-btn {
+  width: 100%;
+}
+
 /* The stake. Coinflip wraps the tiles in a .cf-row-wager so it can carry a
    header above them; RPS and blackjack put the tiles and the figure in
    directly. Either way this is the part that absorbs the leftover width. */
@@ -778,21 +786,24 @@ a.cf-tab {
   min-width: 0;
 }
 
-/* The row's primary action. Full width of the action column, because it is the
-   one thing the column exists for.
+/* The row's primary action.
 
    These mirror ui/components.css but read tokens directly, for a reason worth
    knowing: this stylesheet rides along inside the lazy coinflip chunk, which
    webpack injects after the whole main bundle. So it beats components.css on
    specificity alone, and anything it writes in a literal colour - it used to
    write rgba(47, 129, 247, ...) on every rule - silently becomes a fixed
-   colour that no theme can reach. */
+   colour that no theme can reach.
+
+   The full width is set below, scoped to the row's action column rather than
+   to the class. A bare width:100% here stretched the same button to 1000px on
+   the trading page, where it sits in a footer next to a text link and should be
+   sized by its label. */
 .cf-join-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-height: 34px;
+  min-height: var(--ctl-h);
   padding: 0 var(--sp-4);
   background-color: var(--acc);
   border: 1px solid var(--acc-300);
