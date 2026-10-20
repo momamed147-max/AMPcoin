@@ -74,7 +74,8 @@ async function initDatabase() {
         rpsMatches: [],
         tradeBotHeld: [],
         tradeBotUpdatedAt: null,
-        settings: []
+        settings: [],
+        trustedDevices: []
       },
       settings: {}
     };
@@ -112,7 +113,10 @@ let db = {
   rpsMatches: [],
   tradeBotHeld: [],
   tradeBotUpdatedAt: null,
-  settings: []
+  settings: [],
+  // Long-lived "remember this device" credentials. Only SHA-256 hashes of the
+  // device tokens and client IPs are stored, never the raw values.
+  trustedDevices: []
 };
 let settingsCache = {};
 
@@ -155,7 +159,8 @@ function loadLocalJson() {
     rpsMatches: localMain.rpsMatches || [],
     tradeBotHeld: localMain.tradeBotHeld || [],
     tradeBotUpdatedAt: localMain.tradeBotUpdatedAt || null,
-    settings: localMain.settings || {}
+    settings: localMain.settings || {},
+    trustedDevices: Array.isArray(localMain.trustedDevices) ? localMain.trustedDevices : []
   };
   settingsCache = readLocalJson('settings.json', {});
   _loaded = true;
@@ -193,7 +198,8 @@ async function loadFromDatabase() {
             rpsMatches: data?.rpsMatches || [],
             tradeBotHeld: data?.tradeBotHeld || [],
             tradeBotUpdatedAt: data?.tradeBotUpdatedAt || null,
-            settings: data?.settings || {}
+            settings: data?.settings || {},
+            trustedDevices: Array.isArray(data?.trustedDevices) ? data.trustedDevices : []
           };
           break;
         case 'settings':

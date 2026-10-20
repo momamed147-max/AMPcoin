@@ -4,13 +4,17 @@ import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import Logo from '../components/Logo';
 import { playError } from '../sound';
+import { getRememberedDevice } from '../rememberedDevice';
 import './AuthPage.css';
 
 const LOCAL_DEV_TOOLS = process.env.NODE_ENV !== 'production';
 
 const LoginPage = () => {
+  const initialRemembered = React.useMemo(() => getRememberedDevice(), []);
   const [step, setStep] = useState(1); // 1 = username, 2 = bio code
-  const [robloxUsername, setRobloxUsername] = useState('');
+  const [robloxUsername, setRobloxUsername] = useState(initialRemembered?.username || '');
+  const [rememberedDevice, setRememberedDevice] = useState(initialRemembered);
+  const [rememberMe, setRememberMe] = useState(!!initialRemembered);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [copyStatus, setCopyStatus] = useState('');
@@ -18,7 +22,13 @@ const LoginPage = () => {
   const [devLoading, setDevLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { requestVerifyCode, verifyAndRegister, devLogin, loading: authLoading } = useAuth();
+  const {
+    requestVerifyCode,
+    verifyAndRegister,
+    rememberedLogin,
+    devLogin,
+    loading: authLoading
+  } = useAuth();
 
   const showLoginError = (message) => {
     setError(message);
@@ -28,13 +38,26 @@ const LoginPage = () => {
   const handleGetCode = async (e) => {
     e.preventDefault();
     setError('');
-    if (!robloxUsername.trim()) {
+    const username = robloxUsername.trim();
+    if (!username) {
       showLoginError('Please enter your Roblox username');
       return;
     }
     setLoading(true);
     try {
-      const result = await requestVerifyCode(robloxUsername.trim());
+      // A remembered browser skips the bio step entirely. If the token has
+      // expired or the network changed, fall through to the normal code flow
+      // instead of making the player start over.
+      if (rememberMe && rememberedDevice) {
+        const remembered = await rememberedLogin(username);
+        if (remembered.success) {
+          navigate('/coinflip');
+          return;
+        }
+        setRememberedDevice(getRememberedDevice(username));
+      }
+
+      const result = await requestVerifyCode(username);
       if (result.success) {
         setCode(result.code);
         setStep(2);
@@ -53,7 +76,10 @@ const LoginPage = () => {
     setError('');
     setLoading(true);
     try {
-      const result = await verifyAndRegister({ robloxUsername: robloxUsername.trim() });
+      const result = await verifyAndRegister({
+        robloxUsername: robloxUsername.trim(),
+        remember: rememberMe
+      });
       if (result.success) {
         navigate('/coinflip');
       } else {
@@ -64,6 +90,16 @@ const LoginPage = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleUsernameChange = (value) => {
+    setRobloxUsername(value);
+    setError('');
+    const saved = value.trim() ? getRememberedDevice(value) : null;
+    setRememberedDevice(saved);
+    // Switching to a different remembered account opts back in. Editing the
+    // same one after unticking the box does not silently re-tick it.
+    if (saved && saved.token !== rememberedDevice?.token) setRememberMe(true);
   };
 
   const handleDevLogin = async (event) => {
@@ -120,7 +156,11 @@ const LoginPage = () => {
         {step === 1 ? (
           <form onSubmit={handleGetCode}>
             <h2 className="auth-title">Sign In</h2>
-            <p className="auth-sub">Enter your Roblox username to get a verification code.</p>
+            <p className="auth-sub">
+              {rememberedDevice
+                ? 'This device is remembered. Continue below without changing your Roblox bio.'
+                : 'Enter your Roblox username to get a verification code.'}
+            </p>
 
             {error && <div className="auth-error" role="alert">{error}</div>}
 
@@ -129,14 +169,39 @@ const LoginPage = () => {
               type="text"
               id="robloxUsername"
               value={robloxUsername}
-              onChange={(e) => { setRobloxUsername(e.target.value); setError(''); }}
+              onChange={(e) => handleUsernameChange(e.target.value)}
               className="auth-input"
               placeholder="Enter your Roblox username"
               autoComplete="off"
             />
 
+            {rememberedDevice && (
+              <p className="auth-device-note">
+                <Icon name="shield" size={14} />
+                <span>
+                  <strong>{rememberedDevice.username}</strong> is remembered on this device. No code needed.
+                </span>
+              </p>
+            )}
+
+            <label className="auth-remember">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <span className="auth-remember-copy">
+                <strong>Remember this device</strong>
+                <small>Skip the Roblox profile code for 90 days. Only use this on a device you trust.</small>
+              </span>
+            </label>
+
             <button type="submit" className="auth-btn" disabled={loading}>
-              {loading ? 'Please wait...' : 'Get Verification Code'}
+              {loading
+                ? 'Please wait...'
+                : rememberedDevice && rememberMe
+                  ? 'Continue Without Code'
+                  : 'Get Verification Code'}
             </button>
           </form>
         ) : (
@@ -166,6 +231,12 @@ const LoginPage = () => {
             <button type="submit" className="auth-btn" disabled={loading}>
               {loading ? 'Checking your bio...' : 'Verify & Sign In'}
             </button>
+            {rememberMe && (
+              <p className="auth-remember-note">
+                <Icon name="shield" size={13} />
+                This device will be remembered for 90 days after verification.
+              </p>
+            )}
             <button
               type="button"
               className="auth-btn-secondary"

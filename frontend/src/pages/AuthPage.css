@@ -380,6 +380,95 @@
 
 .auth-input:disabled { opacity: 0.5; cursor: not-allowed; }
 
+/* Remembered device. The amber/green success card is deliberately quieter than
+   the error card: it is information, not an alert. */
+.auth-device-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  margin: var(--sp-3) 0 0;
+  padding: var(--sp-3) var(--sp-4);
+  color: var(--mut);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-md);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    var(--acc-soft);
+  border: 1px solid color-mix(in srgb, var(--acc) 28%, transparent);
+  border-radius: var(--r-sm);
+}
+
+.auth-device-note svg {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--acc-bright);
+}
+
+.auth-device-note strong {
+  color: var(--txt);
+  font-weight: var(--fw-semi);
+}
+
+.auth-remember {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  margin-top: var(--sp-4);
+  color: var(--mut);
+  cursor: pointer;
+  user-select: none;
+}
+
+.auth-remember input[type='checkbox'] {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--acc);
+  cursor: pointer;
+}
+
+.auth-remember input[type='checkbox']:focus-visible {
+  outline: 2px solid var(--acc-bright);
+  outline-offset: 3px;
+}
+
+.auth-remember-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.auth-remember-copy strong {
+  color: var(--txt);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semi);
+  line-height: var(--lh-md);
+}
+
+.auth-remember-copy small {
+  color: var(--faint);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-md);
+}
+
+.auth-remember-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: var(--sp-3) 0 0;
+  color: var(--dim);
+  font-size: var(--fs-xs);
+  line-height: var(--lh-md);
+  text-align: center;
+}
+
+.auth-remember-note svg {
+  flex: 0 0 auto;
+  color: var(--acc);
+}
+
 /* ── Actions ─────────────────────────────────────────────────────────────── */
 
 .auth-btn {

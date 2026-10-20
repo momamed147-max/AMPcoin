@@ -1,5 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_BASE } from '../apiConfig';
+import {
+  getRememberedDevice,
+  saveRememberedDevice,
+  removeRememberedDevice
+} from '../rememberedDevice';
 
 const AuthContextDefault = createContext();
 const DEFAULT_AVATAR = '/default-avatar.svg';
@@ -76,6 +81,35 @@ const AuthProvider = ({ children }) => {
     if (!userObj) return;
     localStorage.setItem('user', JSON.stringify(userObj));
   }, []);
+
+  const forgetRememberedDevice = useCallback(async (username) => {
+    const removed = removeRememberedDevice(username);
+    if (!removed) return;
+    try {
+      await fetch(`${API_BASE}/api/auth/remember-forget`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: removed.token })
+      });
+    } catch (_) {
+      // The local token is already gone. A stale server record will expire.
+    }
+  }, []);
+
+  const handleRememberedSession = useCallback((data, username, rememberRequested) => {
+    if (rememberRequested === true && data?.rememberToken && data?.rememberExpiresAt) {
+      saveRememberedDevice({
+        username,
+        token: data.rememberToken,
+        expiresAt: data.rememberExpiresAt
+      });
+      return true;
+    }
+    if (rememberRequested === false) {
+      void forgetRememberedDevice(username);
+    }
+    return false;
+  }, [forgetRememberedDevice]);
 
   const refreshUser = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -172,6 +206,7 @@ const AuthProvider = ({ children }) => {
         const enhanced = enhanceUserWithRoblox(data.user, profileData);
         persistUser(enhanced);
         setUser(enhanced);
+        handleRememberedSession(data, enhanced.robloxUsername, credentials?.remember);
 
         try {
           const userData = {
@@ -191,6 +226,58 @@ const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login error:', error);
+      return { success: false, message: error.message || 'Network error. Please try again.' };
+    }
+  };
+
+  const rememberedLogin = async (robloxUsername) => {
+    const entry = getRememberedDevice(robloxUsername);
+    if (!entry) {
+      return { success: false, message: 'This device is not remembered.' };
+    }
+
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/remember-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ robloxUsername: entry.username, token: entry.token })
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (response.ok) {
+        localStorage.setItem('token', data.token);
+        const profileData = await resolveRobloxProfile(data.user?.robloxUsername);
+        const enhanced = enhanceUserWithRoblox(data.user, profileData);
+        persistUser(enhanced);
+        setUser(enhanced);
+
+        // A future server version may rotate the device token on use. Keep the
+        // browser in step when it does, and leave the existing token alone when
+        // it does not.
+        if (data.rememberToken && data.rememberExpiresAt) {
+          saveRememberedDevice({
+            username: enhanced.robloxUsername || entry.username,
+            token: data.rememberToken,
+            expiresAt: data.rememberExpiresAt
+          });
+        }
+
+        return { success: true, user: enhanced, remembered: true };
+      }
+
+      // A rejected token, or one used from a different network, is no longer
+      // useful on this browser. Remove it so the normal code flow can replace
+      // it cleanly, and revoke the server record so it does not linger. Server
+      // errors are left alone.
+      if (response.status === 401 || response.status === 403) {
+        void forgetRememberedDevice(entry.username);
+      }
+      return {
+        success: false,
+        code: data.code || '',
+        message: data.message || 'This device is not remembered.'
+      };
+    } catch (error) {
       return { success: false, message: error.message || 'Network error. Please try again.' };
     }
   };
@@ -281,12 +368,12 @@ const AuthProvider = ({ children }) => {
   };
 
   // Step 3: backend checks the bio for the code, then creates + logs in the user
-  const verifyAndRegister = async ({ robloxUsername, password }) => {
+  const verifyAndRegister = async ({ robloxUsername, password, remember }) => {
     try {
       const response = await fetch(`${API_BASE}/api/auth/verify-and-register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ robloxUsername, password })
+        body: JSON.stringify({ robloxUsername, password, remember: remember === true })
       });
       const data = await response.json().catch(() => ({}));
       if (response.ok) {
@@ -295,6 +382,7 @@ const AuthProvider = ({ children }) => {
         const enhanced = enhanceUserWithRoblox(data.user, profileData);
         persistUser(enhanced);
         setUser(enhanced);
+        handleRememberedSession(data, enhanced.robloxUsername || robloxUsername, remember);
         return { success: true, user: enhanced };
       }
       return { success: false, message: data.message || 'Verification failed' };
@@ -345,6 +433,8 @@ const AuthProvider = ({ children }) => {
     resolveRobloxAccount,
     requestVerifyCode,
     verifyAndRegister,
+    rememberedLogin,
+    forgetRememberedDevice,
     logout,
     loading,
     isAdmin,

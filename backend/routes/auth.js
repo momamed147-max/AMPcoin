@@ -14,6 +14,100 @@ const { getRobloxUserIdFromUsername, getRobloxHeadshotUrl, headshotFallbackUrl }
 const router = express.Router();
 
 const ROBLOX_THUMBNAIL_CACHE_TTL = 1000 * 60 * 60;
+const REMEMBER_DEVICE_DAYS = 90;
+const REMEMBER_DEVICE_LIMIT = 10;
+
+function publicUser(user) {
+  if (!user) return null;
+  const { password: _password, ...safe } = user;
+  return safe;
+}
+
+function requestIp(req) {
+  let ip = String((req && (req.ip || (req.socket && req.socket.remoteAddress))) || '').trim();
+  if (ip.includes(',')) ip = ip.split(',')[0].trim();
+  if (ip.startsWith('::ffff:')) ip = ip.slice(7);
+  if (ip === '::1') ip = '127.0.0.1';
+  return ip;
+}
+
+function hashText(value) {
+  return crypto.createHash('sha256').update(String(value)).digest('hex');
+}
+
+/* The client IP is hashed with a fixed domain prefix so a leaked database does
+   not expose an IP address directly, while the same IP still produces the same
+   fingerprint across restarts. */
+function hashRequestIp(req) {
+  const ip = requestIp(req);
+  return ip ? hashText('ampcoin-ip:' + ip) : '';
+}
+
+function trustedDeviceStore() {
+  const main = dbManager.getMainDb();
+  if (!Array.isArray(main.trustedDevices)) main.trustedDevices = [];
+  return main;
+}
+
+function pruneTrustedDevices(store, now = Date.now()) {
+  const devices = Array.isArray(store.trustedDevices) ? store.trustedDevices : [];
+  const active = devices.filter((device) => {
+    const expires = Date.parse(device.expiresAt);
+    return Number.isFinite(expires) && expires > now;
+  });
+  const changed = active.length !== devices.length;
+  if (changed) store.trustedDevices = active;
+  return changed;
+}
+
+function issueRememberedDevice(user, req) {
+  const store = trustedDeviceStore();
+  const now = Date.now();
+  pruneTrustedDevices(store, now);
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const ipHash = hashRequestIp(req);
+  const userAgent = String(req.headers['user-agent'] || '').slice(0, 220);
+  const deviceKey = hashText(`${user.id}|${ipHash}|${userAgent}`);
+  const expiresAt = new Date(now + REMEMBER_DEVICE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+
+  // A fresh verification on the same browser replaces its old token instead of
+  // accumulating one record per sign-in. Other devices keep working.
+  const others = store.trustedDevices.filter((device) => device.userId !== user.id);
+  const sameUser = store.trustedDevices
+    .filter((device) => device.userId === user.id && device.deviceKey !== deviceKey)
+    .sort((a, b) => Date.parse(b.lastUsedAt || b.createdAt) - Date.parse(a.lastUsedAt || a.createdAt))
+    .slice(0, REMEMBER_DEVICE_LIMIT - 1);
+
+  store.trustedDevices = [
+    ...others,
+    ...sameUser,
+    {
+      id: uuidv4(),
+      userId: user.id,
+      deviceKey,
+      tokenHash: hashText(token),
+      ipHash,
+      userAgent,
+      createdAt: new Date(now).toISOString(),
+      lastUsedAt: new Date(now).toISOString(),
+      expiresAt
+    }
+  ];
+  dbManager.saveMainDb();
+  return { token, expiresAt };
+}
+
+function withRememberedDevice(payload, user, req, rememberRequested) {
+  if (!rememberRequested) return payload;
+  const device = issueRememberedDevice(user, req);
+  return {
+    ...payload,
+    rememberToken: device.token,
+    rememberExpiresAt: device.expiresAt
+  };
+}
+
 
 // Development-only account shortcut for local RPS testing. It is unavailable
 // outside the opt-in JSON sandbox, so a local .env that happens to contain
@@ -56,8 +150,7 @@ router.post('/dev-login', (req, res) => {
       dbManager.saveUsersDb();
     }
     const token = jwt.sign({ userId: user.id, robloxUsername: user.robloxUsername }, jwtSecret(), { expiresIn: '12h' });
-    const { password: _password, ...safeUser } = user;
-    res.json({ token, user: safeUser, localTest: true });
+    res.json({ token, user: publicUser(user), localTest: true });
   } catch (error) {
     console.error('Local test login error:', error);
     res.status(500).json({ message: 'Could not create local test account' });
@@ -229,6 +322,7 @@ router.post('/login', async (req, res) => {
     const body = req.body || {};
     const robloxUsername = typeof body.robloxUsername === 'string' ? body.robloxUsername.trim() : '';
     const password = typeof body.password === 'string' ? body.password : '';
+    const rememberRequested = body.remember === true;
 
     if (!robloxUsername || !password) {
       return res.status(400).json({ message: 'Roblox username and password are required' });
@@ -285,7 +379,12 @@ router.post('/login', async (req, res) => {
     );
 
     const { password: _, ...userWithoutPassword } = freshUser || user;
-    res.json({ token, user: userWithoutPassword });
+    res.json(withRememberedDevice(
+      { token, user: userWithoutPassword },
+      freshUser || user,
+      req,
+      rememberRequested
+    ));
   } catch (error) {
     console.error('Login error:', error.message);
     console.error(error.stack);
@@ -444,6 +543,7 @@ router.post('/verify-and-register', async (req, res) => {
   try {
     const body = req.body || {};
     const robloxUsername = typeof body.robloxUsername === 'string' ? body.robloxUsername.trim() : '';
+    const rememberRequested = body.remember === true;
     if (!robloxUsername) {
       return res.status(400).json({ message: 'Username is required' });
     }
@@ -505,7 +605,12 @@ router.post('/verify-and-register', async (req, res) => {
       );
 
       const { password: _pw, ...existingWithoutPassword } = existing;
-      return res.status(200).json({ token: loginToken, user: existingWithoutPassword });
+      return res.status(200).json(withRememberedDevice(
+        { token: loginToken, user: existingWithoutPassword },
+        existing,
+        req,
+        rememberRequested
+      ));
     }
 
     let avatar = pending.avatar || '';
@@ -550,14 +655,121 @@ router.post('/verify-and-register', async (req, res) => {
     );
 
     const { password: _, ...userWithoutPassword } = newUser;
-    res.status(201).json({ token, user: userWithoutPassword });
+    res.status(201).json(withRememberedDevice(
+      { token, user: userWithoutPassword },
+      newUser,
+      req,
+      rememberRequested
+    ));
   } catch (error) {
     console.error('Verify-register error:', error.message);
     res.status(500).json({ message: 'Server error during registration' });
   }
 });
 
-router.post('/verify-token', async (req, res) => {  try {
+router.post('/remember-login', async (req, res) => {
+  try {
+    const body = req.body || {};
+    const robloxUsername = typeof body.robloxUsername === 'string' ? body.robloxUsername.trim() : '';
+    const token = typeof body.token === 'string' ? body.token.trim() : '';
+    if (!robloxUsername || !token) {
+      return res.status(400).json({ message: 'Username and device token are required' });
+    }
+
+    // The token is 32 random bytes rendered as hex. Reject anything else before
+    // touching the store, so a malformed value cannot become a lookup probe.
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      return res.status(401).json({ message: 'This device is not remembered. Verify with a code.' });
+    }
+
+    const usersDb = dbManager.getUsersDb();
+    if (!usersDb || !Array.isArray(usersDb.users)) {
+      return res.status(500).json({ message: 'Server is initializing, please try again' });
+    }
+
+    const key = safeToLower(robloxUsername);
+    const user = usersDb.users.find((candidate) =>
+      safeToLower(candidate.robloxUsername) === key ||
+      String(candidate.id || '') === String(robloxUsername) ||
+      safeToLower(candidate.username) === key
+    );
+
+    if (!user) {
+      return res.status(401).json({ message: 'This device is not remembered. Verify with a code.' });
+    }
+
+    if (!user.isActive || user.isFrozen || user.isBanned || (user.status && user.status === 'banned')) {
+      return res.status(403).json({ message: 'Account is deactivated, banned, or frozen' });
+    }
+
+    const store = trustedDeviceStore();
+    pruneTrustedDevices(store);
+
+    const tokenHash = hashText(token);
+    const device = store.trustedDevices.find(
+      (candidate) => candidate.userId === user.id && candidate.tokenHash === tokenHash
+    );
+    if (!device) {
+      return res.status(401).json({ message: 'This device is not remembered. Verify with a code.' });
+    }
+
+    const currentIpHash = hashRequestIp(req);
+    if (device.ipHash && currentIpHash && device.ipHash !== currentIpHash) {
+      return res.status(401).json({
+        message: 'This device changed networks. Verify with a code to trust it again.',
+        code: 'ip_changed'
+      });
+    }
+
+    const now = new Date().toISOString();
+    device.lastUsedAt = now;
+    user.lastLogin = now;
+    user.updatedAt = now;
+    safeSaveUsersDb();
+    dbManager.saveMainDb();
+    safeGetUserInventory(user.id);
+
+    setImmediate(async () => { try { await resolveAndCacheAvatar(user.id); } catch (_) {} });
+
+    const freshUser = usersDb.users.find((candidate) => candidate.id === user.id) || user;
+    const loginToken = jwt.sign(
+      {
+        userId: freshUser.id,
+        robloxUsername: freshUser.robloxUsername,
+        isAdmin: !!freshUser.isAdmin,
+        isModerator: !!freshUser.isModerator
+      },
+      jwtSecret(),
+      { expiresIn: '24h' }
+    );
+
+    res.json({ token: loginToken, user: publicUser(freshUser) });
+  } catch (error) {
+    console.error('Remembered-device login error:', error.message);
+    res.status(500).json({ message: 'Could not sign in from this device' });
+  }
+});
+
+router.post('/remember-forget', (req, res) => {
+  try {
+    const token = typeof (req.body || {}).token === 'string' ? req.body.token.trim() : '';
+    if (!/^[a-f0-9]{64}$/i.test(token)) {
+      return res.json({ ok: true });
+    }
+    const store = trustedDeviceStore();
+    const tokenHash = hashText(token);
+    const before = store.trustedDevices.length;
+    store.trustedDevices = store.trustedDevices.filter((device) => device.tokenHash !== tokenHash);
+    if (store.trustedDevices.length !== before) dbManager.saveMainDb();
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('Forget-remembered-device error:', error.message);
+    res.status(500).json({ message: 'Could not forget this device' });
+  }
+});
+
+router.post('/verify-token', async (req, res) => {
+  try {
     const authHeader = req.headers.authorization;
     const token = authHeader && authHeader.split(' ')[1];
 
