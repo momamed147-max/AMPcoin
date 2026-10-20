@@ -2650,6 +2650,709 @@ html[data-theme] .ipm-header {
 }
 
 /* ============================================================================
+   25. App shell v2 — a navigation rail, a floating command bar, a chat dock
+   ----------------------------------------------------------------------------
+   This is a layout change, not a repaint: navigation moves from a full-width
+   top strip into a permanent left rail, the page header becomes a floating
+   command bar inside the content column, and live chat moves from the left
+   edge to a docked panel on the right. The old shell put a 320px chat rail
+   before the content and a 56px navigation bar above it, which left the page
+   with an L of chrome and no visual centre.
+
+   The whole section reads theme tokens only (--theme-nav, --theme-header,
+   --theme-chat, --line, --txt, --acc). Nothing here names a colour that a
+   theme has to overwrite, which is what keeps the new geometry working for
+   all seven palettes, including the light Aurora theme.
+
+   Widths: rail 96px (icon + label, so the nine destinations stay visible
+   without a 230px sidebar), chat 300px. The chat dock only appears when
+   there is comfortable room; below 1400px it becomes a right-hand drawer and
+   the floating toggle is the way in. The previous shell hid the drawer at
+   1279px but also hid its only trigger, which stranded the chat entirely on a
+   tablet-width window.
+   ========================================================================= */
+
+.app {
+  --shell-rail: 96px;
+  --shell-chat: 300px;
+  --shell-gutter: 16px;
+}
+
+html[data-theme] .layout-columns {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  width: calc(100% - var(--shell-rail)) !important;
+  min-height: 100dvh !important;
+  margin: 0 0 0 var(--shell-rail) !important;
+  position: relative !important;
+}
+
+html[data-theme] .main-content {
+  order: 1 !important;
+  flex: 1 1 auto !important;
+  width: auto !important;
+  min-width: 0 !important;
+  min-height: 100dvh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  z-index: 1;
+}
+
+/* ---- the rail ----------------------------------------------------------- */
+
+html[data-theme] .sidebar {
+  inset: 0 auto 0 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  width: var(--shell-rail) !important;
+  height: 100dvh !important;
+  padding: 14px 10px calc(14px + env(safe-area-inset-bottom)) !important;
+  gap: 10px !important;
+  border: 0 !important;
+  border-right: 1px solid color-mix(in srgb, var(--line) 78%, transparent) !important;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--acc) 6%, transparent), transparent 32%),
+    var(--theme-nav) !important;
+  box-shadow:
+    18px 0 54px -42px rgba(0, 0, 0, 0.95),
+    inset -1px 0 0 rgba(255, 255, 255, 0.025) !important;
+  overflow: hidden !important;
+  z-index: 1200 !important;
+}
+
+/* The horizontal accent line under the old bar becomes a vertical seam. */
+html[data-theme] .sidebar::after {
+  top: 22px;
+  right: -1px;
+  bottom: 22px;
+  left: auto;
+  width: 1px;
+  height: auto;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    color-mix(in srgb, var(--acc) 52%, transparent) 28%,
+    color-mix(in srgb, var(--gold) 34%, transparent) 56%,
+    transparent
+  );
+  opacity: 0.62;
+}
+
+html[data-theme] .sidebar-brand {
+  position: relative !important;
+  display: flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 7px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 8px 4px 13px !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--line-soft) !important;
+  white-space: normal !important;
+}
+
+html[data-theme] .sidebar-brand .amp-logo {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+}
+
+html[data-theme] .sidebar-brand .amp-logo:hover {
+  transform: none;
+}
+
+html[data-theme] .sidebar-brand .logo-text {
+  color: var(--mut) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.56rem !important;
+  font-weight: var(--fw-bold) !important;
+  line-height: 1 !important;
+  letter-spacing: 0.1em !important;
+  text-transform: uppercase;
+}
+
+/* Keep the live indicator as a pin on the logo. It is the rail's second idle
+   cue, and the only one that says the socket is connected before the chat
+   dock has rendered. */
+html[data-theme] .sidebar-brand .brand-live {
+  position: absolute !important;
+  top: 13px !important;
+  right: 13px !important;
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  color: transparent !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
+  border: 0 !important;
+  border-radius: 50% !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html[data-theme] .sidebar-brand .brand-live > span {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  border-radius: 50%;
+  background: var(--grn);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--grn) 72%, transparent);
+  animation: prestige-online 2.4s ease-in-out infinite;
+}
+
+html[data-theme] .sidebar-nav-scroll {
+  display: flex !important;
+  flex: 1 1 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  min-height: 0 !important;
+  width: 100% !important;
+  padding: 2px 0 !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  scrollbar-width: none;
+}
+
+html[data-theme] .sidebar-nav-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+html[data-theme] .sidebar .nav-section {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 4px !important;
+  width: 100% !important;
+  padding: 0 !important;
+  border: 0 !important;
+}
+
+html[data-theme] .sidebar .nav-section-admin {
+  margin: 6px 0 0 !important;
+  padding-top: 12px !important;
+  border-top: 1px solid var(--line-soft) !important;
+}
+
+html[data-theme] .nav-section-rule {
+  display: none !important;
+}
+
+html[data-theme] .sidebar .nav-link {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 54px !important;
+  padding: 7px 2px !important;
+  border: 1px solid transparent !important;
+  border-radius: 11px !important;
+  color: var(--mut) !important;
+  font-size: 0.6rem !important;
+  font-weight: var(--fw-semi) !important;
+  line-height: 1.05 !important;
+  text-align: center !important;
+  white-space: normal !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+html[data-theme] .sidebar .nav-link svg {
+  width: 17px;
+  height: 17px;
+  color: currentColor !important;
+  filter: none !important;
+  transition: color var(--dur-1) var(--ease-1), transform var(--dur-2) var(--ease-spring) !important;
+}
+
+html[data-theme] .sidebar .nav-link .nav-label {
+  display: block !important;
+  max-width: 100%;
+  overflow: hidden;
+  color: inherit !important;
+  font-size: 0.58rem !important;
+  font-weight: var(--fw-semi) !important;
+  line-height: 1.05 !important;
+  letter-spacing: 0.01em;
+  text-overflow: ellipsis;
+  white-space: normal !important;
+}
+
+html[data-theme] .sidebar .nav-link:hover {
+  color: var(--txt) !important;
+  border-color: var(--line-soft) !important;
+  background: color-mix(in srgb, var(--txt) 6%, transparent) !important;
+  transform: translateY(-1px) !important;
+}
+
+html[data-theme] .sidebar .nav-link:hover svg {
+  color: var(--acc-bright) !important;
+  transform: translateY(-1px) !important;
+}
+
+html[data-theme] .sidebar .nav-link.active {
+  color: var(--txt) !important;
+  border-color: color-mix(in srgb, var(--acc) 30%, var(--line-soft)) !important;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--acc) 18%, transparent),
+      color-mix(in srgb, var(--acc) 8%, transparent)
+    ) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 9px 24px -18px var(--acc-glow) !important;
+  text-shadow: none !important;
+}
+
+html[data-theme] .sidebar .nav-link.active svg {
+  color: var(--acc-bright) !important;
+  filter: none !important;
+}
+
+html[data-theme] .sidebar .nav-link.active::after {
+  content: '';
+  position: absolute;
+  top: 11px;
+  right: auto;
+  bottom: 11px;
+  left: -10px;
+  width: 3px;
+  height: auto;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--acc-bright), var(--gold));
+  box-shadow: 0 0 12px var(--acc-glow);
+}
+
+html[data-theme] .sidebar-footer {
+  display: flex !important;
+  flex: 0 0 auto !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 5px !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 10px 0 0 !important;
+  border: 0 !important;
+  border-top: 1px solid var(--line-soft) !important;
+  background: transparent !important;
+}
+
+html[data-theme] .sidebar-footer .user-info {
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 5px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  padding: 6px 2px !important;
+  border: 1px solid transparent !important;
+  border-radius: 11px !important;
+}
+
+html[data-theme] .sidebar-footer .user-info:hover {
+  border-color: var(--line-soft) !important;
+  background: color-mix(in srgb, var(--txt) 6%, transparent) !important;
+  transform: none !important;
+}
+
+html[data-theme] .sidebar-footer .user-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  border-color: color-mix(in srgb, var(--acc) 42%, var(--line)) !important;
+}
+
+html[data-theme] .sidebar-footer .user-details {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  gap: 1px;
+}
+
+html[data-theme] .sidebar-footer .user-name {
+  display: block !important;
+  max-width: 72px !important;
+  overflow: hidden !important;
+  color: var(--txt) !important;
+  font-size: 0.55rem !important;
+  font-weight: var(--fw-semi) !important;
+  line-height: 1.1 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+html[data-theme] .sidebar-footer .user-handle,
+html[data-theme] .sidebar-footer .admin-badge {
+  display: none !important;
+}
+
+html[data-theme] .sidebar-footer .logout-btn {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 32px !important;
+  padding: 0 !important;
+  border-radius: 9px !important;
+}
+
+html[data-theme] .sidebar-footer .logout-label {
+  display: none !important;
+}
+
+/* ---- the floating command bar ------------------------------------------ */
+
+html[data-theme] .header,
+html[data-theme] .header-new {
+  top: var(--shell-gutter) !important;
+  min-height: 64px !important;
+  margin: var(--shell-gutter) 18px 20px !important;
+  padding: 10px 16px !important;
+  gap: 14px !important;
+  border: 1px solid var(--line-soft) !important;
+  border-radius: 14px !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 62%),
+    var(--theme-header) !important;
+  box-shadow:
+    0 22px 46px -34px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035) !important;
+  z-index: 900 !important;
+}
+
+html[data-theme] .page-content {
+  width: 100% !important;
+  padding: 0 22px 48px !important;
+}
+
+/* ---- the chat dock ------------------------------------------------------ */
+
+html[data-theme] .chat-column {
+  order: 2 !important;
+  position: sticky !important;
+  inset: 0 auto auto auto !important;
+  flex: 0 0 var(--shell-chat) !important;
+  width: var(--shell-chat) !important;
+  min-width: var(--shell-chat) !important;
+  max-width: var(--shell-chat) !important;
+  height: 100dvh !important;
+  padding: 16px 14px 16px 12px !important;
+  border: 0 !important;
+  border-left: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+  z-index: 800 !important;
+}
+
+html[data-theme] .chat-panel {
+  height: 100% !important;
+  border: 1px solid var(--line-soft) !important;
+  border-radius: 16px !important;
+  background:
+    radial-gradient(120% 42% at 50% 0%, color-mix(in srgb, var(--acc) 6%, transparent), transparent 74%),
+    var(--theme-chat) !important;
+  box-shadow:
+    0 24px 54px -38px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03) !important;
+  overflow: hidden !important;
+}
+
+html[data-theme] .chat-header {
+  min-height: 58px !important;
+  padding: 12px 14px !important;
+}
+
+html[data-theme] .chat-column .online-dot {
+  animation: prestige-online 2.2s ease-in-out infinite !important;
+}
+
+/* ---- drawer below the comfortable desktop width ------------------------ */
+
+@keyframes shell-drawer-in {
+  from { opacity: 0; transform: translateX(26px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@media (max-width: 1399px) {
+  html[data-theme] .chat-column {
+    position: fixed !important;
+    inset: 10px 10px 10px auto !important;
+    display: none !important;
+    width: min(340px, calc(100vw - 24px)) !important;
+    min-width: 0 !important;
+    max-width: calc(100vw - 24px) !important;
+    height: auto !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    z-index: 1600 !important;
+  }
+
+  html[data-theme] .chat-column.mobile-open {
+    display: flex !important;
+    animation: shell-drawer-in 0.2s var(--ease) both !important;
+  }
+
+  html[data-theme] .chat-column .chat-panel {
+    border-radius: 16px !important;
+  }
+
+  html[data-theme] .chat-backdrop.show {
+    display: block !important;
+    position: fixed !important;
+    inset: 0 !important;
+    z-index: 1400 !important;
+    background: rgba(2, 5, 10, 0.66) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  html[data-theme] .mobile-chat-fab {
+    display: flex !important;
+    left: calc(var(--shell-rail) + 16px);
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    z-index: 1500;
+  }
+}
+
+/* ---- phones: the rail becomes a bottom dock ---------------------------- */
+
+@media (max-width: 768px) {
+  html[data-theme] .layout-columns {
+    width: 100% !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom)) !important;
+  }
+
+  html[data-theme] .main-content {
+    min-height: 100dvh !important;
+  }
+
+  html[data-theme] .sidebar {
+    inset: auto 0 0 0 !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: calc(64px + env(safe-area-inset-bottom)) !important;
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom)) !important;
+    gap: 6px !important;
+    border: 0 !important;
+    border-top: 1px solid var(--line) !important;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--acc) 5%, transparent), transparent 52%),
+      var(--theme-nav) !important;
+    box-shadow:
+      0 -18px 42px -30px rgba(0, 0, 0, 0.85),
+      inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+    z-index: 1200 !important;
+  }
+
+  html[data-theme] .sidebar::after {
+    display: none !important;
+  }
+
+  html[data-theme] .sidebar-brand {
+    display: none !important;
+  }
+
+  html[data-theme] .sidebar-nav-scroll {
+    flex: 1 1 auto !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    width: auto !important;
+    height: 100% !important;
+    padding: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+  }
+
+  html[data-theme] .sidebar .nav-section {
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 2px !important;
+    width: auto !important;
+  }
+
+  html[data-theme] .sidebar .nav-section-admin {
+    margin: 0 0 0 4px !important;
+    padding: 0 0 0 6px !important;
+    border-top: 0 !important;
+    border-left: 1px solid var(--line-soft) !important;
+  }
+
+  html[data-theme] .sidebar .nav-link {
+    width: 54px !important;
+    min-width: 54px !important;
+    min-height: 50px !important;
+    padding: 5px 2px !important;
+    gap: 2px !important;
+  }
+
+  html[data-theme] .sidebar .nav-link .nav-label {
+    display: block !important;
+    font-size: 0.52rem !important;
+  }
+
+  html[data-theme] .sidebar .nav-link.active::after {
+    top: auto;
+    right: 10px;
+    bottom: -6px;
+    left: 10px;
+    width: auto;
+    height: 2px;
+    border-radius: 2px;
+  }
+
+  html[data-theme] .sidebar-footer {
+    flex: 0 0 auto !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    width: auto !important;
+    padding: 0 0 0 4px !important;
+    gap: 2px !important;
+    border-top: 0 !important;
+    border-left: 1px solid var(--line-soft) !important;
+  }
+
+  html[data-theme] .sidebar-footer .user-info {
+    width: 42px !important;
+    min-height: 42px !important;
+    padding: 3px !important;
+  }
+
+  html[data-theme] .sidebar-footer .user-details {
+    display: none !important;
+  }
+
+  html[data-theme] .sidebar-footer .user-avatar {
+    width: 30px !important;
+    height: 30px !important;
+  }
+
+  html[data-theme] .sidebar-footer .logout-btn {
+    width: 36px !important;
+    min-width: 36px !important;
+    height: 36px !important;
+  }
+
+  html[data-theme] .header,
+  html[data-theme] .header-new {
+    top: 8px !important;
+    min-height: 56px !important;
+    margin: 8px 8px 10px !important;
+    padding: 7px 9px !important;
+    gap: 6px !important;
+    border-radius: 13px !important;
+  }
+
+  html[data-theme] .page-content {
+    padding: 0 10px calc(46px + env(safe-area-inset-bottom)) !important;
+  }
+
+  html[data-theme] .chat-column {
+    inset: 8px 8px 8px auto !important;
+    width: min(340px, calc(100vw - 16px)) !important;
+    max-width: calc(100vw - 16px) !important;
+  }
+
+  html[data-theme] .chat-column .chat-panel {
+    border-radius: 14px !important;
+  }
+
+  html[data-theme] .mobile-chat-fab {
+    left: 12px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+  }
+}
+
+/* On a phone the command bar has too many controls for one row: the page
+   title, the inventory, the wallet and four utilities. Rather than clipping
+   the giveaway button off the right edge, the bar becomes a two-row grid -
+   title and utilities on top, the two value controls underneath. The
+   utilities keep their full touch size. */
+@media (max-width: 560px) {
+  html[data-theme] .header,
+  html[data-theme] .header-new {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'header-title header-actions'
+      'header-balance header-balance';
+    align-items: center !important;
+    column-gap: 6px !important;
+    row-gap: 6px !important;
+    height: auto !important;
+    min-height: 0 !important;
+  }
+
+  html[data-theme] .header-left {
+    grid-area: header-title;
+    flex: 0 1 auto !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  html[data-theme] .header-left h1,
+  html[data-theme] .header-left h2 {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  html[data-theme] .header-center {
+    grid-area: header-balance;
+    justify-content: flex-start !important;
+    flex-wrap: nowrap !important;
+    min-width: 0 !important;
+    gap: 5px !important;
+  }
+
+  html[data-theme] .header-right {
+    grid-area: header-actions;
+    align-self: center !important;
+    justify-content: flex-end !important;
+    margin-left: 0 !important;
+    gap: 3px !important;
+  }
+
+  html[data-theme] .notification-dropdown {
+    position: fixed !important;
+    top: 108px !important;
+    right: 12px !important;
+    left: 12px !important;
+    width: auto !important;
+    max-width: none !important;
+    max-height: calc(100dvh - 196px) !important;
+  }
+}
+
+/* The new rail is icon-led, so the old horizontal-strip-only display rules
+   must not strip its labels back off between 769px and 1400px. */
+@media (min-width: 769px) and (max-width: 1399px) {
+  html[data-theme] .sidebar .nav-label {
+    display: block !important;
+  }
+}
+
+/* ============================================================================
    23. Reduced motion
    ========================================================================= */
 
@@ -2670,6 +3373,10 @@ html[data-theme] .ipm-header {
   }
 
   html[data-theme] .page-content {
+    animation: none !important;
+  }
+
+  html[data-theme] .chat-column.mobile-open {
     animation: none !important;
   }
 
