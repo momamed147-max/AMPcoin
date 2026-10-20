@@ -108,7 +108,9 @@ const VALUE_TOLERANCE = 0.05;
  *   1. The HOUSE BOT joins as the dealer, so the human creator plays.
  *   2. Another PLAYER joins as the dealer, so the creator still plays.
  *
- * In both cases the person who posted the bet gets the Hit and Stand buttons.
+ * The creator is always the player when their bet is filled. That is the
+ * person who posted the wager, and the one who gets Hit and Stand. The hand
+ * never resolves on its own after the deal.
  *
  * The player hits or stands. On a stand the dealer turns over the hole card and
  * plays to the rules; a bust ends the hand immediately. A natural on either
@@ -177,10 +179,10 @@ const HOUSE_EDGE = 0.10;
 /**
  * Which seat is the active player and which is the dealer.
  *
- * The creator is the PLAYER. The second seat - a human or the house bot -
- * takes the dealer role, so the person who posted the bet is the one pressing
- * Hit and Stand. `playerSeatKey` is stored on the table, and older tables
- * (which had no field) keep the old creator-deals shape.
+ * The creator is always the player: they posted the wager, and they get the Hit
+ * and Stand buttons. The second seat - a human joiner or the house bot - deals.
+ * `playerSeatKey` records the result, and older tables (which had no field)
+ * keep the old creator-deals shape.
  */
 function playerIsCreator(table) {
   return !!table && table.playerSeatKey === 'creator';
@@ -244,8 +246,8 @@ function publicTable(t, viewerId, reveal) {
       : [];
 
   // The two seats are named explicitly so the client never has to infer a role
-  // from who created the bet. The second seat deals whether it is a human or
-  // the house bot, leaving the creator in the player seat.
+  // from who created the bet. The creator plays and the second seat deals,
+  // whether that second seat is a human or the house bot.
   const dealerSeat = {
     id: dealer.id,
     username: dealer.username,
@@ -649,8 +651,8 @@ function removeItemUnits(userId, itemId, quantity) {
 /**
  * Seat the second person and deal the hand. Both the human join and the house
  * bot use this exact function, so there is one join path on the server. `role`
- * says whether the newcomer plays or deals. Both currently deal, which leaves
- * the bet creator in the player seat with real Hit and Stand buttons.
+ * says whether the newcomer plays or deals. Both a human joiner and the bot
+ * deal, leaving the bet creator in the player seat with Hit and Stand.
  */
 function seatOpponent(table, seat, role) {
   table.opponentId = seat.id;
@@ -801,9 +803,8 @@ router.post('/tables', authenticateToken, (req, res) => {
       creatorAvatar: user.avatar || '',
       creatorItems: wagerStacks,
       creatorValue: value,
-      // Until the second seat arrives the creator is shown as the player, so
-      // "Bot" reads as "deal to me". A human joiner flips the creator to the
-      // dealer seat; the bot takes the dealer seat and leaves the creator here.
+      // The creator is always the player. Whoever fills the second seat - a
+      // human or the house bot - deals, so "Bot" reads as "deal to me".
       playerStockOwner: userId,
       dealerStockOwner: null,
       playerSeatKey: 'creator',
@@ -976,8 +977,8 @@ router.post('/tables/:id/bot-join', authenticateToken, (req, res) => {
   }
 });
 
-// The seated player hits. Against the house bot that is the human creator;
-// against a human joiner it is the joiner.
+// The seated player hits. The bet creator always occupies that seat, whether
+// the second seat was filled by the house bot or another human.
 router.post('/tables/:id/hit', authenticateToken, (req, res) => {
   try {
     const userId = req.user.userId;
@@ -1094,10 +1095,10 @@ function settleTable(table, result) {
   table.dealerValue = calculateHandValue(table.dealerHand);
 
 
-  // The two seats, resolved ONCE and used by every branch below. A human
-  // joiner plays against the creator; the house bot deals and the creator
-  // plays. seatInfo owns that mapping so payouts cannot read the seats twice
-  // under slightly different assumptions.
+  // The two seats, resolved ONCE and used by every branch below. The creator
+  // plays and the second seat - human or house bot - deals. seatInfo owns that
+  // mapping so payouts cannot read the seats twice under slightly different
+  // assumptions.
   const { player, dealer } = seatInfo(table);
   const seats = {
     playerId: player.id,

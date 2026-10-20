@@ -326,6 +326,99 @@ const INVENTORY = [
       `every rendered class is defined in the CSS${undefinedClasses.length ? ` (missing: ${undefinedClasses.join(', ')})` : ''}`);
   }
 
+  section('a live bot hand gives the player real Hit and Stand buttons');
+  {
+    const live = {
+      id: 'bj-live',
+      status: 'in_progress',
+      creatorId: TEST_USER.id,
+      creatorUsername: TEST_USER.username,
+      creatorItems: INVENTORY.slice(0, 1),
+      creatorValue: 10,
+      opponentId: 'bot-house',
+      opponentUsername: 'House Bot',
+      opponentItems: INVENTORY.slice(1, 2),
+      opponentValue: 10,
+      potValue: 20,
+      playerSeat: { id: TEST_USER.id, username: TEST_USER.username, avatar: '', isBot: false },
+      dealerSeat: { id: 'bot-house', username: 'House Bot', avatar: '', isBot: true },
+      viewerIsPlayer: true,
+      viewerIsDealer: false,
+      playerHand: [
+        { rank: '10', suit: 'hearts', value: 10 },
+        { rank: '7', suit: 'clubs', value: 7 }
+      ],
+      playerValue: 17,
+      dealerHand: [
+        { rank: '9', suit: 'diamonds', value: 9 },
+        { rank: 'hidden', suit: 'hidden', value: 0 }
+      ],
+      dealerValue: 9,
+      playerItems: INVENTORY.slice(0, 1),
+      dealerItems: INVENTORY.slice(1, 2),
+      result: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    const hit = {
+      ...live,
+      playerHand: [...live.playerHand, { rank: '3', suit: 'spades', value: 3 }],
+      playerValue: 20
+    };
+    const stood = {
+      ...hit,
+      status: 'completed',
+      result: 'win',
+      profit: 8,
+      dealerHand: [
+        { rank: '9', suit: 'diamonds', value: 9 },
+        { rank: '8', suit: 'spades', value: 8 }
+      ],
+      dealerValue: 17
+    };
+
+    fetchQueue.length = 0;
+    fetchLog.length = 0;
+    fetchQueue.push({ body: { tables: [live], myTable: live } });
+    queueInventory();
+
+    await render(React.createElement(
+      MemoryRouter,
+      null,
+      React.createElement(
+        AuthContext.Provider,
+        { value: { user: TEST_USER, loading: false } },
+        React.createElement(BlackjackPage, { socket: fakeSocket })
+      )
+    ));
+
+    const yourBet = $$('.cf-topbar-btn').find((b) => /Your bet/i.test(b.textContent));
+    ok(!!yourBet, 'the in-progress hand is offered in the topbar');
+    if (yourBet) await click(yourBet);
+
+    const actions = $$('.bj-action-row button').map((b) => b.textContent.trim());
+    ok(actions.length === 2 && /Hit/.test(actions[0]) && /Stand/.test(actions[1]),
+      `the player gets Hit and Stand, not an automatic result (${actions.join(' | ')})`);
+    ok(!/Play the bot/i.test($('.bj-view-modal')?.textContent || ''),
+      'there is no bot-play fallback button');
+
+    const hitBtn = $$('.bj-action-row button')[0];
+    fetchQueue.push({ body: hit });
+    if (hitBtn) await click(hitBtn);
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    ok(fetchLog.some((u) => /\/bj-live\/hit$/.test(u)), 'Hit calls the hit endpoint');
+    ok(/20/.test($$('.bj-total')[1]?.textContent || ''),
+      `the hit card is rendered on the player hand (${$$('.bj-total').map((n) => n.textContent.trim()).join(' / ')})`);
+
+    const standBtn = $$('.bj-action-row button')[1];
+    fetchQueue.push({ body: stood });
+    if (standBtn) await click(standBtn);
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    ok(fetchLog.some((u) => /\/bj-live\/stand$/.test(u)), 'Stand calls the stand endpoint');
+    ok(/You beat the dealer/i.test($('.bj-result')?.textContent || ''),
+      'the hand settles only after Stand');
+  }
+
   section('the blackjack create modal uses the shared coinflip selector');
   {
     const bet = $$('.cf-topbar-btn').find((b) => /Bet Items/i.test(b.textContent));

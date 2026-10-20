@@ -82,15 +82,15 @@ async function botHand(human, item, qty = 2) {
 
   section('blackjack: the creator plays, the joiner deals');
   {
-    const player = await mk(0, 'd');
-    const dealer = await mk(5, 'j');
+    const player = await mk(0, 'p');
+    const dealer = await mk(5, 'd');
     const pInv = await inv(player);
     const dInv = await inv(dealer);
     const t = await (await fetch(`${API}/api/blackjack/tables`, {
       method: 'POST', headers: auth(player.token),
       body: JSON.stringify({ selectedItems: [{ itemId: pInv[0].itemId, quantity: 2 }] })
     })).json();
-    ok(t.playerSeat?.id === player.user.id, 'the creator is the player');
+    ok(t.playerSeat?.id === player.user.id, 'the creator is the player while waiting');
     ok(t.dealerSeat?.id === null, 'the dealer seat is empty until someone joins');
     ok(t.minJoinValue === Math.floor(t.creatorValue * 0.95)
       && t.maxJoinValue === Math.ceil(t.creatorValue * 1.05),
@@ -127,7 +127,10 @@ async function botHand(human, item, qty = 2) {
 
     // The joiner is the dealer, so they see both cards. The creator, who has
     // to hit or stand, must only see the dealer's upcard.
-    ok(joined.dealerHand[1]?.rank !== 'hidden' || joined.status === 'completed',
+    const dealerView = await (await fetch(`${API}/api/blackjack/tables/${t.id}`, {
+      headers: auth(dealer.token)
+    })).json();
+    ok(dealerView.dealerHand[1]?.rank !== 'hidden' || joined.status === 'completed',
       'the dealer sees the hole card');
     const playerView = await (await fetch(`${API}/api/blackjack/tables/${t.id}`, {
       headers: auth(player.token)
@@ -139,13 +142,51 @@ async function botHand(human, item, qty = 2) {
       method: 'POST', headers: auth(player.token), body: '{}'
     });
     ok(playerHit.status === 200 || joined.status === 'completed',
-      'the player can hit their own hand');
+      'the creator can hit their own hand');
 
     const wrongHit = await fetch(`${API}/api/blackjack/tables/${t.id}/hit`, {
       method: 'POST', headers: auth(dealer.token), body: '{}'
     });
     ok(wrongHit.status === 403 || joined.status === 'completed',
       'the dealer cannot hit for the player');
+  }
+
+  section('blackjack: the bot deals and waits for the player');
+  {
+    const player = await mk(0, 'b');
+    const pInv = await inv(player);
+    let live = 0;
+    let autoPlayed = 0;
+
+    for (let n = 0; n < 10; n++) {
+      const item = pInv[n % pInv.length];
+      const t = await (await fetch(`${API}/api/blackjack/tables`, {
+        method: 'POST', headers: auth(player.token),
+        body: JSON.stringify({ selectedItems: [{ itemId: item.itemId, quantity: 1 }] })
+      })).json();
+      if (!t.id) continue;
+
+      const seated = await (await fetch(`${API}/api/blackjack/tables/${t.id}/bot-join`, {
+        method: 'POST', headers: auth(player.token), body: '{}'
+      })).json();
+      if (seated.message) continue;
+
+      if (seated.status === 'in_progress') {
+        live++;
+        ok(seated.playerSeat?.id === player.user.id && seated.dealerSeat?.isBot === true,
+          'the creator is the player and the bot is the dealer');
+        // Clean up the live hand so it cannot leak into another test account.
+        await fetch(`${API}/api/blackjack/tables/${t.id}/stand`, {
+          method: 'POST', headers: auth(player.token), body: '{}'
+        });
+      } else if (!['blackjack', 'dealer_blackjack', 'push'].includes(seated.result)) {
+        // A completed non-natural hand means the server played for the player.
+        autoPlayed++;
+      }
+    }
+
+    ok(live > 0, `the bot leaves a normal hand in progress for the player (${live} live)`);
+    ok(autoPlayed === 0, `the bot never plays the player's hand for them (${autoPlayed} auto-played)`);
   }
 
   section('blackjack: the pot is conserved and never resized');

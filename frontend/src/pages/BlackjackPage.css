@@ -210,6 +210,22 @@
 
 /* ── Footer actions ───────────────────────────────────────────────────────── */
 .bj-view-footer { align-items: center; }
+.bj-your-turn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid color-mix(in srgb, var(--acc) 45%, var(--line));
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--acc) 11%, var(--panel));
+  color: var(--txt);
+  font-size: .76rem;
+  font-weight: 700;
+}
+
+.bj-your-turn svg { color: var(--acc-bright); }
+
 .bj-action-row { display: flex; gap: 8px; margin-left: auto; }
 .bj-action-row .cf-join-action-btn,
 .bj-action-row .cf-view-join-btn { min-height: 34px; }

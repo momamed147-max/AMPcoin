@@ -39,7 +39,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
   const joinHi = isJoin ? Number(match?.maxJoinValue || Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
   const joinTarget = isJoin ? Number(match?.creatorValue || 0) : 0;
   const joinName = isBlackjackJoin
-    ? (match?.creatorUsername || 'Player')
+    ? (match?.creatorUsername || 'Dealer')
     : (match?.playerOne?.displayName || match?.playerOne?.username || 'Player');
   const joinAvatar = isBlackjackJoin
     ? (match?.creatorAvatar || '/default-avatar.svg')
@@ -344,7 +344,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                     <span className="cf-join-vs-name">{joinName}</span>
                     <span className="cf-join-vs-side cf-rps-side-badge">
                       <Icon name={isBlackjackJoin ? 'card' : 'rpsScissors'} size={11} /> {joinTarget.toLocaleString()} AMP
-                      {isBlackjackJoin ? ' · player' : ''}
+                      {isBlackjackJoin ? ' · dealer' : ''}
                     </span>
                   </div>
                 </div>

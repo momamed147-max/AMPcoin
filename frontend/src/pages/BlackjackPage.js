@@ -409,10 +409,13 @@ const BlackjackPage = ({ socket }) => {
     }
   }, [busy, showPopup]);
 
-  const hit = async () => {
-    if (!myBet) return;
+  // Act on the hand that is actually open, not just the cached myBet. The
+  // view can come from the shared lobby list, and a stale/empty myBet must not
+  // turn Hit or Stand into a dead button.
+  const hit = async (target = myBet) => {
+    if (!target?.id) return;
     setSeq((s) => s + 1);
-    const d = await request(`/${myBet.id}/hit`, {}, 'hit');
+    const d = await request(`/${target.id}/hit`, {}, 'hit');
     if (d) {
       setMyBet(d);
       setViewId(d.id);
@@ -425,10 +428,10 @@ const BlackjackPage = ({ socket }) => {
     }
   };
 
-  const stand = async () => {
-    if (!myBet) return;
+  const stand = async (target = myBet) => {
+    if (!target?.id) return;
     setSeq((s) => s + 1);
-    const d = await request(`/${myBet.id}/stand`, {}, 'stand');
+    const d = await request(`/${target.id}/stand`, {}, 'stand');
     if (!d) return;
     setMyBet(d);
     setViewId(d.id);
@@ -628,6 +631,13 @@ const BlackjackPage = ({ socket }) => {
                   </div>
                 </div>
 
+                {canAct && (
+                  <div className="bj-your-turn" role="status">
+                    <Icon name="target" size={14} />
+                    <span>Your turn — press Hit or Stand. The hand will not play itself.</span>
+                  </div>
+                )}
+
                 <div className="bj-hand-board">
                   <Hand
                     seq={seq}
@@ -717,10 +727,10 @@ const BlackjackPage = ({ socket }) => {
 
                   {canAct && (
                     <div className="cf-view-own-row bj-action-row">
-                      <button className="cf-join-action-btn" onClick={hit} disabled={busy === 'hit'}>
+                      <button className="cf-join-action-btn" onClick={() => hit(viewBet)} disabled={busy === 'hit'}>
                         {busy === 'hit' ? 'Hitting...' : 'Hit'}
                       </button>
-                      <button className="cf-view-join-btn" onClick={stand} disabled={busy === 'stand'}>
+                      <button className="cf-view-join-btn" onClick={() => stand(viewBet)} disabled={busy === 'stand'}>
                         {busy === 'stand' ? 'Standing...' : 'Stand'}
                       </button>
                     </div>
