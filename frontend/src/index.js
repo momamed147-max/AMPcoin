@@ -40,6 +40,12 @@ import './ui/ui.css';
 import './ui/shell.css';
 import './ui/v3.css';
 import './ui/components.css';
+// 6. ui/prestige.css The premium visual and motion layer. Last, so it can
+//                     deepen the shared shell and primitives without touching
+//                     markup or page logic. Page chunks still load after it,
+//                     which is why page-specific overrides repeat their
+//                     selectors there rather than being fought from here.
+import './ui/prestige.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

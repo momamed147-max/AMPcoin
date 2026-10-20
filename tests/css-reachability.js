@@ -213,5 +213,67 @@ console.log('\n=== the shared shell is imported by every page that renders it ==
   }
 }
 
+/* Every file under a directory, skipping build output. */
+function allFiles(dir) {
+  const out = [];
+  (function walk(d) {
+    for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+      if (e.name === 'node_modules' || e.name === 'build') continue;
+      const p = path.join(d, e.name);
+      if (e.isDirectory()) walk(p);
+      else out.push(p);
+    }
+  })(dir);
+  return out;
+}
+
+/* Every button carries a class.
+ *
+ * A <button> with no className is styled by nothing. It inherits its parent's
+ * typography and padding and renders at whatever height that happens to
+ * produce - in this codebase, nine of them came out between 22px and 30px,
+ * sitting inside notices and table cells never written with a bare button in
+ * mind. Two were the only route back to a bet the player had already started.
+ *
+ * Not a styling preference: an unclassed button is unreachable by every shared
+ * rule in the product. No focus ring, no touch-target floor, no disabled state.
+ * It is a control no stylesheet can reach.
+ */
+{
+  const unclassed = [];
+  for (const file of allFiles(SRC)) {
+    if (!file.endsWith('.js')) continue;
+    const rel = path.relative(SRC, file).replace(/\\/g, '/');
+    const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+
+    lines.forEach((line, i) => {
+      const t = line.trim();
+      if (t.startsWith('//') || t.startsWith('*') || t.startsWith('{/*')) return;
+      if (!t.includes('<button')) return;
+
+      /* A button tag can wrap across several lines, with className on the next
+       * one - which is most of them in ChatPanel and CoinflipGameCard. Testing
+       * a single line reported all of those as unclassed, so the opening tag is
+       * reassembled first: from the "<button" to the ">" that closes it. */
+      let tag = t;
+      let j = i;
+      while (!tag.includes('>') && j + 1 < lines.length && j - i < 8) {
+        j++;
+        tag += ` ${lines[j].trim()}`;
+      }
+      if (!/<button(?![^>]*className)([^>]*?)>/.test(tag)) return;
+      if (/type="submit"/.test(tag)) return;
+      unclassed.push(`${rel}:${i + 1}  ${t.slice(0, 50)}`);
+    });
+  }
+  ok(unclassed.length === 0,
+    'every button in the markup carries a className',
+    unclassed.length
+      ? 'an unclassed button is styled by nothing: no focus ring, no touch\n' +
+        '        target, no disabled state\n        ' +
+        unclassed.slice(0, 10).join('\n        ')
+      : '');
+}
+
 console.log(`\n${pass} passed, ${fail} failed` + (deadMarkupTotal ? ` (${deadMarkupTotal} dead class names in markup)` : ''));
 process.exit(fail ? 1 : 0);

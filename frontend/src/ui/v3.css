@@ -87,18 +87,9 @@
 .settings-trigger,
 .sound-toggle,
 .notification-icon,
-.mobile-chat-fab {
-  width: 40px;
-  height: 40px;
-  border-radius: var(--r-md);
-  background: var(--bg2);
-  border: 1px solid var(--line);
-  color: var(--mut);
-  transition: color var(--dur-1) var(--ease-1),
-              background var(--dur-1) var(--ease-1),
-              border-color var(--dur-1) var(--ease-1),
-              transform var(--dur-1) var(--ease-1);
-}
+/* Placement is defined once, in ui/components.css. This rule declared
+     it a fifth time and won by load order, which is how the chat toggle came
+     to sit on top of every right-aligned primary action in the product. */
 .settings-trigger:hover,
 .sound-toggle:hover,
 .notification-icon:hover {
@@ -157,7 +148,7 @@
   border: 1px solid color-mix(in srgb, var(--acc) 34%, transparent);
   color: var(--acc-300);
 }
-.header-left h2 {
+.header-left h1, .header-left h2 {
   font-size: var(--fs-lg);
   font-weight: 800;
   letter-spacing: -0.02em;

@@ -14,7 +14,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: rgba(47, 129, 247, .32); color: #fff; }
+::selection { background: rgba(12, 201, 163, .32); color: #fff; }
 
 :focus-visible {
   outline: 2px solid var(--acc);
@@ -178,7 +178,7 @@ body {
 .sidebar .nav-link.active {
   background: var(--acc-soft) !important;
   color: #7aa7ff !important;
-  border-color: rgba(47,129,247,.22) !important;
+  border-color: rgba(12,201,163,.22) !important;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04), inset 0 -2px 0 var(--acc) !important;
 }
 .sidebar .nav-link.nav-disabled { opacity: 0.45 !important; cursor: not-allowed !important; }
@@ -308,7 +308,7 @@ body {
   box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
   white-space: nowrap;
 }
-.header-wallet-btn:hover { background: #3b8bff; }
+.header-wallet-btn:hover { background: #67ffd6; }
 
 .header-gw-btn {
   display: inline-flex;
@@ -505,7 +505,7 @@ body {
   border: 1px solid var(--line); background: var(--panel2);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
-.chat-message-row:hover .chat-avatar { border-color: var(--acc); box-shadow: 0 0 10px rgba(47,129,247,.25); }
+.chat-message-row:hover .chat-avatar { border-color: var(--acc); box-shadow: 0 0 10px rgba(12,201,163,.25); }
 .chat-bubble { flex: 1; min-width: 0; max-width: 85%; }
 .chat-bubble.own, .chat-bubble.other { flex: 1; min-width: 0; max-width: 85%; }
 .chat-message-row.own-row .chat-bubble { text-align: right; }
@@ -533,7 +533,7 @@ body {
 }
 .chat-input-wrap:focus-within {
   border-color: var(--acc);
-  box-shadow: 0 0 0 3px rgba(47,129,247,.15), inset 0 1px 0 rgba(255,255,255,.03);
+  box-shadow: 0 0 0 3px rgba(12,201,163,.15), inset 0 1px 0 rgba(255,255,255,.03);
 }
 .chat-input {
   flex: 1; background: none; border: none; color: var(--txt);
@@ -548,7 +548,7 @@ body {
   transition: background 0.12s, color 0.12s; flex-shrink: 0;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
 }
-.send-button:hover:not(:disabled) { background: #18202e; color: var(--acc); border-color: rgba(47,129,247,.3); }
+.send-button:hover:not(:disabled) { background: #0f211c; color: var(--acc); border-color: rgba(12,201,163,.3); }
 .send-button:disabled { opacity: 0.4; cursor: not-allowed; }
 .send-icon { font-size: 0.85rem; }
 .send-text { font-size: 0.72rem; font-weight: 700; }
@@ -708,7 +708,7 @@ body {
 }
 .badge-legendary { background: rgba(210,153,34,.12); color: var(--gold); border-color: rgba(210,153,34,.25); }
 .badge-ultra_rare { background: rgba(224,49,179,.1); color: #e060c8; border-color: rgba(224,49,179,.25); }
-.badge-rare { background: var(--acc-soft); color: var(--acc); border-color: rgba(47,129,247,.25); }
+.badge-rare { background: var(--acc-soft); color: var(--acc); border-color: rgba(12,201,163,.25); }
 .badge-uncommon { background: rgba(63,185,80,.1); color: var(--grn); border-color: rgba(63,185,80,.25); }
 .badge-common { background: rgba(139,150,168,.1); color: var(--mut); border-color: var(--line); }
 
@@ -741,7 +741,7 @@ body {
 }
 .btn:hover { border-color: #2c3a52; }
 .btn-primary { background: var(--acc); border-color: rgba(255,255,255,.08); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.14); }
-.btn-primary:hover { background: #3b8bff; border-color: rgba(255,255,255,.08); }
+.btn-primary:hover { background: #67ffd6; border-color: rgba(255,255,255,.08); }
 
 .modal-close-btn {
   background: transparent; border: 1px solid transparent; color: var(--mut);
@@ -819,9 +819,9 @@ body {
 @keyframes chat-in { from { opacity: 0; transform: translateX(-6px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes chat-drawer-in { from { transform: translateX(-24px); opacity: 0.5; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fab-pulse {
-  0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 0 0 rgba(47,129,247,.45); }
-  70% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 0 12px rgba(47,129,247,0); }
-  100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 0 0 rgba(47,129,247,0); }
+  0% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 0 0 rgba(12,201,163,.45); }
+  70% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 0 12px rgba(12,201,163,0); }
+  100% { box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 0 0 0 rgba(12,201,163,0); }
 }
 .mobile-chat-fab { animation: fab-pulse 2.4s infinite; }
 @keyframes notif-in { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
@@ -829,7 +829,7 @@ body {
 .jp-wheel { position: relative; }
 .jp-wheel::after {
   content: ''; position: absolute; inset: -7px; border-radius: 50%;
-  border: 2px dashed rgba(47,129,247,.3); animation: jp-ring-spin 24s linear infinite; pointer-events: none;
+  border: 2px dashed rgba(12,201,163,.3); animation: jp-ring-spin 24s linear infinite; pointer-events: none;
 }
 .jp-player-card, .jp-history-item { transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s; }
 .jp-player-card:hover, .jp-history-item:hover { transform: translateY(-1px); }
@@ -857,13 +857,9 @@ body {
     display: block; position: fixed; top: 56px; left: 0; right: 0; bottom: 0;
     background: rgba(3,5,9,.62); z-index: 1400;
   }
-  .mobile-chat-fab {
-    display: flex !important; align-items: center; justify-content: center;
-    position: fixed; right: 16px; bottom: 16px; width: 52px; height: 52px;
-    border-radius: 50%; border: 1px solid rgba(255,255,255,.1);
-    background: var(--acc); color: #fff; font-size: 1.3rem; cursor: pointer; z-index: 1600;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
-  }
+  /* Placement is defined once, in ui/components.css. This rule declared
+     it a fifth time and won by load order, which is how the chat toggle came
+     to sit on top of every right-aligned primary action in the product. */
 }
 
 /* ─── Mobile (≤768px) ─── */
@@ -892,14 +888,9 @@ body {
     display: block; position: fixed; top: 48px; left: 0; right: 0; bottom: 0;
     background: rgba(3,5,9,.62); z-index: 1400;
   }
-  .mobile-chat-fab {
-    display: flex !important; align-items: center; justify-content: center;
-    position: fixed; right: 16px; bottom: 16px; width: 52px; height: 52px;
-    border-radius: 50%; border: 1px solid rgba(255,255,255,.1);
-    background: var(--acc); color: #fff; font-size: 1.3rem; cursor: pointer; z-index: 1600;
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
-    transition: transform 0.15s;
-  }
+  /* Placement is defined once, in ui/components.css. This rule declared
+     it a fifth time and won by load order, which is how the chat toggle came
+     to sit on top of every right-aligned primary action in the product. */
   .mobile-chat-fab:active { transform: scale(0.92); }
   .wallet-modal, .wm-modal {
     width: 100% !important; max-width: 100% !important;
@@ -910,4 +901,31 @@ body {
     position: fixed !important; top: 52px !important; right: 8px !important; left: 8px !important; width: auto !important;
   }
   .inventory-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important; }
+}
+
+/* ============================================================================
+   Touch targets for the header's icon controls
+   ----------------------------------------------------------------------------
+   38px squares, in the strip a thumb reaches for most. Fixed here rather than
+   in the shared @media (pointer: coarse) block because App.css and
+   ui-polish.css are chunk stylesheets: webpack injects them after the whole
+   main bundle, so a same-specificity rule in ui/components.css loses to them.
+   ========================================================================= */
+
+@media (pointer: coarse) {
+  .sound-toggle,
+  .notification-icon,
+  .header-gw-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  /* The giveaway control carries a text label beside its icon, so it is sized
+     by that rather than forced square. */
+  .header-gw-btn:has(.header-gw-label) {
+    width: auto;
+    min-width: 44px;
+    padding-inline: 14px;
+  }
 }

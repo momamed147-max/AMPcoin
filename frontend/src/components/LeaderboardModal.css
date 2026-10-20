@@ -12,7 +12,7 @@
   border: 1px solid var(--line);
   border-radius: 18px;
   background:
-    radial-gradient(520px 180px at 50% 0%, rgba(76, 141, 255, 0.1), transparent 72%),
+    radial-gradient(520px 180px at 50% 0%, rgba(12, 201, 163, 0.1), transparent 72%),
     var(--panel);
   box-shadow: 0 30px 90px rgba(0, 0, 0, 0.58);
   animation: leaderboard-enter 0.22s ease-out both;
@@ -115,7 +115,7 @@
 }
 
 .leaderboard-modal .table tbody tr:hover {
-  background: rgba(76, 141, 255, 0.045);
+  background: rgba(12, 201, 163, 0.045);
 }
 
 .rank-badge {

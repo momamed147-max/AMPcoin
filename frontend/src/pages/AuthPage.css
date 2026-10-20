@@ -48,6 +48,15 @@
   padding: 0;
 }
 
+/* The shell reserves the nav's height even on a screen that has no nav, which
+   left a 64px band of the page behind the page across the top of the login
+   screen - invisible while everything was flat navy, a hard seam the moment
+   the page behind it had any light in it. The auth screen is the whole
+   viewport and reserves nothing. */
+.layout-columns:has(.auth-page) {
+  margin-top: 0 !important;
+}
+
 .auth-page {
   position: relative;
   display: grid;
@@ -69,6 +78,36 @@
     linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 52%);
   background-attachment: fixed;
   isolation: isolate;
+}
+
+/* The room behind the card.
+
+   The page used to be one static wash. A product's first screen is the one
+   place a slow, quiet movement is worth its cost: it says the site is alive
+   before anything has been clicked, and it is the only ornament on a screen
+   with nothing else on it. Pre-blurred colour fields on transform only, same
+   as the ambient layer behind the app shell, so the compositor carries it and
+   the main thread stays idle. */
+.auth-page::before {
+  content: '';
+  position: fixed;
+  inset: -22%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(36% 40% at 26% 30%, color-mix(in srgb, var(--acc) 30%, transparent), transparent 68%),
+    radial-gradient(28% 32% at 74% 22%, color-mix(in srgb, var(--gold) 19%, transparent), transparent 72%),
+    radial-gradient(32% 32% at 56% 84%, rgba(8, 155, 126, 0.16), transparent 74%);
+  filter: blur(54px);
+  opacity: 0.8;
+  transform-origin: 50% 46%;
+  animation: auth-aurora 30s var(--ease-soft) infinite alternate;
+  will-change: transform, opacity;
+}
+
+@keyframes auth-aurora {
+  0% { transform: rotate(-3deg) scale(1) translate3d(-1.5%, 0, 0); opacity: 0.7; }
+  100% { transform: rotate(3deg) scale(1.07) translate3d(1.5%, -1.5%, 0); opacity: 0.9; }
 }
 
 /* A hairline horizon far below the card. It gives the lower third of a tall
@@ -104,12 +143,30 @@
   );
   border: 1px solid var(--line-strong);
   border-radius: var(--r-2xl);
-  box-shadow: var(--elev-4), var(--inset-top);
+  box-shadow:
+    var(--elev-4),
+    var(--inset-top),
+    0 1px 0 rgba(255, 255, 255, 0.03),
+    0 40px 110px -58px var(--acc-glow);
   animation: auth-card-in var(--dur-4) var(--ease-3) both;
 }
 
+/* The lit top lip. Every important panel in the product has one; on the login
+   card it is the difference between a box and an object. */
+.auth-card::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: 16%;
+  right: 16%;
+  height: 1px;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--acc-bright) 72%, transparent), transparent);
+  opacity: 0.9;
+}
+
 @keyframes auth-card-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(14px) scale(0.985); }
   to   { opacity: 1; transform: none; }
 }
 
@@ -133,6 +190,19 @@
   color: var(--txt);
 }
 
+/* The wordmark keeps its mark, and its letters pick up the light. A solid
+   white wordmark beside a gradient one-half of a lockup always lost; this way
+   the two belong to the same object. */
+.auth-logo .logo-text,
+.auth-logo-text {
+  background: linear-gradient(118deg, #ffffff 4%, #d8fff4 42%, var(--acc-bright) 82%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: var(--acc-bright);
+  filter: drop-shadow(0 4px 18px color-mix(in srgb, var(--acc) 24%, transparent));
+}
+
 .auth-title {
   margin: 0 0 var(--sp-2);
   text-align: center;
@@ -141,6 +211,12 @@
   font-weight: var(--fw-semi);
   letter-spacing: var(--tracking-tight);
   color: var(--txt);
+  /* Headings on the one screen with no other content get the accent ramp. It
+     is the only heading on the page, so it can carry the attention. */
+  background: linear-gradient(180deg, #ffffff 0%, #d8fff4 60%, color-mix(in srgb, var(--acc-bright) 74%, var(--gold)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .auth-sub {
@@ -216,9 +292,17 @@
   color: var(--acc-bright);
 }
 .auth-progress-step.is-current .auth-progress-dot {
-  background: var(--acc);
-  border-color: var(--acc);
-  box-shadow: 0 0 0 3px var(--acc-soft);
+  background: var(--acc-bright);
+  border-color: var(--acc-bright);
+  box-shadow: 0 0 0 3px var(--acc-soft), 0 0 14px color-mix(in srgb, var(--acc) 70%, transparent);
+  animation: auth-dot-pulse 2.6s var(--ease-soft) infinite;
+}
+
+/* A slow breath from the dot already on screen. It is the only thing on the
+   card that says "here", and it reads as a heartbeat rather than a spinner. */
+@keyframes auth-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px var(--acc-soft), 0 0 12px color-mix(in srgb, var(--acc) 55%, transparent); }
+  50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--acc) 8%, transparent), 0 0 20px color-mix(in srgb, var(--acc) 80%, transparent); }
 }
 
 .auth-progress-step.is-done {
@@ -291,17 +375,21 @@
 .auth-input {
   display: block;
   width: 100%;
-  min-height: 42px;
+  min-height: 46px;
   padding: 0 var(--sp-4);
-  background-color: var(--bg2);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.16), transparent 62%),
+    var(--bg2);
   border: 1px solid var(--line);
   border-radius: var(--r-md);
   color: var(--txt);
   font-size: var(--fs-md);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
   transition:
     border-color var(--dur-1) var(--ease-1),
     background-color var(--dur-1) var(--ease-1),
-    box-shadow var(--dur-1) var(--ease-1);
+    box-shadow var(--dur-1) var(--ease-1),
+    transform var(--dur-1) var(--ease-1);
 }
 
 .auth-input::placeholder { color: var(--faint); }
@@ -311,8 +399,11 @@
 .auth-input:focus {
   outline: none;
   border-color: var(--acc);
-  background-color: var(--panel3);
-  box-shadow: 0 0 0 3px var(--acc-soft);
+  background: var(--panel3);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.3),
+    0 0 0 3px var(--acc-soft),
+    0 10px 26px -18px var(--acc-glow);
 }
 
 .auth-input:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -320,38 +411,77 @@
 /* ── Actions ─────────────────────────────────────────────────────────────── */
 
 .auth-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  isolation: isolate;
   width: 100%;
-  min-height: 42px;
+  min-height: 46px;
   margin-top: var(--sp-5);
   padding: 0 var(--sp-5);
-  background-color: var(--acc);
-  border: 1px solid var(--acc-300);
+  background:
+    radial-gradient(120% 160% at 50% -30%, rgba(255, 255, 255, 0.24), transparent 58%),
+    linear-gradient(180deg, var(--acc-300) 0%, var(--acc) 52%, var(--acc-600) 100%);
+  background-size: 100% 100%, 160% 100%;
+  background-position: 50% 0%, 50% 50%;
+  border: 1px solid color-mix(in srgb, var(--acc-bright) 62%, transparent);
   border-radius: var(--r-md);
   color: var(--on-accent);
   font-size: var(--fs-md);
   font-weight: var(--fw-semi);
   letter-spacing: var(--tracking-wide);
   cursor: pointer;
-  box-shadow: var(--inset-top), 0 2px 12px -5px var(--acc-glow);
+  text-shadow: 0 1px 2px rgba(2, 8, 23, 0.28);
+  box-shadow:
+    var(--inset-top),
+    0 3px 14px -6px var(--acc-glow),
+    0 18px 42px -28px var(--acc-glow);
   transition:
-    background-color var(--dur-1) var(--ease-1),
+    background-position var(--dur-2) var(--ease-1),
     border-color var(--dur-1) var(--ease-1),
     box-shadow var(--dur-1) var(--ease-1),
-    transform var(--dur-1) var(--ease-1);
+    transform var(--dur-1) var(--ease-1),
+    filter var(--dur-1) var(--ease-1);
+}
+
+/* The sheen: a soft band that crosses the button once on hover. It is clipped
+   by the button's own radius, so it never leaks past the corners. */
+.auth-btn::after {
+  content: '';
+  position: absolute;
+  top: -40%;
+  bottom: -40%;
+  left: -55%;
+  width: 44%;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.34), transparent);
+  transform: skewX(-18deg) translateX(0);
+  transition: transform var(--dur-4) var(--ease-2);
 }
 
 .auth-btn:hover:not(:disabled) {
-  background-color: var(--acc-300);
-  border-color: var(--acc-200);
-  box-shadow: var(--inset-top), 0 4px 18px -6px var(--acc-glow);
+  background-position: 50% 0%, 50% 64%;
+  border-color: var(--acc-100);
+  filter: brightness(1.05);
+  box-shadow:
+    var(--inset-top),
+    0 5px 20px -7px var(--acc-glow),
+    0 24px 52px -30px var(--acc-glow);
+}
+
+.auth-btn:hover:not(:disabled)::after {
+  transform: skewX(-18deg) translateX(420%);
 }
 
 .auth-btn:active:not(:disabled) {
-  background-color: var(--acc-600);
+  background-position: 50% 0%, 50% 18%;
   border-color: var(--acc-700);
+  transform: translateY(1px);
+  filter: brightness(0.98);
+  box-shadow: inset 0 2px 6px rgba(2, 8, 23, 0.32);
 }
 
 .auth-btn:disabled {
@@ -387,19 +517,30 @@
   width: 100%;
   margin-bottom: var(--sp-5);
   padding: var(--sp-4) var(--sp-5);
-  background-color: var(--bg2);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.14), transparent),
+    var(--bg2);
   border: 1px dashed var(--line-strong);
   border-radius: var(--r-md);
   cursor: pointer;
   text-align: left;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.34);
   transition:
     border-color var(--dur-1) var(--ease-1),
-    background-color var(--dur-1) var(--ease-1);
+    background-color var(--dur-1) var(--ease-1),
+    box-shadow var(--dur-1) var(--ease-1),
+    transform var(--dur-1) var(--ease-1);
 }
 
 .auth-code-box:hover {
   border-color: var(--acc);
-  background-color: var(--panel3);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    var(--panel3);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.28),
+    0 12px 30px -22px var(--acc-glow);
+  transform: translateY(-1px);
 }
 
 .auth-code {
@@ -408,6 +549,7 @@
   font-weight: var(--fw-bold);
   letter-spacing: 0.08em;
   color: var(--acc-bright);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--acc) 45%, transparent);
   word-break: break-all;
 }
 
@@ -425,12 +567,22 @@
 .auth-error {
   margin-bottom: var(--sp-4);
   padding: var(--sp-3) var(--sp-4);
-  background-color: var(--red-soft);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    var(--red-soft);
   border: 1px solid color-mix(in srgb, var(--red) 36%, transparent);
+  border-left: 3px solid var(--red);
   border-radius: var(--r-sm);
   color: var(--red);
   font-size: var(--fs-sm);
   line-height: var(--lh-md);
+  box-shadow: 0 14px 30px -24px color-mix(in srgb, var(--red) 70%, transparent);
+  animation: auth-error-in var(--dur-3) var(--ease-3) both;
+}
+
+@keyframes auth-error-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* ── Footer ──────────────────────────────────────────────────────────────── */
@@ -538,5 +690,28 @@
 /* ── Motion ──────────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
-  .auth-card { animation: none; }
+  .auth-page::before,
+  .auth-card,
+  .auth-card::before,
+  .auth-error,
+  .auth-progress-step.is-current .auth-progress-dot {
+    animation: none;
+  }
+
+  /* The sheen is movement, so it does not run and does not wait. */
+  .auth-btn::after {
+    display: none;
+  }
+
+  .auth-btn,
+  .auth-input,
+  .auth-code-box {
+    transition-duration: 0.01ms;
+  }
+
+  .auth-btn:hover:not(:disabled),
+  .auth-input:focus,
+  .auth-code-box:hover {
+    transform: none;
+  }
 }

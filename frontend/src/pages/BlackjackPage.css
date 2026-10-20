@@ -284,7 +284,7 @@
   margin-bottom: 10px;
   padding: 9px 12px;
   background: var(--acc-soft);
-  border: 1px solid rgba(47, 129, 247, 0.35);
+  border: 1px solid rgba(12, 201, 163, 0.35);
   border-radius: var(--r-sm);
   color: var(--acc);
   font-size: 0.75rem;
@@ -294,9 +294,9 @@
   margin-left: auto;
   padding: 4px 12px;
   background: var(--acc);
-  border: 1px solid rgba(47, 129, 247, 0.7);
+  border: 1px solid rgba(12, 201, 163, 0.7);
   border-radius: 6px;
-  color: #fff;
+  color: var(--on-accent);
   font-size: 0.68rem;
   font-weight: 800;
   cursor: pointer;

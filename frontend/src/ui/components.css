@@ -312,6 +312,20 @@
    field is genuinely a form field - on .input, .field, and on the bare inputs
    inside a .form or a labelled .field-row. A control that sizes itself keeps
    doing so. */
+/* A generic rule that sizes every input in the product is wrong, and it has
+   already broken specialised controls twice.
+ *
+   `input[type='number']` is specificity (0,1,1) - the type attribute plus the
+   element - so it beats a component's own class at (0,1,0) no matter which
+   sheet either is in or which loads last. Setting `width: 100%` here stretched
+   the quantity stepper's field until it squeezed the pet thumbnail beside it
+   down to a sliver. Setting `min-height` here held the same field at 36px
+   against a 44px floor its own stylesheet asked for.
+ *
+   So: appearance - surface, border, radius, colour, focus ring - applies to
+   every control, because a control that looks different from its neighbours is
+   wrong everywhere. Size applies only where a field is genuinely a form field.
+   A control that sizes itself keeps doing so. */
 .input,
 .field,
 .textarea,
@@ -327,7 +341,6 @@ input[type='search'],
 input[type='email'],
 select,
 textarea {
-  min-height: var(--ctl-h);
   padding: 0 var(--ctl-px);
   background-color: var(--bg2);
   border: 1px solid var(--line);
@@ -340,9 +353,9 @@ textarea {
     box-shadow var(--dur-1) var(--ease-1);
 }
 
-/* Width is a decision about context, not about the element. A field in a form
-   or on a panel spans the column it is given; a stepper's number input, a
-   search box inside a toolbar and a checkbox do not. */
+/* Size is a decision about context, not about the element. A field in a form
+   or on a panel spans the column it is given and is tall enough to type in; a
+   stepper's number input, a search box inside a toolbar and a checkbox do not. */
 .input,
 .field,
 .textarea,
@@ -353,6 +366,7 @@ textarea {
 .field-row select,
 .field-row textarea {
   width: 100%;
+  min-height: var(--ctl-h);
 }
 
 textarea {
@@ -452,13 +466,21 @@ select {
 .moderator-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
   max-width: 100%;
-  padding: 3px;
-  background-color: var(--bg0);
+  padding: 4px;
+  /* A hairline of light across the top lip, then the recessed ground. The
+     inset shadow does the work of a border here: it reads as a slot cut into
+     the panel rather than a box laid on top of it. */
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0.006) 44%, transparent 100%),
+    color-mix(in srgb, var(--bg0) 88%, transparent);
   border: 1px solid var(--line-soft);
-  border-radius: var(--r-md);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+  border-radius: calc(var(--r-md) + 3px);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.55),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 32px -26px rgba(0, 0, 0, 0.95);
   /* Scrolls rather than wrapping when there are more tabs than room. A tab
      strip that wraps onto three lines pushes the page's content down by a
      height that changes with the viewport, which is worse than a scrollbar. */
@@ -487,26 +509,46 @@ select {
 .tab-button,
 .oc-tab,
 .vc-rarity-tab {
+  position: relative;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   gap: var(--sp-3);
-  min-height: 30px;
-  padding: 0 12px;
+  min-height: 32px;
+  padding: 0 14px;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: var(--r-sm);
+  border-radius: calc(var(--r-md) - 1px);
   color: var(--mut);
   font-family: var(--font-body);
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
+  letter-spacing: 0.005em;
   line-height: 1;
   cursor: pointer;
   white-space: nowrap;
   transition:
     background-color var(--dur-1) var(--ease-1),
+    background-image var(--dur-1) var(--ease-1),
     color var(--dur-1) var(--ease-1),
-    border-color var(--dur-1) var(--ease-1);
+    border-color var(--dur-1) var(--ease-1),
+    box-shadow var(--dur-2) var(--ease-1),
+    transform var(--dur-2) var(--ease-spring);
+}
+
+/* Focus is a ring, not a colour change: colour is already spoken for by the
+   selected state, and a keyboard user needs to see focus and selection at the
+   same time. */
+.ui-tab:focus-visible,
+.cf-tab:focus-visible,
+.jp-tab:focus-visible,
+.ug-tab:focus-visible,
+.tab-btn:focus-visible,
+.tab-button:focus-visible,
+.oc-tab:focus-visible,
+.vc-rarity-tab:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--bg0), 0 0 0 4px var(--acc);
 }
 
 .ui-tab:hover,
@@ -517,13 +559,24 @@ select {
 .tab-button:hover,
 .oc-tab:hover,
 .vc-rarity-tab:hover {
-  background-color: var(--panel2);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.012) 100%),
+    color-mix(in srgb, var(--panel2) 78%, transparent);
+  border-color: var(--line-soft);
   color: var(--txt);
+  /* One pixel, not two. A tab is a choice about what you are looking at, so
+     it leans toward the pointer rather than leaping at it. */
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 10px 20px -16px rgba(0, 0, 0, 0.95);
 }
 
-/* The selected tab is raised out of the track rather than filled with the
-   accent. An accent fill here competes with the page's primary action, and a
-   tab is not an action - it is a choice about what you are looking at. */
+/* The selected tab is raised out of the track on a tinted glass pill rather
+   than filled solid with the accent: an accent fill here competes with the
+   page's primary action, and a tab is not an action - it is a choice about
+   what you are looking at. The tint is enough to seat it above the track and
+   the glow is what makes it read as lit. */
 .ui-tab.is-active,
 .ui-tab[aria-selected='true'],
 .cf-tab.cf-tab-active,
@@ -532,10 +585,18 @@ select {
 .tab-btn.active,
 .tab-button.active,
 .oc-tab.is-active {
-  background-color: var(--panel3);
-  border-color: var(--line);
-  color: var(--acc-bright);
-  box-shadow: var(--inset-top);
+  /* !important on the paint properties only: ui/v3.css still carries the old
+     solid-accent active pill behind !important, and this rule has to outrank
+     it rather than lose quietly in the cascade. Layout is not marked, so a
+     page can still size its own strip. */
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--acc) 24%, var(--panel3)) 0%, color-mix(in srgb, var(--acc) 9%, var(--panel2)) 100%) !important;
+  border-color: color-mix(in srgb, var(--acc) 42%, var(--line)) !important;
+  color: #f2f7ff !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 color-mix(in srgb, var(--acc) 34%, transparent),
+    0 10px 24px -18px var(--acc-glow) !important;
   font-weight: var(--fw-semi);
 }
 
@@ -545,30 +606,44 @@ select {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 20px;
-  height: 18px;
-  padding: 0 5px;
-  background-color: var(--bg0);
+  min-width: 21px;
+  height: 19px;
+  padding: 0 6px;
+  background: color-mix(in srgb, var(--bg0) 74%, transparent) !important;
   border: 1px solid var(--line-soft);
   border-radius: var(--r-full);
   color: var(--mut);
-  font-size: 0.62rem;
+  font-size: 0.63rem;
   font-weight: var(--fw-semi);
   font-variant-numeric: tabular-nums;
   line-height: 1;
+  transition: color var(--dur-1) var(--ease-1), background var(--dur-1) var(--ease-1), border-color var(--dur-1) var(--ease-1);
 }
 
 .ui-tab.is-active .ui-tab-count,
 .cf-tab.cf-tab-active .cf-tab-count {
-  background-color: var(--acc-soft);
-  border-color: color-mix(in srgb, var(--acc) 32%, transparent);
-  color: var(--acc-bright);
+  background: color-mix(in srgb, var(--acc) 26%, transparent) !important;
+  border-color: color-mix(in srgb, var(--acc) 42%, transparent);
+  color: #eaf3ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
 /* The rarity filter is a set of chips rather than a track: each one is a
-   standalone target with its own colour, and wrapping them reads better than
-   pretending they are pages. It keeps its own container so the rest of the
-   rule above does not fight it. */
+   standalone target with its own colour. The selected chip borrows its own
+   rarity colour, so the filter still reads as one row of jewels. */
+.vc-rarity-tab.active {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 0%, transparent 100%),
+    color-mix(in srgb, var(--rarity-color, var(--acc)) 22%, var(--panel2));
+  border-color: color-mix(in srgb, var(--rarity-color, var(--acc)) 52%, transparent);
+  color: #f2f7ff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 8px 20px -16px color-mix(in srgb, var(--rarity-color, var(--acc)) 70%, transparent);
+  font-weight: var(--fw-semi);
+}
+
+/* It keeps its own container so the track rule above does not fight it. */
 .vc-rarity-tabs {
   flex-wrap: wrap;
   background: none;
@@ -970,6 +1045,75 @@ select {
   margin-top: var(--sp-4);
 }
 
+/* ============================================================================
+   Floating action button
+   ----------------------------------------------------------------------------
+   The chat toggle on a phone.
+
+   Bottom-left rather than bottom-right, which is the whole point. Every
+   primary action in the product is right-aligned - Join in a lobby row, Bet
+   Items in a topbar, Verify on a dialog - so a bottom-right FAB sits directly
+   on top of the one control a player came to press. It covered the Join button
+   on the coinflip lobby at every scroll position.
+
+   Bottom-left is empty on every screen in the product, because nothing aligns
+   a primary action there.
+   ========================================================================= */
+
+.mobile-chat-fab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: var(--z-drawer);
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  background-color: var(--acc);
+  border: 1px solid var(--acc-300);
+  border-radius: var(--r-full);
+  color: var(--on-accent);
+  cursor: pointer;
+  box-shadow: var(--elev-3), 0 4px 14px -6px var(--acc-glow);
+  transition:
+    background-color var(--dur-1) var(--ease-1),
+    transform var(--dur-1) var(--ease-1);
+}
+
+/* Above this the chat lives in a rail beside the content, so there is
+   nothing for a floating toggle to do. */
+@media (min-width: 769px) {
+  .mobile-chat-fab { display: none; }
+}
+
+.mobile-chat-fab:hover {
+  background-color: var(--acc-300);
+}
+
+.mobile-chat-fab:active {
+  transform: scale(0.94);
+}
+
+/* ============================================================================
+   Scrollable strips
+   ----------------------------------------------------------------------------
+   A strip that scrolls and is cut at the edge looks broken unless something
+   says otherwise. The fade is the signal: it shows there is more to the right,
+   and it disappears once the strip is scrolled to the end, so it never lies
+   about there being more. */
+.scroll-fade-x {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 14px, #000 calc(100% - 22px), transparent 100%);
+}
+
+/* Where the fade should not apply - a strip that is not actually scrollable at
+   this width would show a fade on both ends with nothing behind either. */
+@media (min-width: 900px) {
+  .scroll-fade-x { -webkit-mask-image: none; mask-image: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .modal-overlay,
   .modal,
@@ -978,5 +1122,149 @@ select {
   }
   .skeleton::after {
     animation: none;
+  }
+  /* The tabs lean toward the pointer on hover. That is movement, so it goes. */
+  .ui-tab,
+  .cf-tab,
+  .jp-tab,
+  .ug-tab,
+  .tab-btn,
+  .tab-button,
+  .oc-tab,
+  .vc-rarity-tab {
+    transition-duration: 0.01ms;
+  }
+  .ui-tab:hover,
+  .cf-tab:hover,
+  .jp-tab:hover,
+  .ug-tab:hover,
+  .tab-btn:hover,
+  .tab-button:hover,
+  .oc-tab:hover,
+  .vc-rarity-tab:hover {
+    transform: none;
+  }
+}
+
+/* ============================================================================
+   Touch targets
+   ----------------------------------------------------------------------------
+   A control that is 22px tall is comfortable with a mouse and hard to hit
+   with a thumb. WCAG 2.2 sets the floor at 24x24 with exceptions; 44x44 is what
+   a finger can actually land on, and it is what the product holds itself to.
+
+   Done once here rather than in every page sheet, because the controls that
+   were failing are the shared ones: tabs at 30px, the lobby row's "View" link
+   at 22px, ghost buttons at 30px. The audit found between 20 and 53 of them per
+   route on a 390px screen.
+
+   Only height and the vertical padding that produces it. Widths are left alone
+   because a narrow control next to a label is often correct - stretching
+   "View" to 44px wide for no reason makes the row read worse, not better.
+
+   Not applied on a pointer device, where a 30px tab is entirely reasonable and
+   a row of 44px-tall tabs wastes vertical space on the screen the lobbies are
+   actually read on.
+   ========================================================================= */
+
+@media (pointer: coarse) {
+  .btn,
+  .btn-sm,
+  .btn-lg,
+  /* .ui-btn is the same control as .btn under a second name, used by the
+     primitives. It was missing here, so the not-found page's two buttons were
+     36px tall. */
+  .ui-btn {
+    min-height: var(--ctl-h-lg);
+  }
+
+  /* A small button is still a button. This had been set back to --ctl-h
+     (36px) on the theory that "small" means "small on a phone too", which left
+     every btn-sm in the product under the floor - including the "Open" button
+     that is the only route back to a bet already in progress. */
+  .btn-sm {
+    min-height: var(--ctl-h-lg);
+  }
+
+  .ui-tab,
+  .cf-tab,
+  .jp-tab,
+  .ug-tab,
+  .tab-btn,
+  .tab-button,
+  .oc-tab,
+  .vc-rarity-tab {
+    min-height: 44px;
+    padding-block: 6px;
+  }
+
+  /* The text links that act as controls: the row's "View", the trading
+     page's "Offers (n)", a "See all" in a panel header. They are links by
+     markup but they are actions by behaviour, so they get a target. */
+  .cf-view-btn,
+  .btn-ghost,
+  .ui-btn-ghost,
+  .sp2-link {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    padding-block: 8px;
+  }
+
+  /* Icon-only controls in the chrome. */
+  .modal-close,
+  .modal-close-btn,
+  .close-modal,
+  .mobile-chat-fab,
+  .cf-row-chip-badge {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* The header's own controls: the wordmark link, the settings trigger and the
+     log-out button were all 31-36px. They sit in the one strip a thumb reaches
+     for most, so they are the controls most worth the extra pixels. */
+  .sidebar-brand,
+  .settings-trigger,
+  .logout-btn,
+  .header-btn {
+    min-height: 44px;
+  }
+
+  /* The quantity stepper's minus and plus. 26px wide and 36px tall each, which
+     is two small targets either side of a number field - the single hardest
+     thing to hit on the whole site. */
+  .qt button {
+    width: 44px;
+    padding-block: 0;
+  }
+
+  /* The empty seat in a lobby row, which is a button in the markup but was
+     carrying no class to target. */
+  .cf-row .cf-row-avatar-empty,
+  .cf-open-seat {
+    min-height: 44px;
+  }
+
+  /* The quantity stepper. Its buttons are now classed, so they are reachable
+     from here; before that they were styled only by a .qt button descendant
+     selector and no shared rule in the product could touch them. */
+  .qt-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* The field between them. Its own stylesheet already asks for 44px; this is
+     here because input[type='number'] in the appearance block above outranks a
+     bare class on specificity, so the component's rule cannot win on its own. */
+  .qt-input {
+    min-height: 44px;
+  }
+
+  .input,
+  .field,
+  select,
+  textarea {
+    min-height: var(--ctl-h-lg);
   }
 }

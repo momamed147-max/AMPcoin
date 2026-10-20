@@ -24,7 +24,7 @@
   font-variant-numeric: tabular-nums;
 }
 .profile-banner { position: relative; height: 110px; background: linear-gradient(135deg,#16294d 0%,#1f6feb 55%,#0b0f17 130%); box-shadow: inset 0 -1px 0 rgba(255,255,255,.06); }
-.profile-banner::after { content:""; position: absolute; inset: 0; background: radial-gradient(60% 90% at 50% 0%,rgba(47,129,247,.35),transparent 70%); }
+.profile-banner::after { content:""; position: absolute; inset: 0; background: radial-gradient(60% 90% at 50% 0%,rgba(12,201,163,.35),transparent 70%); }
 .profile-close {
   position: absolute; top: 12px; right: 12px; z-index: 2;
   width: 30px; height: 30px; border-radius: 50%;
@@ -39,10 +39,10 @@
 .profile-avatar-wrap img {
   width: 96px; height: 96px; border-radius: 50%; object-fit: cover;
   background: var(--bg1); border: 4px solid var(--panel);
-  box-shadow: 0 0 0 2px rgba(47,129,247,.55), 0 8px 24px rgba(0,0,0,.5);
+  box-shadow: 0 0 0 2px rgba(12,201,163,.55), 0 8px 24px rgba(0,0,0,.5);
 }
 .profile-lvl {
-  margin-top: -12px; background: var(--acc); color: #fff;
+  margin-top: -12px; background: var(--acc); color: var(--on-accent);
   font-size: .68rem; font-weight: 800; letter-spacing: .08em;
   border-radius: 999px; padding: 3px 12px; border: 2px solid var(--panel);
   font-variant-numeric: tabular-nums;
@@ -76,7 +76,7 @@
 .profile-rank-fill {
   height: 100%; border-radius: 999px;
   background: linear-gradient(90deg,#1f6feb,var(--acc));
-  box-shadow: 0 0 10px rgba(47,129,247,.5);
+  box-shadow: 0 0 10px rgba(12,201,163,.5);
   transition: width .5s ease;
 }
 .profile-rank-next { color: var(--dim); font-size: .74rem; font-weight: 600; }
@@ -128,7 +128,7 @@
   cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
   transition: border-color .12s ease, transform .12s ease;
 }
-.tip-tile:hover { transform: translateY(-2px); border-color: rgba(47,129,247,.5); }
+.tip-tile:hover { transform: translateY(-2px); border-color: rgba(12,201,163,.5); }
 .tip-tile img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; background: var(--bg0); }
 .tip-tile-val, .tip-tile .tip-val { color: #7db3ff; font-size: .7rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .tip-tile-busy { position: absolute; top: 4px; right: 6px; color: var(--dim); font-size: .72rem; }

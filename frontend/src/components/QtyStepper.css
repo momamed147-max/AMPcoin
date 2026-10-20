@@ -21,7 +21,7 @@
   transition: background 0.12s ease, color 0.12s ease;
   user-select: none;
 }
-.qt button:hover:not(:disabled) { background: var(--acc); color: #fff; }
+.qt button:hover:not(:disabled) { background: var(--acc); color: var(--on-accent); }
 .qt button:disabled { opacity: 0.32; cursor: not-allowed; }
 
 .qt-input {
@@ -56,3 +56,33 @@
 /* Slightly larger variant for the pet picker tiles. */
 .qt.lg button { width: 30px; font-size: 1.05rem; }
 .qt.lg .qt-input { width: 52px; font-size: 0.9rem; }
+
+/* ============================================================================
+   Touch targets
+   ----------------------------------------------------------------------------
+   26x36 for the minus and plus. Two small targets either side of a number
+   field is the hardest thing on the site to hit with a thumb - you are aiming
+   at one of two buttons that are a fingertip apart.
+
+   Here rather than in ui/components.css because this sheet is imported by the
+   page that uses it and therefore loads in a lazy chunk, after the whole main
+   bundle. A same-specificity rule in the shared layer would lose to it.
+   ========================================================================= */
+
+@media (pointer: coarse) {
+  .qt button,
+  .qt-btn {
+    width: 44px;
+  }
+
+  /* The field between them. 42x36 next to two 44px buttons is the same target
+     problem as the buttons themselves, one step further along. */
+  .qt-input,
+  .qt.lg .qt-input {
+    min-height: 44px;
+  }
+
+  .qt.lg button {
+    width: 44px;
+  }
+}

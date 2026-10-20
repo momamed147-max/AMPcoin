@@ -52,8 +52,95 @@
 .sp2-row:last-child { border-bottom: none; }
 .sp2-row > span:first-child { color: var(--mut); }
 
+/* ── overview tiles ─────────────────────────────────────────────────────── */
+/* The shared StatTile is deliberately plain; on the overview it is the first
+   thing under the tabs and carries the whole account summary, so it gets a
+   display numeral and a large ghost glyph. The glyph moves out of the text
+   column and into the right edge, which stops four wide cards reading as four
+   empty boxes with a number pinned to the left. */
+.sp2 .ui-stat-grid {
+  gap: var(--sp-4);
+}
+
+.sp2 .ui-stat {
+  position: relative;
+  min-height: 118px;
+  padding: var(--sp-5);
+  overflow: hidden;
+  border-radius: var(--r-cut);
+  border-color: var(--line-soft);
+  background:
+    radial-gradient(120% 150% at 100% 0%, color-mix(in srgb, var(--acc) 12%, transparent), transparent 58%),
+    linear-gradient(150deg, color-mix(in srgb, var(--panel2) 92%, var(--acc) 8%), var(--panel));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    0 18px 38px -32px rgba(0, 0, 0, 1);
+}
+
+.sp2 .ui-stat::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: linear-gradient(180deg, var(--acc-bright), transparent);
+  opacity: 0.72;
+}
+
+.sp2 .ui-stat-body {
+  position: relative;
+  z-index: 1;
+  gap: 5px;
+}
+
+.sp2 .ui-stat-label {
+  color: color-mix(in srgb, var(--mut) 78%, var(--acc));
+  font-size: 0.66rem;
+  letter-spacing: 0.14em;
+}
+
+.sp2 .ui-stat-value {
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 2.3vw, 2.35rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.sp2 .ui-stat-sub {
+  max-width: calc(100% - 58px);
+  color: var(--dim);
+}
+
+.sp2 .ui-stat-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  width: 52px;
+  height: 52px;
+  transform: translateY(-50%);
+  border: 1px solid color-mix(in srgb, var(--acc) 18%, transparent);
+  border-radius: var(--r-cut-sm);
+  background: color-mix(in srgb, var(--acc) 8%, transparent);
+  color: color-mix(in srgb, var(--acc-bright) 74%, transparent);
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--acc) 9%, transparent);
+}
+
+.sp2 .ui-stat-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
 /* ── next achievement ───────────────────────────────────────────────────── */
-.sp2-next { display: flex; flex-direction: column; gap: var(--sp-3); }
+.sp2-grid-2 > .ui-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.sp2-next { display: flex; flex: 1; flex-direction: column; gap: var(--sp-3); }
+.sp2-next .ui-progress-wrap { margin-top: auto; }
 .sp2-next-head { display: flex; align-items: center; gap: var(--sp-3); }
 .sp2-next-copy { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
 .sp2-next-copy strong { font-size: var(--fs-md); }

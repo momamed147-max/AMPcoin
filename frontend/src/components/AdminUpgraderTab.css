@@ -59,7 +59,7 @@
 
 .aut-btn {
   padding: 11px; border: none; border-radius: 9px;
-  background: var(--acc); color: #fff; font-weight: 900; font-size: .9rem; cursor: pointer;
+  background: var(--acc); color: var(--on-accent); font-weight: 900; font-size: .9rem; cursor: pointer;
   transition: filter .12s ease;
 }
 .aut-btn:hover:not(:disabled) { filter: brightness(1.1); }

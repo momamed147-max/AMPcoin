@@ -31,7 +31,7 @@
 .pet-field select:focus,
 .pet-catalog-toolbar input:focus,
 .pet-catalog-toolbar select:focus,
-.pet-wipe-row input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(76,141,255,.12); }
+.pet-wipe-row input:focus { border-color: var(--acc); box-shadow: 0 0 0 3px rgba(12,201,163,.12); }
 .pet-mod-section { padding-top: 11px; border-top: 1px solid var(--line-soft); }
 .pet-mod-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
 .pet-mod-heading > div { display: flex; flex-direction: column; gap: 2px; }
@@ -41,7 +41,7 @@
 .pet-mod-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .pet-mod-option { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 3px; color: var(--mut); border: 1px solid var(--line); border-radius: 8px; background: var(--bg1); cursor: pointer; transition: all .15s ease; }
 .pet-mod-option:hover { color: var(--txt); border-color: rgba(125,179,255,.4); transform: translateY(-1px); }
-.pet-mod-option.active { color: #dbeafe; border-color: var(--acc); background: var(--acc-soft); box-shadow: 0 0 0 2px rgba(76,141,255,.08); }
+.pet-mod-option.active { color: #dbeafe; border-color: var(--acc); background: var(--acc-soft); box-shadow: 0 0 0 2px rgba(12,201,163,.08); }
 .pet-mod-option strong { font-size: .78rem; }
 .pet-mod-option span { font-size: .57rem; }
 .pet-preview-card { display: flex; align-items: center; gap: 9px; min-width: 0; padding: 9px; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--bg1); }

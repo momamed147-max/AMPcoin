@@ -443,7 +443,7 @@ const RpsPage = ({ socket }) => {
         </div>
       </div>
 
-      {error && <div className="rps-error" role="alert"><Icon name="warn" size={15} /><span>{error}</span><button type="button" onClick={refresh}>Retry</button></div>}
+      {error && <div className="rps-error" role="alert"><Icon name="warn" size={15} /><span>{error}</span><button type="button" className="btn btn-primary btn-sm" onClick={refresh}>Retry</button></div>}
 
       {myMatches.length > 0 && (
         <div className="rps-active-note">
@@ -451,7 +451,7 @@ const RpsPage = ({ socket }) => {
           <span>
             You have {myMatches.length} active RPS bet{myMatches.length > 1 ? 's' : ''}.
           </span>
-          <button type="button" onClick={() => setViewId(myMatches[0].id)}>Open</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewId(myMatches[0].id)}>Open</button>
         </div>
       )}
 

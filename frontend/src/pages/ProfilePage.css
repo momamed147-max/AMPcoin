@@ -39,9 +39,9 @@
   color: #a9d5ff;
   font-size: 0.82rem;
   font-weight: 650;
-  border: 1px solid rgba(76, 141, 255, 0.25);
+  border: 1px solid rgba(12, 201, 163, 0.25);
   border-radius: 10px;
-  background: rgba(76, 141, 255, 0.09);
+  background: rgba(12, 201, 163, 0.09);
 }
 
 .profile-card {
@@ -49,7 +49,7 @@
   border: 1px solid var(--line);
   border-radius: 18px;
   background:
-    radial-gradient(500px 180px at 12% 0%, rgba(76, 141, 255, 0.09), transparent 72%),
+    radial-gradient(500px 180px at 12% 0%, rgba(12, 201, 163, 0.09), transparent 72%),
     var(--panel);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.22);
 }
@@ -196,7 +196,7 @@
 
 .profile-stats .stat-value.win { color: #63d47b; }
 .profile-stats .stat-value.loss { color: #ff7b72; }
-.profile-stats .stat-value.rate { color: #82b7ff; }
+.profile-stats .stat-value.rate { color: var(--acc-bright); }
 
 .profile-stats .stat-label {
   margin-top: 5px;

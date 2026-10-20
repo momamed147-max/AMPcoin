@@ -150,7 +150,10 @@ const ModeratorPanel = ({ user }) => {
       <div className="moderator-hero">
         <div>
           <span className="moderator-eyebrow"><Icon name="shield" size={13} /> Moderator access</span>
-          <h1>Moderation Console</h1>
+          {/* An h2, not an h1. The header band is the page's h1; this is a
+              distinct view inside the admin panel with its own name, so it is
+              a section of that page rather than a second copy of its title. */}
+          <h2>Moderation Console</h2>
           <p>Keep chat healthy with focused, permission-safe controls.</p>
         </div>
         <div className="moderator-scope"><Icon name="lock" size={14} /> Mute-only access</div>
@@ -241,7 +244,7 @@ const ModeratorPanel = ({ user }) => {
                 placeholder="Search username, display name, or ID"
                 aria-label="Search users"
               />
-              {search && <button type="button" onClick={() => setSearch('')} aria-label="Clear user search"><Icon name="close" size={14} /></button>}
+              {search && <button type="button" className="btn btn-ghost btn-sm" onClick={() => setSearch('')} aria-label="Clear user search"><Icon name="close" size={14} /></button>}
             </div>
 
             <div className="moderator-user-list">

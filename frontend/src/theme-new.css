@@ -36,6 +36,7 @@
   --theme-glow-b: rgba(56, 132, 255, 0.09);
   --theme-accent-2: #3884ff;
   --theme-chat-accent: rgba(109, 74, 255, 0.08);
+  --on-accent: #ffffff;
   --theme-on-accent: #ffffff;
 }
 
@@ -75,5 +76,6 @@
   --theme-glow-b: rgba(255, 140, 66, 0.10);
   --theme-accent-2: #ff8c42;
   --theme-chat-accent: rgba(255, 68, 56, 0.16);
+  --on-accent: #ffffff;
   --theme-on-accent: #ffffff;
 }

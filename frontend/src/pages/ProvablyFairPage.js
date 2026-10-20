@@ -29,10 +29,9 @@ const ProvablyFairPage = () => {
 
   return (
     <div className="provably-fair-page">
-      <div className="page-header">
-        <h1>Provably Fair</h1>
-      </div>
-
+      {/* The header band above is this page's h1 and already reads "Fair", so
+          the page does not repeat it. What it does carry is the explanation,
+          which is not in the band. */}
       <div className="fair-explanation">
         <p>
           Our Provably Fair system ensures that all game outcomes are verifiable and unbiased. 

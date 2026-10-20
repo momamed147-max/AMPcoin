@@ -1,31 +1,11 @@
-/* AMPcoin final visual system — loaded after feature styles. */
-
-:root,
-.jackpot-page,
-.tr-page,
-.wm-modal,
-.vc-modal {
-  --bg0: #060910;
-  --bg1: #090e18;
-  --panel: #0d1420;
-  --panel2: #121c2b;
-  --panel3: #172438;
-  --line: rgba(137, 166, 204, 0.16);
-  --line-soft: rgba(137, 166, 204, 0.09);
-  --txt: #f4f7fb;
-  --mut: #96a5ba;
-  --dim: #68778c;
-  --acc: #4c8dff;
-  --acc-bright: #76a9ff;
-  --acc-soft: rgba(76, 141, 255, 0.13);
-  --grn: #48c866;
-  --red: #f05d57;
-  --gold: #e6ad3c;
-  --orange: #ee8b42;
-  --r-sm: 9px;
-  --r-md: 12px;
-  --r-lg: 16px;
-}
+/* AMPcoin final visual system — loaded after feature styles.
+ *
+ * The palette used to be redeclared here, including a :root block and scoped
+ * copies on the game modals. That block loaded after ui/system.css and after
+ * theme.css had already been overruled by it, so every "new" palette change
+ * silently rendered as the same blue site. Tokens now live only in
+ * ui/system.css and theme.css. Nothing in this file may declare a colour token.
+ */
 
 html {
   background: var(--bg0);
@@ -35,11 +15,11 @@ html {
 body {
   min-width: 320px;
   color: var(--txt);
-  font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: var(--font-body);
   font-size: 14px;
   background:
-    radial-gradient(900px 520px at 18% -12%, rgba(50, 104, 190, 0.15), transparent 66%),
-    radial-gradient(760px 520px at 105% 30%, rgba(24, 91, 153, 0.09), transparent 70%),
+    radial-gradient(900px 520px at 18% -12%, color-mix(in srgb, var(--acc) 10%, transparent), transparent 66%),
+    radial-gradient(760px 520px at 105% 30%, color-mix(in srgb, var(--gold) 5%, transparent), transparent 70%),
     var(--bg0);
 }
 
@@ -76,7 +56,7 @@ textarea:focus-visible,
 
 ::selection {
   color: #fff;
-  background: rgba(76, 141, 255, 0.42);
+  background: rgba(12, 201, 163, 0.42);
 }
 
 *::-webkit-scrollbar {
@@ -190,7 +170,7 @@ textarea:focus-visible,
   left: 0;
   height: 1px;
   pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(76, 141, 255, 0.42), transparent);
+  background: linear-gradient(90deg, transparent, rgba(12, 201, 163, 0.42), transparent);
   opacity: 0.55;
 }
 
@@ -291,7 +271,7 @@ textarea:focus-visible,
   min-height: 38px;
   padding: 8px 11px !important;
   color: var(--mut) !important;
-  font-family: 'Manrope', sans-serif !important;
+  font-family: var(--font-body) !important;
   font-size: 0.78rem !important;
   font-weight: 700 !important;
   line-height: 1 !important;
@@ -324,8 +304,8 @@ textarea:focus-visible,
 
 .sidebar .nav-link.active {
   color: #d8e8ff !important;
-  border-color: rgba(76, 141, 255, 0.25) !important;
-  background: linear-gradient(180deg, rgba(76, 141, 255, 0.16), rgba(76, 141, 255, 0.09)) !important;
+  border-color: rgba(12, 201, 163, 0.25) !important;
+  background: linear-gradient(180deg, rgba(12, 201, 163, 0.16), rgba(12, 201, 163, 0.09)) !important;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055), 0 5px 16px rgba(0, 0, 0, 0.15) !important;
 }
 
@@ -338,7 +318,7 @@ textarea:focus-visible,
   height: 2px;
   border-radius: 99px 99px 0 0;
   background: var(--acc);
-  box-shadow: 0 -2px 9px rgba(76, 141, 255, 0.7);
+  box-shadow: 0 -2px 9px rgba(12, 201, 163, 0.7);
 }
 
 .sidebar .nav-link.active svg {
@@ -388,7 +368,7 @@ textarea:focus-visible,
   height: 32px !important;
   border: 1px solid rgba(137, 166, 204, 0.28) !important;
   background: var(--panel2);
-  box-shadow: 0 0 0 2px rgba(76, 141, 255, 0.06);
+  box-shadow: 0 0 0 2px rgba(12, 201, 163, 0.06);
 }
 
 .user-online-dot {
@@ -503,9 +483,9 @@ textarea:focus-visible,
   flex: 0 0 auto;
   place-items: center;
   color: #8db8ff;
-  border: 1px solid rgba(76, 141, 255, 0.2);
+  border: 1px solid rgba(12, 201, 163, 0.2);
   border-radius: 10px;
-  background: rgba(76, 141, 255, 0.09);
+  background: rgba(12, 201, 163, 0.09);
 }
 
 .header-title-copy {
@@ -515,7 +495,7 @@ textarea:focus-visible,
   min-width: 0;
 }
 
-.header-left h2 {
+.header-left h1, .header-left h2 {
   margin: 0;
   overflow: hidden;
   color: var(--txt);
@@ -562,7 +542,7 @@ textarea:focus-visible,
   place-items: center;
   color: #7eb0ff;
   border-radius: 8px;
-  background: rgba(76, 141, 255, 0.09);
+  background: rgba(12, 201, 163, 0.09);
 }
 
 .cash-balance .balance-gem {
@@ -638,8 +618,8 @@ textarea:focus-visible,
 
 .settings-trigger:hover {
   color: #c8ddff;
-  border-color: rgba(76, 141, 255, 0.35);
-  background: rgba(76, 141, 255, 0.12);
+  border-color: rgba(12, 201, 163, 0.35);
+  background: rgba(12, 201, 163, 0.12);
 }
 
 .settings-trigger:active {
@@ -678,9 +658,9 @@ textarea:focus-visible,
   padding: 0;
   place-items: center;
   color: #9ec4ff;
-  border: 1px solid rgba(76, 141, 255, 0.2);
+  border: 1px solid rgba(12, 201, 163, 0.2);
   border-radius: 10px;
-  background: rgba(76, 141, 255, 0.08);
+  background: rgba(12, 201, 163, 0.08);
   cursor: pointer;
   transition: color 0.16s ease, border-color 0.16s ease, background 0.16s ease, transform 0.12s ease;
 }
@@ -711,8 +691,8 @@ textarea:focus-visible,
 
 .sound-toggle:hover {
   color: #c8ddff;
-  border-color: rgba(76, 141, 255, 0.35);
-  background: rgba(76, 141, 255, 0.12);
+  border-color: rgba(12, 201, 163, 0.35);
+  background: rgba(12, 201, 163, 0.12);
 }
 
 .sound-toggle:active {
@@ -741,8 +721,8 @@ textarea:focus-visible,
 .notification-icon:hover,
 .notification-icon[aria-expanded='true'] {
   color: #b8d3ff;
-  border-color: rgba(76, 141, 255, 0.24);
-  background: rgba(76, 141, 255, 0.09);
+  border-color: rgba(12, 201, 163, 0.24);
+  background: rgba(12, 201, 163, 0.09);
 }
 
 .notification-badge {
@@ -815,7 +795,7 @@ textarea:focus-visible,
 }
 
 .notification-item.unread {
-  background: rgba(76, 141, 255, 0.07) !important;
+  background: rgba(12, 201, 163, 0.07) !important;
 }
 
 .notification-item-icon {
@@ -858,7 +838,7 @@ textarea:focus-visible,
 .tr-page {
   width: min(1320px, 100%);
   color: var(--txt);
-  font-family: 'Manrope', sans-serif;
+  font-family: var(--font-body);
 }
 
 .jackpot-page,
@@ -914,32 +894,6 @@ textarea:focus-visible,
   align-items: center;
 }
 
-.cf-topbar-tabs,
-.jp-tabs,
-.admin-tabs,
-.leaderboard-tabs,
-.cf-tab,
-.jp-tab,
-.jp-active,
-.tab-btn,
-.tab-button,
-.cf-tab:hover,
-.jp-tab:hover,
-.tab-btn:hover:not(.active),
-.tab-button:hover,
-.cf-tab-active,
-.cf-tab.cf-tab-active,
-.jp-tab.active,
-.jp-active.active,
-.tab-btn.active,
-.tab-button.active,
-.cf-tab-count {
-  color: var(--mut) !important;
-  border-color: var(--line-soft) !important;
-  background: rgba(148, 163, 184, 0.07) !important;
-}
-
-.cf-tab-active .cf-tab-count,
 .btn,
 .cf-topbar-btn,
 .cf-join-btn,
@@ -960,7 +914,7 @@ textarea:focus-visible,
 .profile-tip-btn {
   min-height: 38px;
   border-radius: 9px !important;
-  font-family: 'Manrope', sans-serif !important;
+  font-family: var(--font-body) !important;
   font-weight: 750 !important;
   transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease, filter 0.16s ease, transform 0.1s ease, box-shadow 0.16s ease !important;
 }
@@ -1059,8 +1013,8 @@ textarea:focus,
 .ipm-search:focus,
 .cf-create-search:focus,
 .cf-create-select:focus {
-  border-color: rgba(76, 141, 255, 0.72) !important;
-  box-shadow: 0 0 0 3px rgba(76, 141, 255, 0.12) !important;
+  border-color: rgba(12, 201, 163, 0.72) !important;
+  box-shadow: 0 0 0 3px rgba(12, 201, 163, 0.12) !important;
   outline: none !important;
 }
 
@@ -1177,7 +1131,7 @@ textarea:focus,
   border-color: var(--line) !important;
   border-radius: 14px !important;
   background:
-    radial-gradient(360px 140px at 50% 0%, rgba(76, 141, 255, 0.055), transparent 72%),
+    radial-gradient(360px 140px at 50% 0%, rgba(12, 201, 163, 0.055), transparent 72%),
     rgba(13, 20, 32, 0.62) !important;
 }
 
@@ -1186,7 +1140,7 @@ textarea:focus,
   overflow: hidden;
   padding: 28px 18px 22px !important;
   background:
-    radial-gradient(420px 190px at 50% 0%, rgba(76, 141, 255, 0.12), transparent 72%),
+    radial-gradient(420px 190px at 50% 0%, rgba(12, 201, 163, 0.12), transparent 72%),
     var(--panel) !important;
 }
 
@@ -1197,7 +1151,7 @@ textarea:focus,
 }
 
 .jp-wheel::after {
-  border-color: rgba(76, 141, 255, 0.24) !important;
+  border-color: rgba(12, 201, 163, 0.24) !important;
   animation: none !important;
 }
 
@@ -1206,7 +1160,6 @@ textarea:focus,
 .tr-card,
 .tr-offer,
 .stat-card,
-.admin-tabs,
 .wm-card,
 .ipm-item,
 .cf-inv-tile,
@@ -1223,7 +1176,7 @@ textarea:focus,
 .ipm-item:hover,
 .cf-inv-tile:hover,
 .jp-inv-tile:hover {
-  border-color: rgba(76, 141, 255, 0.3) !important;
+  border-color: rgba(12, 201, 163, 0.3) !important;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2) !important;
 }
 
@@ -1293,7 +1246,7 @@ textarea:focus,
 }
 
 .chat-message-row.own-row .chat-bubble {
-  border-color: rgba(76, 141, 255, 0.18);
+  border-color: rgba(12, 201, 163, 0.18);
   border-radius: 12px 5px 12px 12px;
   background: rgba(48, 103, 190, 0.13);
 }
@@ -1469,7 +1422,7 @@ textarea:focus,
 .vc-modal {
   border-color: var(--line) !important;
   background:
-    radial-gradient(600px 180px at 50% 0%, rgba(76, 141, 255, 0.07), transparent 72%),
+    radial-gradient(600px 180px at 50% 0%, rgba(12, 201, 163, 0.07), transparent 72%),
     var(--panel) !important;
 }
 
@@ -1566,7 +1519,7 @@ textarea:focus,
 .wm-card:hover,
 .cf-inv-tile:hover,
 .jp-inv-tile:hover {
-  border-color: rgba(76, 141, 255, 0.34) !important;
+  border-color: rgba(12, 201, 163, 0.34) !important;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2) !important;
 }
 
@@ -1576,8 +1529,8 @@ textarea:focus,
 .cf-inv-tile.selected,
 .jp-inv-tile.selected {
   border-color: var(--acc) !important;
-  background: rgba(76, 141, 255, 0.11) !important;
-  box-shadow: inset 0 0 0 1px rgba(76, 141, 255, 0.35), 0 0 0 3px rgba(76, 141, 255, 0.07) !important;
+  background: rgba(12, 201, 163, 0.11) !important;
+  box-shadow: inset 0 0 0 1px rgba(12, 201, 163, 0.35), 0 0 0 3px rgba(12, 201, 163, 0.07) !important;
 }
 
 .ipm-item {
@@ -1694,7 +1647,7 @@ textarea:focus,
 }
 
 .profile-stat-box:hover {
-  border-color: rgba(76, 141, 255, 0.24);
+  border-color: rgba(12, 201, 163, 0.24);
   transform: translateY(-1px);
 }
 
@@ -1774,7 +1727,7 @@ textarea:focus,
   min-height: 100dvh;
   padding: 36px 20px !important;
   background:
-    radial-gradient(620px 360px at 50% 0%, rgba(76, 141, 255, 0.13), transparent 70%),
+    radial-gradient(620px 360px at 50% 0%, rgba(12, 201, 163, 0.13), transparent 70%),
     linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px),
     var(--bg0);
@@ -1788,7 +1741,7 @@ textarea:focus,
   border-color: var(--line) !important;
   border-radius: 20px !important;
   background:
-    radial-gradient(420px 170px at 50% 0%, rgba(76, 141, 255, 0.1), transparent 72%),
+    radial-gradient(420px 170px at 50% 0%, rgba(12, 201, 163, 0.1), transparent 72%),
     rgba(13, 20, 32, 0.96) !important;
   box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
   backdrop-filter: blur(18px);
@@ -1813,13 +1766,13 @@ textarea:focus,
   width: 100%;
   color: var(--txt);
   text-align: left;
-  border-color: rgba(76, 141, 255, 0.32) !important;
+  border-color: rgba(12, 201, 163, 0.32) !important;
   background: rgba(8, 15, 27, 0.8) !important;
 }
 
 .auth-code-box:hover {
-  border-color: rgba(76, 141, 255, 0.52) !important;
-  background: rgba(76, 141, 255, 0.08) !important;
+  border-color: rgba(12, 201, 163, 0.52) !important;
+  background: rgba(12, 201, 163, 0.08) !important;
 }
 
 .auth-copy {
@@ -1869,7 +1822,7 @@ textarea:focus,
 }
 
 .table tbody tr:hover td {
-  background: rgba(76, 141, 255, 0.04) !important;
+  background: rgba(12, 201, 163, 0.04) !important;
 }
 
 /* Popups, FAB and loading */
@@ -1908,20 +1861,14 @@ textarea:focus,
 }
 
 .loading-spinner {
-  border-color: rgba(76, 141, 255, 0.14) !important;
+  border-color: rgba(12, 201, 163, 0.14) !important;
   border-top-color: var(--acc) !important;
-  box-shadow: 0 0 18px rgba(76, 141, 255, 0.08);
+  box-shadow: 0 0 18px rgba(12, 201, 163, 0.08);
 }
 
-.mobile-chat-fab {
-  width: 50px !important;
-  height: 50px !important;
-  border-color: rgba(118, 169, 255, 0.35) !important;
-  border-radius: 15px !important;
-  background: linear-gradient(180deg, #5a98ff, #326fe0) !important;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 12px 28px rgba(35, 86, 176, 0.32) !important;
-  animation: none !important;
-}
+/* Placement is defined once, in ui/components.css. This rule declared
+     it a fifth time and won by load order, which is how the chat toggle came
+     to sit on top of every right-aligned primary action in the product. */
 
 .chat-backdrop.show {
   background: rgba(2, 5, 10, 0.7) !important;
@@ -1960,15 +1907,9 @@ textarea:focus,
     backdrop-filter: blur(3px);
   }
 
-  .mobile-chat-fab {
-    display: flex !important;
-    position: fixed;
-    right: calc(18px + env(safe-area-inset-right));
-    bottom: calc(18px + env(safe-area-inset-bottom));
-    z-index: 1600;
-    align-items: center;
-    justify-content: center;
-  }
+  /* Placement is defined once, in ui/components.css. This rule declared
+     it a fifth time and won by load order, which is how the chat toggle came
+     to sit on top of every right-aligned primary action in the product. */
 
   .header-title-copy > span { display: none; }
   .cf-topbar { flex-wrap: wrap; }
@@ -2072,11 +2013,39 @@ textarea:focus,
   .header-wallet-btn { min-width: 36px; min-height: 36px; padding: 0 9px !important; }
   .header-wallet-btn > span { display: none; }
   .header-right { gap: 5px; }
+  /* Icon controls in the header strip.
+
+     36px was chosen to fit five of them across a phone without wrapping, which
+     is a real constraint - but 36px is below what a thumb can reliably hit, and
+     the strip is where a finger goes most often. 44px is the WCAG 2.2 AA
+     target size and it still fits: the giveaway button drops its label below
+     480px, which is what buys back the width.
+
+     Applied only for a coarse pointer. On a mouse-driven tablet or a narrow
+     desktop window 36px is a perfectly good icon button and the extra eight
+     pixels would just crowd the strip. */
   .notification-icon,
   .settings-trigger,
   .sound-toggle,
-  .header-gw-btn { width: 36px !important; min-width: 36px; height: 36px !important; padding: 0 !important; }
+  .header-gw-btn {
+    width: 36px;
+    min-width: 36px;
+    height: 36px;
+    padding: 0;
+  }
+
   .header-gw-btn > span { display: none; }
+
+  @media (pointer: coarse) {
+    .notification-icon,
+    .settings-trigger,
+    .sound-toggle,
+    .header-gw-btn {
+      width: 44px;
+      min-width: 44px;
+      height: 44px;
+    }
+  }
 
   .page-content {
     padding: 14px 12px calc(88px + env(safe-area-inset-bottom)) !important;
@@ -2108,11 +2077,9 @@ textarea:focus,
     padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important;
   }
 
-  .mobile-chat-fab {
-    display: flex !important;
-    right: calc(14px + env(safe-area-inset-right));
-    bottom: calc(14px + env(safe-area-inset-bottom));
-  }
+  /* Placement is defined once, in ui/components.css. This rule declared
+     it a fifth time and won by load order, which is how the chat toggle came
+     to sit on top of every right-aligned primary action in the product. */
 
   .notification-dropdown {
     position: fixed !important;
@@ -2207,7 +2174,7 @@ textarea:focus,
   .sidebar { gap: 4px !important; }
   .sidebar-brand { padding-right: 4px !important; }
   .sidebar .nav-link { width: 36px; min-width: 36px; }
-  .header-left h2 { font-size: 0.82rem; }
+  .header-left h1, .header-left h2 { font-size: 0.82rem; }
   .balance-pill { max-width: 82px; }
   .balance-total { font-size: 0.72rem; }
   .header-page-icon { display: none; }
@@ -2226,7 +2193,7 @@ textarea:focus,
   pointer-events: none;
   opacity: .55;
   background:
-    radial-gradient(420px 180px at 8% 20%, rgba(76,141,255,.07), transparent 72%),
+    radial-gradient(420px 180px at 8% 20%, rgba(12,201,163,.07), transparent 72%),
     radial-gradient(520px 220px at 92% 72%, rgba(139,92,246,.045), transparent 74%);
   animation: ambient-breathe 12s ease-in-out infinite alternate;
 }
@@ -2289,5 +2256,72 @@ textarea:focus,
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================================
+   Touch targets for the header's icon controls
+   ----------------------------------------------------------------------------
+   38px squares, in the strip a thumb reaches for most. Fixed here rather than
+   in the shared @media (pointer: coarse) block because App.css and
+   ui-polish.css are chunk stylesheets: webpack injects them after the whole
+   main bundle, so a same-specificity rule in ui/components.css loses to them.
+   ========================================================================= */
+
+@media (pointer: coarse) {
+  .sound-toggle,
+  .notification-icon,
+  .header-gw-btn {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  /* The giveaway control carries a text label beside its icon, so it is sized
+     by that rather than forced square. */
+  .header-gw-btn:has(.header-gw-label) {
+    width: auto;
+    min-width: 44px;
+    padding-inline: 14px;
+  }
+}
+
+/* The navigation rail, for touch only. 36px tall is fine for a mouse and a
+   poor target for a thumb, and the rail is the control used most on a phone.
+   Scoped to a coarse pointer so the desktop sidebar keeps its density.
+
+   The selector is scoped to .sidebar because that is how the rail's own rules
+   are written - `.sidebar .nav-link` is (0,2,0) and a bare `.nav-link` at
+   (0,1,0) loses to it regardless of which sheet it is in or which loads
+   last. */
+@media (pointer: coarse) {
+  .sidebar .nav-link {
+    min-height: 44px;
+  }
+
+  /* The rest of the header's right-hand cluster: the profile button, the
+     wallet, and the giveaway control - whose label is dropped below 480px, so
+     the width is already there and only the height is short. All three were
+     36-40px tall, just under the floor, in the strip a thumb reaches for most. */
+  .user-info,
+  .header-wallet-btn,
+  .header-gw-btn {
+    min-height: 44px;
+  }
+
+  /* min-height rather than height: these carry their own padding, and a height
+     was being undone by it - the sound toggle and the notification bell both
+     came out 44 wide and 40 tall. min-height cannot be shrunk by content. */
+  .sound-toggle,
+  .notification-icon {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* The jackpot page writes its own button classes rather than using the
+     shared ones, so the shared floor has to name them. */
+  .jp-btn-primary,
+  .jp-btn-secondary {
+    min-height: 44px;
   }
 }

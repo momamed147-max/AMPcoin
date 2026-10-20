@@ -6,8 +6,8 @@ export const THEMES = {
   default: {
     id: 'default',
     name: 'Default',
-    description: 'Blue + dark blue',
-    swatches: ['#4c8dff', '#0d1420', '#e6ad3c']
+    description: 'Jade + obsidian',
+    swatches: ['#0cc9a3', '#07100e', '#f6c45a']
   },
   mikayla: {
     id: 'mikayla',
@@ -99,7 +99,7 @@ export function applyTheme(themeId, persist = true) {
         aurora: '#f4f6fb',
         inferno: '#000000'
       };
-      metaTheme.setAttribute('content', THEME_COLORS[id] || '#060910');
+      metaTheme.setAttribute('content', THEME_COLORS[id] || '#030807');
     }
     // Lets CSS react to a light theme: a few surfaces hardcode a dark scrim or
     // a dark scrollbar thumb and are unreadable on white.

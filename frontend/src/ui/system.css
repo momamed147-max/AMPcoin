@@ -57,42 +57,43 @@
   /* ── Primitives: the palette, before meaning is attached ──────────────── */
 
   /* Neutral ladder. Nine steps, deliberately separated.
-     0 is the page, 1-2 are chrome, 3-6 are surfaces, 7-8 are overlays. */
-  --ds-n-0:  #080a0f;   /* page background                                     */
-  --ds-n-1:  #0d1016;   /* nav, header, chat - furniture                       */
-  --ds-n-2:  #12161e;   /* primary panel                                       */
-  --ds-n-3:  #171c26;   /* raised panel, input                                 */
-  --ds-n-4:  #1e2430;   /* hover surface, row header                           */
-  --ds-n-5:  #262d3b;   /* pressed, selected chip                              */
-  --ds-n-6:  #313a4b;   /* divider strong, scrollbar track                     */
-  --ds-n-7:  #4a5567;   /* disabled text                                      */
-  --ds-n-8:  #e8edf5;   /* maximum contrast on dark                            */
+     The room is now obsidian with a green cast rather than navy. That single
+     decision is what lets jade read as light instead of as a tinted blue. */
+  --ds-n-0:  #030807;   /* page background                                     */
+  --ds-n-1:  #07100e;   /* nav, header, chat - furniture                       */
+  --ds-n-2:  #0a1714;   /* primary panel                                       */
+  --ds-n-3:  #0f211c;   /* raised panel, input                                 */
+  --ds-n-4:  #152c25;   /* hover surface, row header                           */
+  --ds-n-5:  #1d3b31;   /* pressed, selected chip                              */
+  --ds-n-6:  #2a5145;   /* divider strong, scrollbar track                     */
+  --ds-n-7:  #55766a;   /* disabled text                                       */
+  --ds-n-8:  #ecfff8;   /* maximum contrast on dark                            */
 
-  /* Accent ramp, drawn from the logo's blue. */
-  --ds-a-100: #d3e3fb;  /* tint, on-accent surfaces                            */
-  --ds-a-200: #a8c8f6;
-  --ds-a-300: #6ea6f5;  /* hover / bright                                      */
-  --ds-a-400: #4589f0;
-  --ds-a-500: #2f74de;  /* the accent                                          */
-  --ds-a-600: #2059b4;
-  --ds-a-700: #173f80;
+  /* Accent ramp: oxidised jade. Deliberately not a blue derivative. */
+  --ds-a-100: #d8fff4;  /* tint, on-accent surfaces                            */
+  --ds-a-200: #a6ffe6;
+  --ds-a-300: #67ffd6;  /* hover / bright                                      */
+  --ds-a-400: #2ee6bd;
+  --ds-a-500: #0cc9a3;  /* the accent                                          */
+  --ds-a-600: #089b7e;
+  --ds-a-700: #076d5a;
 
   /* Semantic. Meaning is attached to these, never to the ramps above. */
-  --ds-pos-400: #3ecf8e;  /* win, profit, success                             */
+  --ds-pos-400: #4ee39a;  /* win, profit, success                             */
   --ds-pos-600: #1f9d63;
-  --ds-neg-400: #f4666a;  /* loss, danger, destructive                         */
-  --ds-neg-600: #c9383c;
-  --ds-warn-400: #e8b04b; /* rewards, gold, pending                            */
+  --ds-neg-400: #ff6b7d;  /* loss, danger, destructive                         */
+  --ds-neg-600: #c9384c;
+  --ds-warn-400: #f6c45a; /* rewards, gold, pending                            */
   --ds-warn-600: #b07d1f;
 
   /* Rarity. Deliberately distinct in hue as well as lightness, so a common
      and an ultra-rare are separable at a glance and not only side by side. */
-  --ds-r-common:    #7d8798;
-  --ds-r-uncommon:  #57b98a;
-  --ds-r-rare:      #4f95e8;
-  --ds-r-epic:      #9a6ce8;
-  --ds-r-legendary: #e0a63e;
-  --ds-r-mythic:    #e05c5c;
+  --ds-r-common:    #86998f;
+  --ds-r-uncommon:  #5fd0a0;
+  --ds-r-rare:      #5eb8ea;
+  --ds-r-epic:      #b28cff;
+  --ds-r-legendary: #f5c45a;
+  --ds-r-mythic:    #ff6b7d;
 
   /* ── Surfaces ───────────────────────────────────────────────────────── */
 
@@ -121,18 +122,18 @@
 
   /* ── Lines ──────────────────────────────────────────────────────────── */
 
-  --line:      rgba(160, 175, 195, 0.13);
-  --line-soft: rgba(160, 175, 195, 0.07);
-  --line-strong: rgba(160, 175, 195, 0.22);
+  --line:      rgba(176, 236, 218, 0.13);
+  --line-soft: rgba(176, 236, 218, 0.07);
+  --line-strong: rgba(176, 236, 218, 0.24);
 
   /* ── Text ───────────────────────────────────────────────────────────── */
   /* Luminance rises monotonically down this list, and every step clears
      4.5:1 against --bg1 and --panel. */
 
-  --txt:  #e9eef6;   /* 15.1:1 on --panel                                      */
-  --mut:  #a2adbf;   /*  7.4:1                                                */
-  --dim:  #77839a;   /*  4.6:1 - AA for body text; the old #525d70 was 2.9:1 */
-  --faint: #5a6577;  /* non-essential only, never for a value a user must read */
+  --txt:  #ecfff8;   /* high-contrast warm white on jade-black               */
+  --mut:  #a7c2b8;   /*  7.5:1                                                */
+  --dim:  #7f9d92;   /*  4.7:1 - AA for body text                             */
+  --faint: #607a70;  /* non-essential only, never for a value a user must read */
 
   /* ── Accent (semantic) ───────────────────────────────────────────────── */
 
@@ -145,14 +146,17 @@
   --acc-500:    var(--ds-a-500);
   --acc-600:    var(--ds-a-600);
   --acc-700:    var(--ds-a-700);
-  --acc-soft:   rgba(47, 116, 222, 0.14);
-  --acc-glow:   rgba(47, 116, 222, 0.32);
-  --acc-ring:   rgba(47, 116, 222, 0.45);
+  --acc-soft:   rgba(12, 201, 163, 0.14);
+  --acc-glow:   rgba(12, 201, 163, 0.34);
+  --acc-ring:   rgba(12, 201, 163, 0.48);
 
+  /* The base value stays white for the dark-accent themes that inherit it.
+     Default (jade) overrides this in theme.css, because white on jade fails
+     contrast: its primary controls read as dark type on a lit surface. */
   --on-accent: #ffffff;
   --theme-accent-2: var(--ds-a-600);
-  --theme-chat-accent: rgba(47, 116, 222, 0.16);
-  --theme-on-accent: #ffffff;
+  --theme-chat-accent: rgba(12, 201, 163, 0.16);
+  --theme-on-accent: #032019;
 
   /* ── Status ─────────────────────────────────────────────────────────── */
   /* Each status ships a solid and a tint. The tint is what gets used for a
@@ -161,37 +165,43 @@
 
   --grn:      var(--ds-pos-400);
   --grn-dim:  var(--ds-pos-600);
-  --grn-soft: rgba(62, 207, 142, 0.14);
+  --grn-soft: rgba(78, 227, 154, 0.14);
   --red:      var(--ds-neg-400);
   --red-dim:  var(--ds-neg-600);
-  --red-soft: rgba(244, 102, 106, 0.14);
+  --red-soft: rgba(255, 107, 125, 0.14);
   --gold:     var(--ds-warn-400);
   --gold-dim: var(--ds-warn-600);
-  --gold-soft: rgba(232, 176, 75, 0.14);
-  --orange:   #f08a3c;
+  --gold-soft: rgba(246, 196, 90, 0.14);
+  --orange:   #ff9b52;
 
   /* Two categorical hues for the rare cases that are neither a status nor the
      accent - currently the three RPS moves, which need to read apart from each
      other and from everything else on the page. */
-  --violet: #9a6ce8;
-  --violet-soft: rgba(154, 108, 232, 0.14);
+  --violet: #b28cff;
+  --violet-soft: rgba(178, 140, 255, 0.14);
 
   /* ── Type ───────────────────────────────────────────────────────────── */
+  /* A geometric body face paired with a slightly technical display face. The
+     contrast between the two is part of the redesign: headings now have a
+     different voice from the numbers, instead of both being Sora. */
 
-  --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-display: 'Chakra Petch', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Outfit', 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* A compact scale with clear steps. Line heights are set per size rather
-     than globally, because 1.5 is right for body and wrong for a heading. */
+     than globally, because 1.5 is right for body and wrong for a heading.
+     The top of the ramp was lifted a step: in a casino product a page title,
+     a pot value and an eyebrow were landing within four pixels of each other,
+     which is why every screen read as one flat typographic plane. */
   --fs-xs:   0.72rem;  --lh-xs:   1.35;
-  --fs-sm:   0.8rem;   --lh-sm:   1.4;
-  --fs-md:   0.9rem;   --lh-md:   1.5;
+  --fs-sm:   0.81rem;  --lh-sm:   1.4;
+  --fs-md:   0.92rem;  --lh-md:   1.5;
   --fs-base: 1rem;     --lh-base: 1.55;
-  --fs-lg:   1.125rem; --lh-lg:   1.35;
-  --fs-xl:   1.4rem;   --lh-xl:   1.25;
-  --fs-2xl:  1.85rem;  --lh-2xl:  1.15;
-  --fs-3xl:  2.4rem;   --lh-3xl:  1.08;
+  --fs-lg:   1.18rem;  --lh-lg:   1.3;
+  --fs-xl:   1.5rem;   --lh-xl:   1.2;
+  --fs-2xl:  2.05rem;  --lh-2xl:  1.1;
+  --fs-3xl:  2.7rem;   --lh-3xl:  1.04;
 
   --fw-normal: 400;
   --fw-medium: 500;
@@ -233,22 +243,28 @@
   /* Six, ten, fourteen, eighteen. Not everything is a pill. */
 
   --r-xs: 4px;
-  --r-sm: 6px;
-  --r-md: 10px;
-  --r-lg: 14px;
-  --r-xl: 18px;
-  --r-2xl: 24px;
+  --r-sm: 7px;
+  --r-md: 11px;
+  --r-lg: 16px;
+  --r-xl: 21px;
+  --r-2xl: 27px;
+  --r-3xl: 36px;
   --r-full: 999px;
+
+  /* The signature silhouette. Panels are cut on two opposite corners, like a
+     stamped token, so a card does not read as another generic rounded box. */
+  --r-cut: 5px 20px 5px 20px;
+  --r-cut-sm: 4px 13px 4px 13px;
 
   /* ── Elevation ───────────────────────────────────────────────────────── */
   /* One recipe at four strengths: a tight contact shadow that says the surface
      touches what is below it, and a wide ambient one that says how far above
      it sits. A shadow without the contact layer just makes something darker. */
 
-  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px -4px rgba(0, 0, 0, 0.5);
-  --shadow-3: 0 2px 4px rgba(0, 0, 0, 0.42), 0 12px 28px -10px rgba(0, 0, 0, 0.62);
-  --shadow-4: 0 4px 10px rgba(0, 0, 0, 0.46), 0 28px 60px -18px rgba(0, 0, 0, 0.7);
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.38), 0 1px 0 rgba(255, 255, 255, 0.03) inset;
+  --shadow-2: 0 2px 4px rgba(0, 0, 0, 0.34), 0 8px 20px -8px rgba(0, 0, 0, 0.62);
+  --shadow-3: 0 4px 8px rgba(0, 0, 0, 0.36), 0 18px 44px -14px rgba(0, 0, 0, 0.72);
+  --shadow-4: 0 8px 18px rgba(0, 0, 0, 0.4), 0 42px 90px -24px rgba(0, 0, 0, 0.82);
 
   --elev-1: var(--shadow-1);
   --elev-2: var(--shadow-2);
@@ -312,9 +328,9 @@
 
   /* ── Layout ─────────────────────────────────────────────────────────── */
 
-  --page-max: 1240px;
-  --page-pad: clamp(16px, 2.2vw, 32px);
-  --chat-w: 264px;
+  --page-max: 1344px;
+  --page-pad: clamp(16px, 2.4vw, 36px);
+  --chat-w: 284px;
 
   /* Fixed chrome. One height for both rails, because they sit edge to edge
      and a 2px mismatch between them shows as a visible step in the corner.
@@ -353,9 +369,9 @@
   /* Restrained on purpose. The brief asks for a premium product, and heavy
      ambient glow is the fastest way to look like a template. */
 
-  --theme-grid: rgba(160, 175, 195, 0.014);
-  --theme-glow-a: rgba(47, 116, 222, 0.10);
-  --theme-glow-b: rgba(124, 92, 255, 0.06);
+  --theme-grid: rgba(160, 220, 200, 0.018);
+  --theme-glow-a: rgba(12, 201, 163, 0.11);
+  --theme-glow-b: rgba(246, 196, 90, 0.055);
 
   /* ── Rarity surfaces ─────────────────────────────────────────────────── */
   /* Used by item tiles and mod badges so rarity is legible without a legend. */
@@ -366,4 +382,30 @@
   --rarity-epic:      var(--ds-r-epic);
   --rarity-legendary: var(--ds-r-legendary);
   --rarity-mythic:    var(--ds-r-mythic);
+
+  /* ── Depth and atmosphere ────────────────────────────────────────────── */
+  /* A small set of composed values for the premium layer. These are not new
+     colours; they are the existing ramp arranged into light. Kept here so a
+     theme still repaints everything and no component invents its own glow. */
+
+  --grad-brand:   linear-gradient(135deg, #d8fff4 0%, #2ee6bd 42%, #089b7e 100%);
+  --grad-brand-2: linear-gradient(120deg, var(--acc) 0%, #a6ffe6 100%);
+  --grad-gold:    linear-gradient(135deg, #fff0bd 0%, var(--gold) 52%, #e58a2f 100%);
+  --grad-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.055) 0%, rgba(255, 255, 255, 0.014) 22%, transparent 68%);
+  --grad-glass:   linear-gradient(160deg, rgba(16, 44, 36, 0.76) 0%, rgba(4, 12, 10, 0.9) 100%);
+  --grad-line:    linear-gradient(90deg, transparent, rgba(103, 255, 214, 0.48), rgba(246, 196, 90, 0.3), transparent);
+
+  --glow-brand:  rgba(12, 201, 163, 0.36);
+  --glow-violet: rgba(178, 140, 255, 0.26);
+  --glow-teal:   rgba(103, 255, 214, 0.24);
+  --glow-gold:   rgba(246, 196, 90, 0.28);
+
+  --glass-bg:     rgba(5, 19, 15, 0.68);
+  --glass-bg-2:   rgba(8, 28, 23, 0.76);
+  --glass-border: rgba(166, 255, 226, 0.15);
+  --glass-blur:   blur(18px) saturate(1.25);
+
+  --dur-ambient: 34s;
+  --ease-expo:   cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft:   cubic-bezier(0.33, 1, 0.68, 1);
 }

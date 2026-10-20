@@ -172,7 +172,7 @@ textarea:focus-visible,
     min-width: 96px;
   }
 
-  .header-left h2 {
+  .header-left h1, .header-left h2 {
     font-size: 0.86rem;
   }
 

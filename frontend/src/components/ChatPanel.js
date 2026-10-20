@@ -771,7 +771,7 @@ const ChatPanel = ({ socket, chatOpen }) => {
         <div className="chat-error" role="alert">
           <Icon name="warn" size={14} />
           <span>{chatError}</span>
-          <button type="button" onClick={() => setChatError('')} aria-label="Dismiss chat error">
+          <button type="button" className="btn btn-ghost btn-sm" onClick={() => setChatError('')} aria-label="Dismiss chat error">
             <Icon name="close" size={13} />
           </button>
         </div>

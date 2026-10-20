@@ -40,7 +40,7 @@
 .apop-error .apop-glow { background: var(--red); }
 .apop-warning { border-color: rgba(236,127,36,.5); }
 .apop-warning .apop-glow { background: var(--orange); }
-.apop-info { border-color: rgba(47,129,247,.5); }
+.apop-info { border-color: rgba(12,201,163,.5); }
 .apop-info .apop-glow { background: var(--acc); }
 .apop-icon {
   width: 34px; height: 34px; min-width: 34px; border-radius: 50%;
@@ -53,7 +53,7 @@
 .apop-success .apop-icon { background: #238636; box-shadow: 0 0 14px rgba(63,185,80,.5), inset 0 1px 0 rgba(255,255,255,.2); }
 .apop-error .apop-icon { background: #da3633; box-shadow: 0 0 14px rgba(248,81,73,.5), inset 0 1px 0 rgba(255,255,255,.2); animation: apop-shake .4s .1s; }
 .apop-warning .apop-icon { background: #9e6a03; box-shadow: 0 0 14px rgba(236,127,36,.5), inset 0 1px 0 rgba(255,255,255,.2); }
-.apop-info .apop-icon { background: var(--acc); box-shadow: 0 0 14px rgba(47,129,247,.5), inset 0 1px 0 rgba(255,255,255,.2); font-style: italic; font-family: serif; }
+.apop-info .apop-icon { background: var(--acc); color: var(--on-accent); box-shadow: 0 0 14px rgba(12,201,163,.5), inset 0 1px 0 rgba(255,255,255,.2); font-style: italic; font-family: serif; }
 @keyframes apop-shake {
   0%, 100% { transform: translateX(0) scale(1); }
   25% { transform: translateX(-4px) scale(1.05); }

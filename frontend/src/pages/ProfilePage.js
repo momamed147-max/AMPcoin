@@ -154,7 +154,9 @@ const ProfilePage = () => {
   return (
     <div className="profile-container">
       <div className="profile-header">
-        <h1>User Profile</h1>
+        {/* The header band above is the page’s h1 and already reads
+            "Profile"; repeating it gave the page two level-one headings
+            saying the same thing. */}
         <div className="profile-header-actions">
           <button
             className="btn btn-secondary"

@@ -196,7 +196,7 @@ const ValueChecker = ({ isOpen, onClose }) => {
                         className="vc-th-val"
                         aria-sort={sortField === field ? (sortDir === 'desc' ? 'descending' : 'ascending') : 'none'}
                       >
-                        <button type="button" onClick={() => handleSort(field)}>
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={() => handleSort(field)}>
                           {label}
                           <Icon
                             name="chevron"

@@ -131,9 +131,9 @@ const AdminUpgraderTab = () => {
                     <span className="aut-val"><Icon name="diamond" size={10} /> {Number(i.value || 0).toLocaleString()}</span>
                   </div>
                   <div className="aut-stepper">
-                    <button type="button" onClick={() => bump(id, -1, avail)} disabled={!sel[id]}>-</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => bump(id, -1, avail)} disabled={!sel[id]}>-</button>
                     <span className={sel[id] ? 'on' : ''}>{sel[id] || 0}</span>
-                    <button type="button" onClick={() => bump(id, 1, avail)} disabled={(sel[id] || 0) >= avail}>+</button>
+                    <button type="button" className="btn btn-ghost btn-sm" onClick={() => bump(id, 1, avail)} disabled={(sel[id] || 0) >= avail}>+</button>
                   </div>
                 </div>
               );

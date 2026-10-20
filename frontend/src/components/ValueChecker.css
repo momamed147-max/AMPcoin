@@ -6,11 +6,6 @@
   overflow-y: auto;
 }
 .vc-modal {
-  --bg0:#070a11; --bg1:#0b0f17; --panel:#0e141d; --panel2:#121924;
-  --line:rgba(148,163,184,.12); --line-soft:rgba(148,163,184,.07);
-  --txt:#eef2f7; --mut:#8b96a8; --dim:#525d70;
-  --acc:#2f81f7;
-  --r-sm:8px; --r-md:10px; --r-lg:14px;
   background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg);
   box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 24px 64px rgba(0,0,0,.6);
   width: 90vw; max-width: 720px; max-height: 85vh; margin: auto;
@@ -47,7 +42,7 @@
 .vc-th-val { text-align: right; cursor: pointer; user-select: none; transition: color .15s; }
 .vc-th-val:hover { color: var(--acc); }
 .vc-row { transition: background .1s; }
-.vc-row:hover { background: rgba(47,129,247,.06); }
+.vc-row:hover { background: rgba(12,201,163,.06); }
 .vc-row td { padding: 9px 12px; border-bottom: 1px solid var(--line-soft); }
 .vc-pet-cell { width: 45%; }
 .vc-pet-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
@@ -66,7 +61,7 @@
   width: 34px; height: 34px; border-radius: var(--r-sm); font-size: 1rem; font-weight: 700;
   cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s;
 }
-.vc-page-btn:hover:not(:disabled) { border-color: var(--acc); color: #fff; background: var(--acc); }
+.vc-page-btn:hover:not(:disabled) { border-color: var(--acc); color: var(--on-accent); background: var(--acc); }
 .vc-page-btn:disabled { opacity: .3; cursor: not-allowed; }
 .vc-page-info { color: var(--mut); font-size: .82rem; font-variant-numeric: tabular-nums; }
 

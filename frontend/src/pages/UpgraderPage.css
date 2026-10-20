@@ -133,7 +133,7 @@
 
 .ug-btn {
   width: 100%; padding: 13px; border: none; border-radius: 10px;
-  background: var(--acc); color: #fff; font-weight: 900; font-size: .98rem;
+  background: var(--acc); color: var(--on-accent); font-weight: 900; font-size: .98rem;
   cursor: pointer; box-shadow: 0 4px 16px color-mix(in srgb, var(--acc) 35%, transparent);
   transition: transform .12s ease, filter .12s ease;
 }
@@ -188,7 +188,7 @@
   background: var(--panel3); border: 1px solid var(--line); color: var(--txt);
   font-weight: 900; line-height: 1; padding: 0;
 }
-.ug-stepper button:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); }
+.ug-stepper button:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); color: var(--on-accent); }
 .ug-stepper button:disabled { opacity: .35; cursor: not-allowed; }
 .ug-stepper span { min-width: 18px; text-align: center; font-size: .82rem; font-weight: 800; color: var(--dim); }
 .ug-stepper span.on { color: var(--acc); }

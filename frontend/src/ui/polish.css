@@ -32,7 +32,7 @@
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(900px 420px at 20% -10%, rgba(47, 129, 247, 0.10), transparent 62%),
+    radial-gradient(900px 420px at 20% -10%, rgba(12, 201, 163, 0.10), transparent 62%),
     radial-gradient(700px 380px at 94% 2%, rgba(124, 92, 255, 0.06), transparent 60%);
 }
 

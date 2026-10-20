@@ -426,7 +426,17 @@ const Header = ({ socket }) => {
       <div className="header-left">
         <span className="header-page-icon"><Icon name={pageMeta.icon} size={17} /></span>
         <div className="header-title-copy">
-          <h2>{pageMeta.title}</h2>
+          {/* An h1, because this is the page's title.
+
+             It was an h2, and no page supplied an h1 to replace it - so a reader
+             navigating by heading found the document beginning at level two,
+             with nothing at level one to enter the page by. Several pages also
+             carried their own h1 repeating this same string a few pixels below,
+             which is a duplicate rather than a hierarchy.
+
+             The heading level is what tells a screen reader where the page
+             starts; the visual size comes from CSS and does not change. */}
+         <h1>{pageMeta.title}</h1>
           <span>{pageMeta.subtitle}</span>
         </div>
       </div>

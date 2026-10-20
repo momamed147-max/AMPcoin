@@ -51,6 +51,7 @@ const QtyStepper = ({
     <div className={`qt ${className}`}>
       <button
         type="button"
+        className="qt-btn"
         onClick={() => step(-1)}
         disabled={disabled || clamped <= min}
         aria-label={`decrease ${ariaLabel}`}
@@ -81,6 +82,7 @@ const QtyStepper = ({
       />
       <button
         type="button"
+        className="qt-btn"
         onClick={() => step(1)}
         disabled={disabled || clamped >= max}
         aria-label={`increase ${ariaLabel}`}

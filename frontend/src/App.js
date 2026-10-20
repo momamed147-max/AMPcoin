@@ -12,6 +12,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import ToastProvider, { useToast } from './components/Toasts';
 import CommandPalette from './components/CommandPalette';
+import Ambient from './components/Ambient';
 import Icon from './components/Icon';
 import { API_BASE } from './apiConfig';
 import { installGlobalSoundEffects, playError } from './sound';
@@ -40,10 +41,16 @@ const ValueChecker = lazy(() => import('./components/ValueChecker'));
 
 function RouteFallback() {
   return (
-    <div className="route-loading">
-      <div className="cf-loading" aria-label="Loading page">
-        <span className="cf-loading-dots"><i /><i /><i /></span>
+    <div className="route-loading" role="status" aria-live="polite">
+      <div className="route-loader" aria-hidden="true">
+        <span className="route-loader-ring" />
+        <span className="route-loader-ring route-loader-ring-2" />
+        <span className="route-loader-core" />
       </div>
+      <p className="route-loading-text">
+        Dealing you in
+        <span className="cf-loading-dots"><i /><i /><i /></span>
+      </p>
     </div>
   );
 }
@@ -193,20 +200,31 @@ function AppContent() {
   if (loading) {
     return (
       <div className="loading-container">
+        <Ambient />
+        <div className="boot-halo" aria-hidden="true" />
         <div className="app-loading-logo"><Logo size={64} showText={false} /></div>
         <div className="loading-spinner"></div>
         <p>Loading AMPcoin...</p>
+        <div className="boot-progress" aria-hidden="true"><span /></div>
       </div>
     );
   }
 
   return (
     <div className="app">
+      <Ambient />
+      <div
+        className={`route-progress ${user ? '' : 'route-progress-auth'}`}
+        key={location.pathname}
+        aria-hidden="true"
+      >
+        <span />
+      </div>
       {apiDown && (
         <div className="api-down-banner" role="status">
           <Icon name="warn" size={15} />
           <span>{apiNote}</span>
-          <button onClick={checkApi}>Retry</button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={checkApi}>Retry</button>
         </div>
       )}
       
@@ -225,7 +243,17 @@ function AppContent() {
             </div>
           </>
         )}
-        <div className="main-content">
+        {/* <main> is the landmark that lets a screen reader or a keyboard user
+            skip everything else and land on the content. Without it a reader
+            has to walk the nav, the chat rail and the header on every single
+            navigation before reaching anything they came for - and on this
+            shell that is a lot of controls to step through.
+
+            The header band sits inside it, so the page title is announced as
+            part of entering the main region rather than before it. The chat
+            rail stays outside, where it belongs: it is a sibling panel, not
+            part of the page. */}
+        <main className="main-content">
           {user && <Header socket={socket} />}
           <div className="page-content" key={location.pathname}>
             {/* keying on the path remounts the boundary on navigation, so a
@@ -267,10 +295,11 @@ function AppContent() {
             </Suspense>
             </ErrorBoundary>
           </div>
-        </div>
+        </main>
       </div>
       {user && (
         <button
+          type="button"
           className="mobile-chat-fab"
           onClick={() => setMobileChatOpen((v) => !v)}
           aria-label={mobileChatOpen ? 'Close chat' : 'Open live chat'}

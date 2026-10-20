@@ -4,26 +4,61 @@
   --theme-nav: var(--bg1);
   --theme-header: var(--bg1);
   --theme-chat: var(--bg1);
-  --theme-panel: #0d1420;
+  --theme-panel: #0a1714;
   --theme-grid: rgba(255, 255, 255, 0.012);
-  --theme-glow-a: rgba(50, 104, 190, 0.15);
-  --theme-glow-b: rgba(24, 91, 153, 0.09);
-  --theme-accent-2: #326fe0;
-  --theme-chat-accent: rgba(76, 141, 255, 0.13);
-  --theme-on-accent: #ffffff;
+  --theme-glow-a: rgba(12, 201, 163, 0.15);
+  --theme-glow-b: rgba(246, 196, 90, 0.08);
+  --theme-accent-2: #089b7e;
+  --theme-chat-accent: rgba(12, 201, 163, 0.14);
+  --theme-on-accent: #032019;
 }
 
+/* The default theme mirrors ui/system.css. The legacy ui-polish palette that
+   used to require this duplicate has been removed; the mirror stays because a
+   chosen theme must still outrank the system. Every other theme in this file
+   does the same thing. */
 :root[data-theme='default'] {
+  --bg0: #030807;
+  --bg1: #07100e;
+  --bg2: #0f211c;
+  --panel: #0a1714;
+  --panel2: #0f211c;
+  --panel3: #152c25;
+  --line: rgba(176, 236, 218, 0.15);
+  --line-soft: rgba(176, 236, 218, 0.08);
+  --line-strong: rgba(176, 236, 218, 0.28);
+  --txt: #ecfff8;
+  --mut: #a7c2b8;
+  --dim: #7f9d92;
+  --faint: #607a70;
+  --acc: #0cc9a3;
+  --acc-bright: #67ffd6;
+  --acc-soft: rgba(12, 201, 163, 0.15);
+  --acc-glow: rgba(12, 201, 163, 0.36);
+  --acc-ring: rgba(12, 201, 163, 0.52);
+  --grn: #4ee39a;
+  --grn-dim: #1f9d63;
+  --grn-soft: rgba(78, 227, 154, 0.15);
+  --red: #ff6b7d;
+  --red-dim: #c9384c;
+  --red-soft: rgba(255, 107, 125, 0.15);
+  --gold: #f6c45a;
+  --gold-dim: #b07d1f;
+  --gold-soft: rgba(246, 196, 90, 0.15);
+  --orange: #ff9b52;
+  --violet: #b28cff;
+  --violet-soft: rgba(178, 140, 255, 0.16);
   --theme-nav: var(--bg1);
   --theme-header: var(--bg1);
   --theme-chat: var(--bg1);
-  --theme-panel: #0d1420;
-  --theme-grid: rgba(255, 255, 255, 0.012);
-  --theme-glow-a: rgba(50, 104, 190, 0.15);
-  --theme-glow-b: rgba(24, 91, 153, 0.09);
-  --theme-accent-2: #326fe0;
-  --theme-chat-accent: rgba(76, 141, 255, 0.13);
-  --theme-on-accent: #ffffff;
+  --theme-panel: var(--panel);
+  --theme-grid: rgba(150, 230, 205, 0.02);
+  --theme-glow-a: rgba(12, 201, 163, 0.17);
+  --theme-glow-b: rgba(246, 196, 90, 0.09);
+  --theme-accent-2: #089b7e;
+  --theme-chat-accent: rgba(12, 201, 163, 0.16);
+  --on-accent: #032019;
+  --theme-on-accent: #032019;
 }
 
 :root[data-theme='mikayla'],
@@ -57,6 +92,7 @@
   --theme-glow-b: rgba(103, 45, 180, 0.12);
   --theme-accent-2: #a855f7;
   --theme-chat-accent: rgba(232, 121, 249, 0.15);
+  --on-accent: #ffffff;
   --theme-on-accent: #ffffff;
 }
 
@@ -91,6 +127,7 @@
   --theme-glow-b: rgba(255, 255, 255, 0.04);
   --theme-accent-2: #8b5cf6;
   --theme-chat-accent: rgba(196, 181, 253, 0.12);
+  --on-accent: #17121f;
   --theme-on-accent: #17121f;
 }
 
@@ -125,6 +162,7 @@
   --theme-glow-b: rgba(249, 115, 22, 0.1);
   --theme-accent-2: #d97706;
   --theme-chat-accent: rgba(245, 158, 11, 0.14);
+  --on-accent: #241503;
   --theme-on-accent: #241503;
 }
 
@@ -161,6 +199,7 @@
   --theme-glow-b: rgba(20, 184, 166, 0.12);
   --theme-accent-2: #f97316;
   --theme-chat-accent: rgba(20, 184, 166, 0.15);
+  --on-accent: #04100e;
   --theme-on-accent: #04100e;
 }
 
@@ -267,13 +306,6 @@ html[data-theme] .leaderboard-modal {
     var(--theme-panel) !important;
 }
 
-html[data-theme] .cf-tab-active,
-html[data-theme] .cf-tab.cf-tab-active,
-html[data-theme] .jp-tab.active,
-html[data-theme] .jp-active.active,
-html[data-theme] .tab-btn.active,
-html[data-theme] .tab-button.active,
-html[data-theme] .vc-rarity-tab.active,
 html[data-theme] .sidebar .nav-link.active {
   color: var(--txt) !important;
   border-color: var(--line) !important;
@@ -448,7 +480,6 @@ html[data-theme] .gw-refund-banner,
 html[data-theme] .chat-input-wrap,
 html[data-theme] .cf-topbar-btn,
 html[data-theme] .cf-sort-label,
-html[data-theme] .admin-tabs,
 html[data-theme] .stat-card,
 html[data-theme] .jp-history-item,
 html[data-theme] .tr-offer,

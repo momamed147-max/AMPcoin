@@ -1,116 +1,235 @@
-/* CoinChip.css — pure SVG + CSS poker chips, dark-theme friendly (transparent bg) */
+/* ============================================================================
+   CoinChip.css — faceted AMP tokens and the toss that hurls them
+   ----------------------------------------------------------------------------
+   The coin is not a poker chip with a letter on it any more. It is a
+   twelve-sided, machined token: a metal rim, radial facets, an inset well and
+   a glyph that has to survive down to 24px in an avatar badge.
+
+   The animation is built in four layers:
+     1. the token's arc and 3D tumble
+     2. a ground shadow that tightens as the token rises
+     3. an aura that blooms during the throw
+     4. an impact ring and twelve sparks that only fire as it lands
+   Every layer is transform/opacity only and every one is disabled for
+   prefers-reduced-motion.
+   ========================================================================= */
 
 .coin-chip {
   display: inline-block;
   background: transparent;
   line-height: 0;
   vertical-align: middle;
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45));
+  filter:
+    drop-shadow(0 7px 14px rgba(0, 0, 0, 0.52))
+    drop-shadow(0 0 12px var(--coin-glow, rgba(12, 201, 163, 0.22)));
 }
 
 .coin-chip svg {
   display: block;
   width: 100%;
   height: 100%;
+  overflow: visible;
   background: transparent;
 }
 
-/* ---------- 3D flip container ---------- */
+.coin-chip-tails {
+  filter:
+    drop-shadow(0 7px 14px rgba(0, 0, 0, 0.52))
+    drop-shadow(0 0 12px var(--coin-glow, rgba(246, 196, 90, 0.22)));
+}
+
+/* ---------- 3D stage ---------- */
 
 .coin-flip-scene {
   position: relative;
   display: inline-block;
   background: transparent;
-  perspective: 900px;
-  -webkit-perspective: 900px;
+  perspective: 1200px;
+  -webkit-perspective: 1200px;
   line-height: 0;
+  --spark-color: #67ffd6;
+  --spark-soft: rgba(103, 255, 214, 0.5);
 }
 
-/* The coin is thrown, not spun on the spot. This ellipse tracks its height:
-   wide and dark on the ground, tight and faint at the top of the arc. */
+.coin-flip-scene.scene-tails {
+  --spark-color: #f6c45a;
+  --spark-soft: rgba(246, 196, 90, 0.5);
+}
+
+/* The light behind the token. It inhales before the throw and flashes on the
+   landing, which is what separates a toss from a CSS spinner. */
+.coin-flip-aura {
+  position: absolute;
+  inset: -34%;
+  z-index: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--spark-soft) 0%, transparent 64%);
+  filter: blur(10px);
+  opacity: 0.3;
+  transform: scale(0.8);
+  animation: coin-aura 1.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  pointer-events: none;
+}
+
+.coin-flip-aura-loop {
+  animation: coin-aura-loop 2.4s ease-in-out infinite;
+}
+
+/* Ground shadow: wide and dark on contact, small and faint at the apex. */
 .coin-flip-shadow {
   position: absolute;
   left: 50%;
-  bottom: 2px;
-  width: 74%;
-  height: 10px;
-  margin-left: -37%;
+  bottom: -3%;
+  z-index: 0;
+  width: 78%;
+  height: 12%;
+  margin-left: -39%;
   border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.55), rgba(0, 0, 0, 0) 70%);
-  animation: coin-shadow 1.5s ease-in-out;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0) 72%);
+  animation: coin-shadow 1.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   transform-origin: center;
+  pointer-events: none;
 }
 
 .coin-flip-inner {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   transform-style: preserve-3d;
   -webkit-transform-style: preserve-3d;
-  /* Final rotation is supplied inline via --coin-landing (e.g. 1800deg / 1980deg) */
+  /* Final rotation is supplied inline via --coin-landing (1800deg / 1980deg). */
   --coin-landing: 1800deg;
+  will-change: transform;
 }
 
-/* 1.5s: away fast, apex early, easing into a small settle. The previous 2.5s
-   of near-constant rotation read as a loading spinner rather than a coin. */
+/* 1.9s: a fast release, a long hang at the top, then a short settle with one
+   bounce. The previous toss read as a loading spinner because it rotated at a
+   near-constant speed and never left the ground. */
 .coin-flip-inner.coin-spinning {
-  animation: coin-spin 1.5s cubic-bezier(0.22, 0.68, 0.25, 1) forwards;
-  -webkit-animation: coin-spin 1.5s cubic-bezier(0.22, 0.68, 0.25, 1) forwards;
+  animation: coin-toss 1.9s cubic-bezier(0.18, 0.72, 0.2, 1) both;
+  -webkit-animation: coin-toss 1.9s cubic-bezier(0.18, 0.72, 0.2, 1) both;
+}
+
+/* ---------- Impact ---------- */
+
+.coin-flip-ring {
+  position: absolute;
+  left: 50%;
+  bottom: -4%;
+  z-index: 1;
+  width: 82%;
+  height: 16%;
+  margin-left: -41%;
+  border: 2px solid var(--spark-soft);
+  border-radius: 50%;
+  box-shadow: 0 0 18px var(--spark-soft);
+  opacity: 0;
+  transform: translateZ(0) scale(0.35);
+  animation: coin-impact 1.9s cubic-bezier(0.16, 0.84, 0.28, 1) both;
+  pointer-events: none;
+}
+
+.coin-flip-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.coin-flip-burst i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2.5px;
+  height: 12px;
+  margin-left: -1.25px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--spark-color) 0%, rgba(255, 255, 255, 0.9) 42%, transparent 100%);
+  box-shadow: 0 0 7px var(--spark-soft);
+  opacity: 0;
+  transform: rotate(calc(var(--spark) * 30deg)) translateY(-6px) scaleY(0.25);
+  transform-origin: 50% 100%;
+  animation: coin-spark 1.9s cubic-bezier(0.16, 0.84, 0.28, 1) both;
+  animation-delay: calc(var(--spark) * 7ms);
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes coin-toss {
+  0% {
+    transform: translateY(4%) rotateX(9deg) rotateY(0deg) rotateZ(-3deg) scale(0.94);
+  }
+  9% {
+    transform: translateY(-66%) rotateX(15deg) rotateY(430deg) rotateZ(-11deg) scale(1.08);
+  }
+  30% {
+    transform: translateY(-106%) rotateX(19deg) rotateY(1130deg) rotateZ(9deg) scale(1.03);
+  }
+  54% {
+    transform: translateY(-70%) rotateX(14deg) rotateY(1650deg) rotateZ(-6deg) scale(1.06);
+  }
+  73% {
+    transform: translateY(-7%) rotateX(10deg) rotateY(calc(var(--coin-landing) - 180deg)) rotateZ(2deg) scale(1.02);
+  }
+  79% {
+    transform: translateY(0) rotateX(8deg) rotateY(var(--coin-landing)) rotateZ(0deg) scale(1.035);
+  }
+  86% {
+    transform: translateY(-11%) rotateX(9deg) rotateY(var(--coin-landing)) rotateZ(1.5deg) scale(1.01);
+  }
+  93% {
+    transform: translateY(0) rotateX(8deg) rotateY(var(--coin-landing)) rotateZ(0deg) scale(0.985);
+  }
+  97% {
+    transform: translateY(-3.5%) rotateX(8deg) rotateY(var(--coin-landing)) rotateZ(0deg) scale(1.005);
+  }
+  100% {
+    transform: translateY(0) rotateX(8deg) rotateY(var(--coin-landing)) rotateZ(0deg) scale(1);
+  }
 }
 
 @keyframes coin-shadow {
-  0%   { transform: scaleX(1);    opacity: 0.5; }
-  16%  { transform: scaleX(0.5);  opacity: 0.16; }
-  55%  { transform: scaleX(0.78); opacity: 0.28; }
-  82%  { transform: scaleX(1.04); opacity: 0.55; }
-  90%  { transform: scaleX(0.94); opacity: 0.4; }
-  100% { transform: scaleX(1);    opacity: 0.5; }
+  0%   { transform: scaleX(1);    opacity: 0.6; }
+  9%   { transform: scaleX(0.58); opacity: 0.2; }
+  30%  { transform: scaleX(0.34); opacity: 0.08; }
+  54%  { transform: scaleX(0.54); opacity: 0.16; }
+  79%  { transform: scaleX(1.16); opacity: 0.62; }
+  86%  { transform: scaleX(0.82); opacity: 0.3; }
+  93%  { transform: scaleX(1.05); opacity: 0.56; }
+  100% { transform: scaleX(1);    opacity: 0.52; }
 }
 
-@-webkit-keyframes coin-shadow {
-  0%   { -webkit-transform: scaleX(1);    transform: scaleX(1);    opacity: 0.5; }
-  16%  { -webkit-transform: scaleX(0.5);  transform: scaleX(0.5);  opacity: 0.16; }
-  55%  { -webkit-transform: scaleX(0.78); transform: scaleX(0.78); opacity: 0.28; }
-  82%  { -webkit-transform: scaleX(1.04); transform: scaleX(1.04); opacity: 0.55; }
-  90%  { -webkit-transform: scaleX(0.94); transform: scaleX(0.94); opacity: 0.4; }
-  100% { -webkit-transform: scaleX(1);    transform: scaleX(1);    opacity: 0.5; }
+@keyframes coin-aura {
+  0%   { opacity: 0.24; transform: scale(0.72); }
+  30%  { opacity: 0.72; transform: scale(1.16); }
+  66%  { opacity: 0.48; transform: scale(0.96); }
+  79%  { opacity: 1;    transform: scale(1.42); }
+  100% { opacity: 0.34; transform: scale(1.02); }
 }
 
-/* Landing helpers — component also sets --coin-landing inline via style prop */
-.coin-flip-inner.land-heads {
-  --coin-landing: 1800deg;
+@keyframes coin-aura-loop {
+  0%, 100% { opacity: 0.22; transform: scale(0.78); }
+  50%      { opacity: 0.6;  transform: scale(1.08); }
 }
 
-.coin-flip-inner.land-tails {
-  --coin-landing: 1980deg;
+@keyframes coin-impact {
+  0%, 74% { opacity: 0; transform: translateZ(0) scale(0.32); }
+  79%     { opacity: 0.95; transform: translateZ(0) scale(0.72); }
+  92%     { opacity: 0.35; transform: translateZ(0) scale(1.9); }
+  100%    { opacity: 0; transform: translateZ(0) scale(2.4); }
 }
 
-/* Landed (static) states, multiples of 360 = heads, +180 = tails */
-.coin-flip-inner.coin-landed-heads {
-  transform: rotateY(1800deg);
-}
-
-.coin-flip-inner.coin-landed-tails {
-  transform: rotateY(1980deg);
-}
-
-/* The arc is the point. A coin that only rotates never reads as being thrown,
-   and without the translateY there is nothing for the shadow to track. */
-@keyframes coin-spin {
-  0%   { transform: translateY(0) rotateY(0deg); }
-  16%  { transform: translateY(-30%) rotateY(520deg); }
-  55%  { transform: translateY(-11%) rotateY(1420deg); }
-  82%  { transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
-  90%  { transform: translateY(-5%) rotateY(var(--coin-landing, 1800deg)); }
-  100% { transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
-}
-
-@-webkit-keyframes coin-spin {
-  0%   { -webkit-transform: translateY(0) rotateY(0deg); transform: translateY(0) rotateY(0deg); }
-  16%  { -webkit-transform: translateY(-30%) rotateY(520deg); transform: translateY(-30%) rotateY(520deg); }
-  55%  { -webkit-transform: translateY(-11%) rotateY(1420deg); transform: translateY(-11%) rotateY(1420deg); }
-  82%  { -webkit-transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
-  90%  { -webkit-transform: translateY(-5%) rotateY(var(--coin-landing, 1800deg)); transform: translateY(-5%) rotateY(var(--coin-landing, 1800deg)); }
-  100% { -webkit-transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); transform: translateY(0) rotateY(var(--coin-landing, 1800deg)); }
+@keyframes coin-spark {
+  0%, 74% {
+    opacity: 0;
+    transform: rotate(calc(var(--spark) * 30deg)) translateY(-6px) scaleY(0.2);
+  }
+  79% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(calc(var(--spark) * 30deg)) translateY(calc(var(--coin-size, 120px) * -0.66)) scaleY(1);
+  }
 }
 
 /* ---------- Faces ---------- */
@@ -127,36 +246,36 @@
 }
 
 .coin-face-front {
-  transform: rotateY(0deg);
+  transform: translateZ(3px) rotateY(0deg);
   z-index: 2;
 }
 
 .coin-face-back {
-  transform: rotateY(180deg);
+  transform: translateZ(3px) rotateY(180deg);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .coin-flip-inner.coin-spinning {
-    animation-duration: 0.01s;
-    -webkit-animation-duration: 0.01s;
-  }
+/* Static landed state, kept for any caller that mounts a finished coin. */
+.coin-flip-inner.coin-landed-heads {
+  transform: rotateX(8deg) rotateY(1800deg);
 }
 
-/* ---------- Endless loader loop ---------- */
+.coin-flip-inner.coin-landed-tails {
+  transform: rotateX(8deg) rotateY(1980deg);
+}
+
+/* ---------- Endless loader ---------- */
 
 .coin-flip-inner.coin-loop {
-  animation: coin-loop 1.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-  -webkit-animation: coin-loop 1.6s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  animation: coin-loop 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  -webkit-animation: coin-loop 2.4s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
 @keyframes coin-loop {
-  0% { transform: rotateY(0deg); }
-  100% { transform: rotateY(720deg); }
-}
-
-@-webkit-keyframes coin-loop {
-  0% { -webkit-transform: rotateY(0deg); transform: rotateY(0deg); }
-  100% { -webkit-transform: rotateY(720deg); transform: rotateY(720deg); }
+  0%   { transform: translateY(0) rotateX(8deg) rotateY(0deg) rotateZ(-2deg); }
+  25%  { transform: translateY(-9%) rotateX(12deg) rotateY(180deg) rotateZ(2deg); }
+  50%  { transform: translateY(0) rotateX(8deg) rotateY(360deg) rotateZ(-2deg); }
+  75%  { transform: translateY(-9%) rotateX(12deg) rotateY(540deg) rotateZ(2deg); }
+  100% { transform: translateY(0) rotateX(8deg) rotateY(720deg) rotateZ(-2deg); }
 }
 
 .coin-loader {
@@ -168,8 +287,39 @@
 }
 
 .coin-loader-label {
+  font-family: var(--font-body, sans-serif);
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--mut, #8b96a8);
-  letter-spacing: 0.04em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ---------- Reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .coin-flip-inner.coin-spinning {
+    animation-duration: 0.01s !important;
+    -webkit-animation-duration: 0.01s !important;
+  }
+
+  .coin-flip-inner.coin-loop,
+  .coin-flip-aura,
+  .coin-flip-aura-loop,
+  .coin-flip-shadow,
+  .coin-flip-ring,
+  .coin-flip-burst i {
+    animation: none !important;
+  }
+
+  .coin-flip-burst,
+  .coin-flip-ring,
+  .coin-flip-shadow {
+    display: none;
+  }
+
+  .coin-flip-aura {
+    opacity: 0.28;
+    transform: scale(0.95);
+  }
 }

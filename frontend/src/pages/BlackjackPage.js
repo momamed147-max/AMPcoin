@@ -303,7 +303,7 @@ const BlackjackPage = ({ socket }) => {
       {error && (
         <div className="bj-error" role="alert">
           <Icon name="warn" size={15} /><span>{error}</span>
-          <button type="button" onClick={refresh}>Retry</button>
+          <button type="button" className="btn btn-primary btn-sm" onClick={refresh}>Retry</button>
         </div>
       )}
 
@@ -314,7 +314,7 @@ const BlackjackPage = ({ socket }) => {
             You have a table open &mdash; you are the {myTable.viewerIsCreator ? 'dealer' : 'player'}.
             {myTable.status === 'waiting' ? ' Waiting for someone to join.' : ' Finish the hand to start another.'}
           </span>
-          <button type="button" onClick={() => setViewId(myTable.id)}>Open</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewId(myTable.id)}>Open</button>
         </div>
       )}
 

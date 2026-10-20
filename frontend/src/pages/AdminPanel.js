@@ -1362,7 +1362,10 @@ function FullAdminPanel() {
       <div className="page-header">
         <div className="admin-heading-copy">
           <span className="admin-kicker"><Icon name="shield" size={13} /> Operations center</span>
-          <h1>Admin Panel</h1>
+          {/* No heading. The header band above is the page's h1 and already
+              reads "Admin"; repeating it here as a second level-one heading
+              breaks the outline a screen reader navigates by. The explanation
+              below is not in the band, so it stays. */}
           <p>Monitor the platform, manage player access, and keep game operations moving.</p>
         </div>
         <span className="admin-role-pill"><Icon name="gear" size={13} /> Full admin access</span>
@@ -1737,7 +1740,7 @@ function FullAdminPanel() {
                               <strong>{entry.name}</strong>
                               <small>× {entry.quantity}</small>
                             </span>
-                            <button type="button" onClick={() => togglePetSelection(entry.pet)} aria-label={`Remove ${entry.name} from the bundle`}><Icon name="close" size={11} /></button>
+                            <button type="button" className="btn btn-ghost btn-sm" onClick={() => togglePetSelection(entry.pet)} aria-label={`Remove ${entry.name} from the bundle`}><Icon name="close" size={11} /></button>
                             <button
                               type="button"
                               className="give-chip-wipe"
