@@ -34,28 +34,9 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Theme atmosphere. Two very soft washes positioned off-canvas so they read
-   as light falling into the room rather than as a gradient painted onto it.
-   Both are pinned, so they cost nothing to scroll and never move under
-   content while a lobby animates. */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-base);
-  pointer-events: none;
-  background:
-    radial-gradient(900px 620px at 18% -8%, var(--theme-glow-a), transparent 62%),
-    radial-gradient(760px 560px at 92% 6%, var(--theme-glow-b), transparent 60%);
-}
-
-/* Legacy full-bleed background gradients set a <img>-style cover on
-   background-size. This is the correct pairing for a fixed wash. */
-body::before,
-body::after {
-  background-size: cover;
-  background-position: center;
-}
+/* The room is painted once by the body background in the theme layer. A fixed
+   pseudo-element here used to add a second full-screen composited texture for
+   the same glow, which is pure GPU memory on a low-end device. */
 
 h1, h2, h3, h4, h5, h6 {
   margin: 0;

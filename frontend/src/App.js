@@ -12,7 +12,6 @@ import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 import ToastProvider, { useToast } from './components/Toasts';
 import CommandPalette from './components/CommandPalette';
-import Ambient from './components/Ambient';
 import Icon from './components/Icon';
 import { API_BASE } from './apiConfig';
 import { installGlobalSoundEffects, playError } from './sound';
@@ -200,7 +199,6 @@ function AppContent() {
   if (loading) {
     return (
       <div className="loading-container">
-        <Ambient />
         <div className="boot-halo" aria-hidden="true" />
         <div className="app-loading-logo"><Logo size={64} showText={false} /></div>
         <div className="loading-spinner"></div>
@@ -212,7 +210,6 @@ function AppContent() {
 
   return (
     <div className="app">
-      <Ambient />
       <div
         className={`route-progress ${user ? '' : 'route-progress-auth'}`}
         key={location.pathname}

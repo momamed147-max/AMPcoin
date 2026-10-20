@@ -23,20 +23,11 @@
 
 /* ── 1. The content well ─────────────────────────────────────────────────── */
 
-/* A low-contrast glow behind the page body. Without it the area below a short
-   list is flat #070a11, which reads as the page failing to render rather than
-   as a page with three rows on it. */
-.app .main-content::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(900px 420px at 20% -10%, rgba(12, 201, 163, 0.10), transparent 62%),
-    radial-gradient(700px 380px at 94% 2%, rgba(124, 92, 255, 0.06), transparent 60%);
-}
+/* The content well used to carry its own blue glows from ui/polish.css. Those
+   are now jade and gold, painted onto the main column itself rather than a
+   second composited pseudo-element. */
 
-/* Keep a short page from collapsing, and sit above that glow. */
+/* Keep a short page from collapsing, and sit above that wash. */
 .app .page-content {
   position: relative;
   z-index: 1;

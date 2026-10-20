@@ -2195,9 +2195,7 @@ textarea:focus,
   background:
     radial-gradient(420px 180px at 8% 20%, rgba(12,201,163,.07), transparent 72%),
     radial-gradient(520px 220px at 92% 72%, rgba(139,92,246,.045), transparent 74%);
-  animation: ambient-breathe 12s ease-in-out infinite alternate;
 }
-@keyframes ambient-breathe { from { transform: translate3d(-1%, -.5%, 0) scale(1); } to { transform: translate3d(1%, .5%, 0) scale(1.04); } }
 
 .sidebar .nav-link,
 .cf-tab,
@@ -2236,11 +2234,6 @@ textarea:focus,
 .jp-btn-primary:hover::after,
 .rps-find-button:hover::after { left: 120%; }
 
-.cf-row,
-.jp-history-item,
-.tr-card,
-.wm-card,
-.rps-main-card { will-change: transform; }
 .cf-row:hover,
 .jp-history-item:hover,
 .tr-card:hover { transform: translateY(-2px); }

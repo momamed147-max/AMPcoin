@@ -23,222 +23,20 @@
    ========================================================================= */
 
 /* ============================================================================
-   1. The room — animated ambient background
+   1. The room — one static painted background
    ========================================================================= */
 
-.ambient {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-  contain: layout paint;
-  background:
-    radial-gradient(120% 90% at 50% 0%, rgba(8, 32, 25, 0.35), transparent 58%),
-    linear-gradient(180deg, #030807 0%, #04100c 54%, #020605 100%);
-  --ambient-jade: rgba(18, 235, 185, 0.22);
-  --ambient-mint: rgba(103, 255, 214, 0.12);
-  --ambient-gold: rgba(246, 196, 90, 0.14);
-  --ambient-deep: rgba(4, 88, 72, 0.24);
-}
-
-.ambient-aurora {
-  position: absolute;
-  inset: -28%;
-  background:
-    radial-gradient(38% 42% at 22% 24%, var(--ambient-jade), transparent 68%),
-    radial-gradient(30% 36% at 76% 18%, var(--ambient-gold), transparent 70%),
-    radial-gradient(36% 34% at 58% 88%, var(--ambient-deep), transparent 72%);
-  /* The radial gradients are already smooth; blurring this full-screen layer
-     forced the compositor to rasterise a huge filtered texture on every
-     paint. The aurora itself still moves, but only as a transform. */
-  opacity: 0.88;
-  transform-origin: 50% 50%;
-  animation: prestige-aurora 34s var(--ease-soft) infinite alternate;
-}
-
-.ambient-beam {
-  position: absolute;
-  top: -42%;
-  left: -22%;
-  width: 58vw;
-  height: 180vh;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(103, 255, 214, 0.05) 34%,
-    rgba(214, 255, 240, 0.075) 48%,
-    rgba(246, 196, 90, 0.045) 62%,
-    transparent 100%
-  );
-  transform: rotate(-27deg);
-  opacity: 0.78;
-}
-
-.ambient-orb {
-  position: absolute;
-  border-radius: 50%;
-}
-
-.ambient-orb-a {
-  top: -26%;
-  left: -14%;
-  width: 62vw;
-  height: 62vw;
-  background: radial-gradient(circle, rgba(12, 201, 163, 0.3) 0%, rgba(12, 201, 163, 0) 68%);
-}
-
-.ambient-orb-b {
-  top: 10%;
-  right: -26%;
-  width: 56vw;
-  height: 56vw;
-  background: radial-gradient(circle, rgba(246, 196, 90, 0.2) 0%, rgba(246, 196, 90, 0) 70%);
-}
-
-.ambient-orb-c {
-  bottom: -38%;
-  left: 18%;
-  width: 56vw;
-  height: 56vw;
-  background: radial-gradient(circle, rgba(8, 155, 126, 0.2) 0%, rgba(8, 155, 126, 0) 70%);
-}
-
-/* Two long slabs of light, angled across the room. They are the thing the eye
-   registers first when a page loads: a direction, not another soft circle. */
-.ambient-shard {
-  position: absolute;
-  top: -38%;
-  width: 18vw;
-  height: 176vh;
-  opacity: 0.7;
-}
-
-.ambient-shard-a {
-  left: 14%;
-  background: linear-gradient(180deg, transparent, rgba(103, 255, 214, 0.055) 38%, transparent 82%);
-  transform: rotate(27deg);
-}
-
-.ambient-shard-b {
-  right: 8%;
-  width: 12vw;
-  background: linear-gradient(180deg, transparent, rgba(246, 196, 90, 0.05) 44%, transparent 84%);
-  transform: rotate(-22deg);
-}
-
-/* Orbital engraving in the top-right corner. Three incomplete rings turn at
-   different speeds, which is what makes the background feel engineered rather
-   than painted. */
-.ambient-rings {
-  position: absolute;
-  top: -42vmax;
-  right: -34vmax;
-  width: 108vmax;
-  height: 108vmax;
-  opacity: 0.8;
-}
-
-.ambient-rings i {
-  position: absolute;
-  display: block;
-  border-radius: 50%;
-}
-
-.ambient-rings i:nth-child(1) {
-  inset: 0;
-  border: 1px solid rgba(103, 255, 214, 0.13);
-  border-left-color: transparent;
-  border-bottom-color: transparent;
-}
-
-.ambient-rings i:nth-child(2) {
-  inset: 9%;
-  border: 1px dashed rgba(246, 196, 90, 0.12);
-}
-
-.ambient-rings i:nth-child(3) {
-  inset: 20%;
-  border: 1px solid rgba(103, 255, 214, 0.07);
-  border-top-color: rgba(246, 196, 90, 0.2);
-}
-
-/* A perspective floor. It moves slowly toward the viewer, so the bottom of a
-   short page still has a horizon instead of dead black. */
-.ambient-horizon {
-  position: absolute;
-  left: -30%;
-  right: -30%;
-  bottom: -17%;
-  height: 58vh;
-  background-image:
-    linear-gradient(rgba(103, 255, 214, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(103, 255, 214, 0.07) 1px, transparent 1px);
-  background-size: 92px 46px;
-  transform: perspective(640px) rotateX(64deg);
-  transform-origin: 50% 100%;
-  mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 70%, transparent 100%);
-  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 70%, transparent 100%);
-  opacity: 0.42;
-}
-
-.ambient-grid {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(176, 236, 218, 0.032) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(176, 236, 218, 0.032) 1px, transparent 1px);
-  background-size: 80px 80px;
-  mask-image: radial-gradient(78% 70% at 50% 28%, #000 0%, rgba(0, 0, 0, 0.55) 46%, transparent 82%);
-  -webkit-mask-image: radial-gradient(78% 70% at 50% 28%, #000 0%, rgba(0, 0, 0, 0.55) 46%, transparent 82%);
-  opacity: 0.62;
-}
-
-.ambient-stars {
-  position: absolute;
-  inset: 0;
-}
-
-.ambient-stars i {
-  position: absolute;
-  display: block;
-  border-radius: 50%;
-  background: rgba(219, 255, 244, 0.94);
-  box-shadow: 0 0 9px rgba(103, 255, 214, 0.7);
-  opacity: var(--star-opacity, 0.4);
-}
-
-/* A single survey line crossing the room. Very slow, very faint - it is the
-   detail that stops the background from reading as a frozen gradient. */
-.ambient-scan {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 6%;
-  width: 1px;
-  background: linear-gradient(180deg, transparent, rgba(103, 255, 214, 0.32) 38%, rgba(246, 196, 90, 0.18) 64%, transparent);
-  box-shadow: 0 0 34px 10px rgba(12, 201, 163, 0.06);
-  opacity: 0.55;
-  animation: prestige-scan 26s ease-in-out infinite alternate;
-}
-
-.ambient-vignette {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(125% 90% at 50% 34%, transparent 38%, rgba(1, 4, 3, 0.5) 100%),
-    linear-gradient(180deg, rgba(1, 5, 4, 0.26) 0%, transparent 16%, transparent 72%, rgba(1, 5, 4, 0.58) 100%);
-}
-
-/* The old app background was an opaque sheet plus two painted glows. The
-   ambient component replaces all three. */
+/* No animated ambient layer and no fixed pseudo-element. On a low-end GPU
+   every extra full-screen texture is memory and fill-rate, and the old room
+   promoted more than a dozen of them. These gradients now live on <body>, so
+   they are painted once with the document instead of composited on every
+   frame. */
 html[data-theme] body {
   background:
     radial-gradient(1100px 760px at 16% -12%, color-mix(in srgb, var(--acc) 17%, transparent), transparent 63%),
     radial-gradient(900px 680px at 104% 6%, color-mix(in srgb, var(--gold) 9%, transparent), transparent 64%),
     radial-gradient(900px 700px at 46% 118%, rgba(8, 155, 126, 0.08), transparent 66%),
     var(--bg0) !important;
-  background-attachment: fixed;
 }
 
 html[data-theme] .app {
@@ -256,8 +54,14 @@ html[data-theme] .main-content {
   z-index: 1;
 }
 
-/* Ambient is a fixed layer at z-index 0; every real surface has to sit above
-   it or the glow will paint over text. */
+html[data-theme] .main-content {
+  background:
+    radial-gradient(900px 420px at 18% -10%, color-mix(in srgb, var(--acc) 9%, transparent), transparent 62%),
+    radial-gradient(700px 380px at 94% 2%, color-mix(in srgb, var(--gold) 5%, transparent), transparent 60%);
+}
+
+/* Surfaces sit above the painted room, and the sidebar stays above the
+   content. */
 html[data-theme] .sidebar {
   z-index: 1000;
 }
@@ -287,7 +91,6 @@ html[data-theme] .sidebar::after {
   );
   background-size: 220% 100%;
   opacity: 0.72;
-  animation: prestige-navline 9s linear infinite;
 }
 
 html[data-theme] .sidebar-brand {
@@ -624,7 +427,9 @@ html[data-theme] .boot-halo {
   background:
     radial-gradient(circle, color-mix(in srgb, var(--acc) 18%, transparent) 0%, transparent 62%),
     conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--acc) 32%, transparent), transparent 30%);
-  filter: blur(18px);
+  /* The gradients are already smooth. A blur filter here forced the boot
+     screen -- the first thing a weak device shows -- to rasterise a filtered
+     430px layer while the rest of the app was still loading. */
   animation: prestige-halo 6s ease-in-out infinite;
   pointer-events: none;
 }
@@ -637,7 +442,7 @@ html[data-theme] .loading-container {
     transparent;
 }
 
-html[data-theme] .loading-container > :not(.ambient) {
+html[data-theme] .loading-container > * {
   position: relative;
   z-index: 2;
 }
@@ -2437,19 +2242,6 @@ html[data-theme] .request-state p {
    21. Motion keyframes
    ========================================================================= */
 
-@keyframes prestige-aurora {
-  0% { transform: rotate(-3deg) scale(1) translate3d(-1%, 0, 0); opacity: 0.72; }
-  50% { opacity: 0.92; }
-  100% { transform: rotate(3deg) scale(1.06) translate3d(1.5%, -1%, 0); opacity: 0.8; }
-}
-
-@keyframes prestige-scan {
-  0% { transform: translateX(0); opacity: 0; }
-  12% { opacity: 0.55; }
-  88% { opacity: 0.55; }
-  100% { transform: translateX(88vw); opacity: 0; }
-}
-
 @keyframes prestige-navline {
   0% { background-position: 0% 50%; }
   100% { background-position: 200% 50%; }
@@ -2470,10 +2262,6 @@ html[data-theme] .request-state p {
    ========================================================================= */
 
 @media (max-width: 1100px) {
-  .ambient-orb {
-    opacity: 0.72;
-  }
-
   html[data-theme] .header,
   html[data-theme] .header-new {
     gap: 10px !important;
@@ -2485,48 +2273,6 @@ html[data-theme] .request-state p {
 }
 
 @media (max-width: 768px) {
-  .ambient-orb-a {
-    width: 92vw;
-    height: 92vw;
-  }
-
-  .ambient-orb-b {
-    width: 86vw;
-    height: 86vw;
-  }
-
-  .ambient-orb-c {
-    width: 82vw;
-    height: 82vw;
-  }
-
-  .ambient-grid {
-    background-size: 48px 48px;
-    opacity: 0.5;
-  }
-
-  .ambient-beam {
-    width: 120vw;
-    opacity: 0.4;
-  }
-
-  .ambient-rings {
-    opacity: 0.38;
-  }
-
-  .ambient-horizon {
-    height: 42vh;
-    opacity: 0.28;
-  }
-
-  .ambient-shard {
-    opacity: 0.32;
-  }
-
-  .ambient-scan {
-    display: none;
-  }
-
   html[data-theme] .header-page-icon {
     width: 30px;
     height: 30px;
@@ -2622,13 +2368,11 @@ html[data-theme] .request-state p {
 
 /* The light theme needs less bloom. The same shadows that give depth on a
    near-black page turn into dirty smudges on paper. */
-html[data-theme='aurora'] .ambient {
-  opacity: 0.42;
-  mix-blend-mode: multiply;
-}
-
-html[data-theme='aurora'] .ambient-vignette {
-  opacity: 0.35;
+html[data-theme='aurora'] body {
+  background:
+    radial-gradient(1100px 760px at 16% -12%, color-mix(in srgb, var(--acc) 9%, transparent), transparent 63%),
+    radial-gradient(900px 680px at 104% 6%, color-mix(in srgb, var(--gold) 5%, transparent), transparent 64%),
+    var(--bg0) !important;
 }
 
 @supports not (backdrop-filter: blur(2px)) {
@@ -2649,8 +2393,8 @@ html[data-theme='aurora'] .ambient-vignette {
    ----------------------------------------------------------------------------
    Changing the tokens repaints the site; it does not redesign it. This section
    changes the shapes and the light: cut-corner surfaces, a two-material button
-   system, jade-lit headings, and a content well that sits in the same room as
-   the ambient layer instead of on top of it.
+   system, jade-lit headings, and a content well that sits on the same painted
+   room as the rest of the shell.
 
    The selectors are deliberately prefixed with html[data-theme] because the
    page chunks load after this file. That prefix is what lets the skin win
@@ -2675,14 +2419,6 @@ html[data-theme] *::-webkit-scrollbar-thumb {
 html[data-theme] *::-webkit-scrollbar-thumb:hover {
   background: color-mix(in srgb, var(--acc) 46%, var(--ds-n-6, #2a5145));
   background-clip: padding-box;
-}
-
-/* The content well used to carry its own blue glows from ui/polish.css. Those
-   are now jade and gold, and they no longer compete with the ambient room. */
-html[data-theme] .main-content::before {
-  background:
-    radial-gradient(900px 420px at 18% -10%, color-mix(in srgb, var(--acc) 9%, transparent), transparent 62%),
-    radial-gradient(700px 380px at 94% 2%, color-mix(in srgb, var(--gold) 5%, transparent), transparent 60%);
 }
 
 /* ── Type ───────────────────────────────────────────────────────────────── */
@@ -2883,20 +2619,41 @@ html[data-theme] .header-new::after {
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--acc) 34%, transparent) 62%, color-mix(in srgb, var(--gold) 22%, transparent));
 }
 
+/* Low-end compositing pass.
+   A backdrop blur has to re-sample the page behind an overlay every frame it
+   moves or the page scrolls. The scrims below are already opaque enough to
+   separate a dialog, so the blur is pure GPU cost on weak hardware. */
+html[data-theme] .modal-overlay,
+html[data-theme] .cf-modal-overlay,
+html[data-theme] .wm-overlay,
+html[data-theme] .wallet-modal-overlay,
+html[data-theme] .trade-modal-overlay,
+html[data-theme] .vc-overlay,
+html[data-theme] .ipm-overlay,
+html[data-theme] .profile-modal-overlay,
+html[data-theme] .leaderboard-overlay,
+html[data-theme] .cp-overlay,
+html[data-theme] .ccm-overlay,
+html[data-theme] .settings-overlay,
+html[data-theme] .db-overlay,
+html[data-theme] .ui-overlay,
+html[data-theme] .chat-backdrop,
+html[data-theme] .bj-modal-wrap,
+html[data-theme] .wm-footer,
+html[data-theme] .settings-header,
+html[data-theme] .apop-card,
+html[data-theme] .auth-card,
+html[data-theme] .modal.enhanced > .modal-header,
+html[data-theme] .ipm-header {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
 /* ============================================================================
    23. Reduced motion
    ========================================================================= */
 
 @media (prefers-reduced-motion: reduce) {
-  .ambient-aurora,
-  .ambient-beam,
-  .ambient-orb,
-  .ambient-shard,
-  .ambient-rings,
-  .ambient-rings i,
-  .ambient-horizon,
-  .ambient-scan,
-  .ambient-stars i,
   html[data-theme] .sidebar::after,
   html[data-theme] .brand-live > span,
   html[data-theme] .online-dot,

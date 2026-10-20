@@ -48,9 +48,7 @@
     box-shadow var(--mo-base) var(--mo-out),
     background-color var(--mo-base) var(--mo-out),
     border-color var(--mo-base) var(--mo-out),
-    color var(--mo-base) var(--mo-out),
-    filter var(--mo-base) var(--mo-out);
-  will-change: transform;
+    color var(--mo-base) var(--mo-out);
 }
 
 /* Lift on hover, press in on click. The asymmetry is deliberate: a control
@@ -63,7 +61,6 @@
 .cf-bot-btn:hover:not(:disabled),
 .tab-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  filter: brightness(1.07);
 }
 
 .btn:active:not(:disabled),
@@ -200,8 +197,8 @@
 /* ── 5. Overlays and modals ──────────────────────────────────────────────── */
 
 @keyframes mo-overlay-in {
-  from { opacity: 0; backdrop-filter: blur(0); }
-  to { opacity: 1; backdrop-filter: blur(3px); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes mo-modal-pop {
@@ -296,29 +293,9 @@ select:focus {
 
 /* ── 9. Idle life ────────────────────────────────────────────────────────── */
 
-/* The audit found exactly one thing moving while idle, a 12s background loop.
-   These add motion at the edges of vision: slow enough to notice only when you
-   stop, which is the point. */
-@keyframes mo-drift {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: 0.55; }
-  50% { transform: translate3d(2%, -3%, 0) scale(1.08); opacity: 0.75; }
-}
-
-.app .main-content::before {
-  animation: mo-drift 26s var(--ease-1) infinite;
-}
-
-/* The logo breathes. Slow enough to be felt rather than watched. */
-@keyframes mo-logo-breathe {
-  0%, 100% { transform: scale(1); filter: brightness(1); }
-  50% { transform: scale(1.04); filter: brightness(1.12); }
-}
-
-.app .logo,
-.app .logo-mark,
-.app .brand-logo {
-  animation: mo-logo-breathe 7s var(--ease-1) infinite;
-}
+/* The room is static on purpose. The only idle animation left is the online
+   dot, which is a few pixels of transform/opacity and costs a low-end device
+   nothing. Big background loops and filter animations were removed here. */
 
 /* Online count pulses gently so the site never looks frozen. */
 @keyframes mo-soft-pulse {

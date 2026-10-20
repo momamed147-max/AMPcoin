@@ -71,44 +71,16 @@
   padding: var(--sp-8) var(--sp-5);
   background-color: var(--bg0);
   /* A single soft wash behind the card, offset so the light has a direction.
-     Fixed, so it does not slide under the card when the viewport scrolls on a
-     short window. */
+     It scrolls with the page: fixed-attachment backgrounds force a repaint on
+     every scroll on low-end mobile GPUs. */
   background-image:
     radial-gradient(1100px 720px at 50% 28%, var(--theme-glow-a), transparent 64%),
     linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 52%);
-  background-attachment: fixed;
   isolation: isolate;
 }
 
-/* The room behind the card.
-
-   The page used to be one static wash. A product's first screen is the one
-   place a slow, quiet movement is worth its cost: it says the site is alive
-   before anything has been clicked, and it is the only ornament on a screen
-   with nothing else on it. Pre-blurred colour fields on transform only, same
-   as the ambient layer behind the app shell, so the compositor carries it and
-   the main thread stays idle. */
-.auth-page::before {
-  content: '';
-  position: fixed;
-  inset: -22%;
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(36% 40% at 26% 30%, color-mix(in srgb, var(--acc) 30%, transparent), transparent 68%),
-    radial-gradient(28% 32% at 74% 22%, color-mix(in srgb, var(--gold) 19%, transparent), transparent 72%),
-    radial-gradient(32% 32% at 56% 84%, rgba(8, 155, 126, 0.16), transparent 74%);
-  filter: blur(54px);
-  opacity: 0.8;
-  transform-origin: 50% 46%;
-  animation: auth-aurora 30s var(--ease-soft) infinite alternate;
-  will-change: transform, opacity;
-}
-
-@keyframes auth-aurora {
-  0% { transform: rotate(-3deg) scale(1) translate3d(-1.5%, 0, 0); opacity: 0.7; }
-  100% { transform: rotate(3deg) scale(1.07) translate3d(1.5%, -1.5%, 0); opacity: 0.9; }
-}
+/* The card's own background already has a directional wash. The old blurred
+   fixed layer here added a full-screen filter to every login load. */
 
 /* A hairline horizon far below the card. It gives the lower third of a tall
    screen something to sit on, which is the one place this layout went flat. */
