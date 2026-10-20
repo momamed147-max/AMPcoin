@@ -1,61 +1,106 @@
-/* The page is just the shared cf shell now; the table lives in a modal. */
-.bj-page { max-width: 1220px; margin: 0 auto; padding: 18px 20px 60px; }
-.bj-loading { display: grid; place-items: center; min-height: 60vh; }
+/* Blackjack is a shared open bet: the row, join modal and view modal all reuse
+   the Coinflip/RPS shell. Only the card table and the blackjack-specific
+   result/house-rule strips belong here. */
 
-/* ── the table modal ── */
-.bj-table-modal {
-  width: min(560px, 100%);
-  max-height: 90vh; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 14px; padding: 20px;
+.bj-page { max-width: 1220px; margin: 0 auto; padding: 18px 20px 60px; }
+
+/* ── Lobby row extras ─────────────────────────────────────────────────────── */
+.bj-row-live { border-left: 2px solid var(--acc); }
+.bj-lobby-row .cf-row-player-name { max-width: 120px; }
+.bj-row-vs-divider {
+  align-self: center;
+  color: var(--dim);
+  font-size: .78rem;
+  font-weight: 900;
+  padding: 0 2px;
+}
+
+/* ── View modal ───────────────────────────────────────────────────────────── */
+.bj-view-modal {
+  width: min(720px, 100%);
+  max-height: 92vh;
+  overflow-y: auto;
+  gap: 14px;
   background:
-    radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--acc) 8%, transparent), transparent 70%),
+    radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--acc) 7%, transparent), transparent 72%),
     var(--panel);
 }
 
-.bj-table-top { display: flex; align-items: center; gap: 12px; }
-.bj-seat {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  flex: 1; min-width: 0;
+.bj-view-top { margin-bottom: 2px; }
+.bj-seat-role {
+  margin-top: 2px;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--dim);
 }
-.bj-seat.me .bj-seat-name { color: var(--acc); }
-.bj-seat-avatar {
-  width: 42px; height: 42px; border-radius: 50%; object-fit: cover;
-  background: var(--panel3);
+
+.bj-view-seal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--panel3), var(--panel2));
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 var(--line-soft);
 }
-.bj-seat-avatar.fallback {
-  display: grid; place-items: center; color: var(--mut);
-  font-weight: 900; font-size: 1rem;
+.bj-plaque-big {
+  font-size: .78rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  color: var(--txt);
+  white-space: nowrap;
 }
-.bj-seat-name {
-  display: flex; align-items: center; gap: 5px;
-  font-size: .82rem; font-weight: 800;
-  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+.bj-plaque-sub { font-size: .66rem; color: var(--dim); font-weight: 700; }
+
+/* ── Hands ────────────────────────────────────────────────────────────────── */
+.bj-hand-board {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(90% 120% at 50% -20%, color-mix(in srgb, var(--acc) 6%, transparent), transparent 70%),
+    var(--bg1);
 }
-.bj-seat-tag {
-  font-size: .6rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em;
-  padding: 1px 5px; border-radius: 5px;
-  background: color-mix(in srgb, var(--gold) 20%, transparent); color: var(--gold);
-}
-.bj-seat-role { font-size: .68rem; color: var(--dim); font-weight: 700; text-transform: uppercase; letter-spacing: .06em; }
-.bj-vs { color: var(--dim); font-weight: 900; font-size: .8rem; flex: 0 0 auto; }
 
 .bj-hand-row { display: flex; flex-direction: column; gap: 8px; }
 .bj-hand-label { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.bj-name { font-size: .82rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--mut); }
-.bj-hand-sub { font-size: .74rem; color: var(--dim); font-weight: 600; }
+.bj-name {
+  font-size: .78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  color: var(--mut);
+}
+.bj-hand-sub { font-size: .7rem; color: var(--dim); font-weight: 700; }
 .bj-total {
-  font-size: 1.25rem; font-weight: 900; color: var(--txt);
+  display: inline-flex;
+  align-items: center;
+  margin-left: auto;
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--txt);
   font-variant-numeric: tabular-nums;
 }
 .bj-total.muted { color: var(--dim); }
 
 .bj-cards { display: flex; gap: 9px; min-height: 108px; align-items: flex-start; flex-wrap: wrap; }
-.bj-empty-cards { color: var(--dim); font-size: .84rem; padding-top: 40px; }
+.bj-empty-cards { color: var(--dim); font-size: .82rem; padding-top: 38px; }
 
-/* ── cards ── */
+/* ── Cards ────────────────────────────────────────────────────────────────── */
 .bj-card {
-  width: 74px; height: 104px; border-radius: 9px; position: relative;
-  flex: 0 0 auto; box-shadow: 0 4px 14px rgba(0, 0, 0, .38);
+  width: 74px;
+  height: 104px;
+  border-radius: 9px;
+  position: relative;
+  flex: 0 0 auto;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .38);
   animation: bj-deal .42s cubic-bezier(.2, .9, .3, 1.2) both;
   animation-delay: calc(var(--i, 0) * 90ms);
 }
@@ -67,16 +112,28 @@
   .bj-card { animation: none; }
 }
 
-.bj-card.face { background: linear-gradient(160deg, #fff, #e9edf3); border: 1px solid rgba(0, 0, 0, .3); }
+.bj-card.face {
+  background: linear-gradient(160deg, #fff, #e9edf3);
+  border: 1px solid rgba(0, 0, 0, .3);
+}
 .bj-card.face .bj-pip {
-  position: absolute; inset: 0; display: grid; place-items: center;
-  font-size: 2.5rem; line-height: 1;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 2.5rem;
+  line-height: 1;
 }
 .bj-card.red { color: #d1334b; }
 .bj-card.black { color: #1b2331; }
 .bj-corner {
-  position: absolute; display: flex; flex-direction: column; align-items: center;
-  font-size: .82rem; font-weight: 900; line-height: .95;
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: .82rem;
+  font-weight: 900;
+  line-height: .95;
 }
 .bj-corner i { font-style: normal; font-size: .68rem; }
 .bj-corner.tl { top: 5px; left: 6px; }
@@ -89,7 +146,9 @@
   border: 1px solid var(--line);
 }
 .bj-back-mark {
-  position: absolute; inset: 7px; border-radius: 5px;
+  position: absolute;
+  inset: 7px;
+  border-radius: 5px;
   border: 1px dashed color-mix(in srgb, var(--acc) 45%, transparent);
 }
 
@@ -98,185 +157,65 @@
 }
 .bj-card.dimmed { opacity: .55; filter: saturate(.6); }
 
-.bj-divider {
-  height: 1px; background: var(--line);
-  margin: 2px 0;
+/* ── Wagers inside the view modal ─────────────────────────────────────────── */
+.bj-view-items {
+  max-height: 150px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+.bj-items-label {
+  padding: 0 2px 4px;
+  font-size: .64rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
 }
 
-/* ── the 3:2 plaque ── */
-.bj-plaque {
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  align-self: center; padding: 9px 20px; border-radius: 999px;
-  background: linear-gradient(180deg, var(--panel3), var(--panel2));
-  border: 1px solid var(--line);
-  box-shadow: inset 0 1px 0 var(--line-soft);
+.bj-house-note {
+  text-align: center;
+  color: var(--dim);
+  font-size: .7rem;
+  font-weight: 600;
 }
-.bj-plaque-big {
-  font-size: .82rem; font-weight: 900; letter-spacing: .1em;
-  color: var(--txt);
-}
-.bj-plaque-sub { font-size: .68rem; color: var(--dim); font-weight: 600; }
 
-.bj-lobby-row .cf-item-thumb {
-  width: 30px; height: 30px; border-radius: 7px; overflow: hidden;
-  background: var(--panel3); flex: 0 0 auto;
-}
-.bj-lobby-row .cf-item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-
-/* ── result ── */
+/* ── Result ───────────────────────────────────────────────────────────────── */
 .bj-result {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  padding: 11px 14px; border-radius: 11px; font-size: .95rem;
-  border: 1px solid var(--line); background: var(--bg1);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 11px 14px;
+  border-radius: 11px;
+  font-size: .95rem;
+  border: 1px solid var(--line);
+  background: var(--bg1);
 }
-.bj-result.win { border-color: var(--grn); background: color-mix(in srgb, var(--grn) 12%, transparent); color: var(--grn); }
-.bj-result.loss { border-color: var(--red); background: color-mix(in srgb, var(--red) 12%, transparent); color: var(--red); }
-.bj-result.push { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 10%, transparent); color: var(--gold); }
+.bj-result.win {
+  border-color: var(--grn);
+  background: color-mix(in srgb, var(--grn) 12%, transparent);
+  color: var(--grn);
+}
+.bj-result.loss {
+  border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  color: var(--red);
+}
+.bj-result.push {
+  border-color: var(--gold);
+  background: color-mix(in srgb, var(--gold) 10%, transparent);
+  color: var(--gold);
+}
 .bj-tax { color: var(--mut); font-size: .8rem; }
 
-/* ── the two buttons, using the shared cf sizing ── */
-.bj-actions { display: flex; gap: 8px; }
-.bj-actions .cf-topbar-btn { flex: 1; justify-content: center; }
+/* ── Footer actions ───────────────────────────────────────────────────────── */
+.bj-view-footer { align-items: center; }
+.bj-action-row { display: flex; gap: 8px; margin-left: auto; }
+.bj-action-row .cf-join-action-btn,
+.bj-action-row .cf-view-join-btn { min-height: 34px; }
+.bj-footer-note { color: var(--dim); font-size: .8rem; font-weight: 700; }
 
-.bj-waiting {
-  display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
-  padding: 11px 13px; border-radius: 11px;
-  background: var(--bg1); border: 1px solid var(--line);
-}
-.bj-waiting-text { color: var(--mut); font-size: .82rem; font-weight: 700; }
-
-/* ── history (kept for the shared cf styling) ── */
-.bj-panel {
-  background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-  padding: 14px; display: flex; flex-direction: column; gap: 9px;
-}
-.bj-panel h3 { margin: 0; font-size: .95rem; display: flex; justify-content: space-between; align-items: baseline; }
-.bj-count { color: var(--dim); font-size: .74rem; font-weight: 600; }
-.bj-panel-sub { margin: 0; color: var(--dim); font-size: .74rem; line-height: 1.45; }
-.bj-list { display: flex; flex-direction: column; gap: 5px; max-height: 420px; overflow-y: auto; padding-right: 3px; }
-.bj-empty { color: var(--dim); font-size: .82rem; padding: 16px 0; text-align: center; }
-
-.bj-item {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 8px; border-radius: 9px;
-  background: var(--bg1); border: 1px solid transparent;
-}
-.bj-item.picked { border-color: var(--acc); background: var(--panel2); }
-.bj-item-img { width: 30px; height: 30px; border-radius: 8px; object-fit: cover; flex: 0 0 30px; background: var(--panel3); }
-.bj-item-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
-.bj-item-name { font-size: .8rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bj-item-val { display: inline-flex; align-items: center; gap: 3px; font-size: .7rem; color: var(--mut); }
-
-.bj-stepper { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
-.bj-stepper button {
-  width: 22px; height: 22px; border-radius: 6px; cursor: pointer;
-  background: var(--panel3); border: 1px solid var(--line); color: var(--txt);
-  font-weight: 900; line-height: 1; padding: 0;
-}
-.bj-stepper button:hover:not(:disabled) { background: var(--acc); border-color: var(--acc); }
-.bj-stepper button:disabled { opacity: .35; cursor: not-allowed; }
-.bj-stepper span { min-width: 18px; text-align: center; font-size: .82rem; font-weight: 800; color: var(--dim); }
-.bj-stepper span.on { color: var(--acc); }
-
-.bj-total {
-  display: flex; justify-content: space-between; align-items: center;
-  padding-top: 9px; border-top: 1px solid var(--line-soft);
-  font-size: .84rem; color: var(--mut); font-weight: 700;
-}
-.bj-total span:last-child { display: inline-flex; align-items: center; gap: 4px; color: var(--txt); font-weight: 900; }
-
-/* ── history ── */
-.bj-history { display: flex; flex-direction: column; gap: 6px; }
-.bj-history-row {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--panel); border: 1px solid var(--line);
-  border-left-width: 3px; border-radius: 10px; padding: 9px 12px;
-}
-.bj-history-row.win { border-left-color: var(--grn); }
-.bj-history-row.loss { border-left-color: var(--red); }
-.bj-history-row.push { border-left-color: var(--gold); }
-.bj-history-cards { display: flex; gap: 3px; flex: 0 0 auto; }
-.bj-mini {
-  font-size: .66rem; font-weight: 800; padding: 2px 4px; border-radius: 4px;
-  background: var(--bg1); border: 1px solid var(--line-soft);
-}
-.bj-mini.red { color: var(--red); }
-.bj-mini.black { color: var(--txt); }
-.bj-history-body { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
-.bj-history-outcome { font-size: .85rem; font-weight: 800; }
-.bj-history-detail { display: inline-flex; align-items: center; gap: 4px; font-size: .73rem; color: var(--mut); }
-.bj-history-row.win .bj-history-outcome { color: var(--grn); }
-.bj-history-row.loss .bj-history-outcome { color: var(--red); }
-.bj-history-row.push .bj-history-outcome { color: var(--gold); }
-.bj-history-profit { font-weight: 900; font-size: .88rem; }
-.bj-history-row.win .bj-history-profit { color: var(--grn); }
-.bj-history-row.loss .bj-history-profit { color: var(--red); }
-
-/* ── open tables, the ones you can deal against ── */
-.bj-boards { display: flex; flex-direction: column; gap: 8px; }
-.bj-boards-head h3 { margin: 0 0 3px; font-size: .95rem; }
-.bj-boards-head p { margin: 0; color: var(--dim); font-size: .78rem; line-height: 1.5; max-width: 62ch; }
-
-.bj-board {
-  display: flex; align-items: center; gap: 12px;
-  background: var(--panel); border: 1px solid var(--line);
-  border-left-width: 3px; border-left-color: var(--acc);
-  border-radius: 12px; padding: 11px 14px;
-}
-.bj-board-who { display: flex; align-items: center; gap: 9px; flex: 1; min-width: 0; }
-.bj-board-avatar {
-  width: 34px; height: 34px; border-radius: 50%; object-fit: cover;
-  background: var(--panel3); flex: 0 0 34px;
-}
-.bj-board-avatar.fallback {
-  display: grid; place-items: center; color: var(--mut);
-  font-weight: 900; font-size: .85rem; text-transform: uppercase;
-}
-.bj-board-names { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
-.bj-board-name { font-size: .87rem; font-weight: 800; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bj-board-sub { font-size: .72rem; color: var(--dim); font-weight: 600; }
-.bj-board-pot { display: flex; flex-direction: column; align-items: flex-end; gap: 1px; }
-.bj-board-pot-val { display: inline-flex; align-items: center; gap: 4px; font-weight: 900; font-size: .9rem; }
-.bj-board-timer {
-  font-size: .74rem; font-weight: 800; color: var(--gold);
-  font-variant-numeric: tabular-nums; min-width: 30px; text-align: right;
-}
-.bj-btn.small { flex: 0 0 auto; padding: 9px 20px; font-size: .84rem; border-radius: 9px; }
-
-/* ── the deal-against modal ── */
-.bj-modal-wrap {
-  position: fixed; inset: 0; z-index: 120;
-  background: rgba(0, 0, 0, .6); backdrop-filter: blur(3px);
-  display: grid; place-items: center; padding: 20px;
-  animation: bj-fade .16s ease both;
-}
-@keyframes bj-fade { from { opacity: 0; } to { opacity: 1; } }
-.bj-modal {
-  width: min(460px, 100%); max-height: 86vh; overflow-y: auto;
-  background: var(--panel); border: 1px solid var(--line);
-  border-radius: 15px; padding: 16px;
-  display: flex; flex-direction: column; gap: 10px;
-  box-shadow: 0 22px 60px rgba(0, 0, 0, .5);
-  animation: bj-rise .2s cubic-bezier(.2, .9, .3, 1.1) both;
-}
-@keyframes bj-rise {
-  from { opacity: 0; transform: translateY(16px) scale(.98); }
-  to { opacity: 1; transform: none; }
-}
-.bj-modal-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.bj-modal-head h3 { margin: 0; font-size: .98rem; }
-.bj-modal-x {
-  background: none; border: none; color: var(--mut); font-size: 1.15rem;
-  font-weight: 900; cursor: pointer; line-height: 1; padding: 3px 7px; border-radius: 7px;
-}
-.bj-modal-x:hover { background: var(--panel3); color: var(--txt); }
-
-/* ─── Active-table notice ───────────────────────────────────────────────────
-   Blackjack renders the same two strips RPS does - an error banner and an
-   "you already have a table open" note - but borrowed RPS's class names for
-   them. The rules live in RpsPage.css, which this page does not load, so both
-   rendered completely unstyled. They are now blackjack-prefixed and owned here.
-   ─────────────────────────────────────────────────────────────────────────── */
+/* ── Active-bet notice ────────────────────────────────────────────────────── */
 .bj-active-note {
   display: flex;
   align-items: center;
@@ -303,7 +242,7 @@
 }
 .bj-active-note button:hover { filter: brightness(1.12); }
 
-/* ─── Error strip ────────────────────────────────────────────────────────── */
+/* ── Error strip ──────────────────────────────────────────────────────────── */
 .bj-error {
   display: flex;
   align-items: center;
@@ -329,3 +268,16 @@
   cursor: pointer;
 }
 .bj-error button:hover { filter: brightness(1.12); }
+
+@media (max-width: 640px) {
+  .bj-page { padding: 12px 10px 50px; }
+  .bj-view-modal { width: 100%; padding: 14px; }
+  .bj-card { width: 56px; height: 80px; }
+  .bj-card.face .bj-pip { font-size: 1.9rem; }
+  .bj-corner { font-size: .68rem; }
+  .bj-corner i { font-size: .56rem; }
+  .bj-cards { min-height: 84px; gap: 6px; }
+  .bj-view-items { max-height: 120px; }
+  .bj-action-row { width: 100%; }
+  .bj-action-row > * { flex: 1; }
+}

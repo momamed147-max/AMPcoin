@@ -324,7 +324,7 @@ const INVENTORY = [
       `every rendered class is defined in the CSS${undefinedClasses.length ? ` (missing: ${undefinedClasses.join(', ')})` : ''}`);
   }
 
-  section('the create-bet modal opens with a typable quantity');
+  section('the blackjack create modal uses the shared coinflip selector');
   {
     const bet = $$('.cf-topbar-btn').find((b) => /Bet Items/i.test(b.textContent));
     ok(!!bet, 'the Bet Items button exists');
@@ -334,42 +334,34 @@ const INVENTORY = [
     process.on('unhandledRejection', (e) => {
       console.log('    (diagnostic) unhandled rejection:', e && e.message);
     });
-    // openCreate awaits fetchInventory() before it sets the modal, so give it a
-    // stub and let the promise settle.
     queueInventory();
     await click(bet);
     await act(async () => { await new Promise((r) => setTimeout(r, 80)); });
 
-    const modal = $('.bjm-modal');
-    ok(!!modal, 'the create modal opened');
+    const modal = $('.cf-modal.cf-join-modal');
+    ok(!!modal, 'the shared join/create modal opened');
     if (!modal) {
       console.log('    (diagnostic) buttons:', $$('button').map((b) => b.textContent.trim()).join(' | '));
       console.log('    (diagnostic) queued fetches left:', fetchQueue.length);
     }
     if (modal) {
-      const tiles = $$('.bjm-tile');
-      ok(tiles.length === 3, `it lists the pets (${tiles.length} tiles)`);
-      ok(!!$('.bjm-tile-hit', modal), 'each tile has a click target that is not a button');
+      const tiles = $$('.cf-inv-tile');
+      const names = new Set($$('.cf-inv-name', modal).map((n) => n.textContent.trim()));
+      ok(tiles.length >= 3, `it lists the pets (${tiles.length} unit tiles)`);
+      ok(names.size === INVENTORY.length, `all ${INVENTORY.length} pet stacks are shown (${names.size})`);
+      ok(!!$('button.cf-inv-tile', modal) === false, 'tiles are not buttons (no nested controls)');
       ok(!$$('button button', modal).length, 'no interactive element is nested inside another button');
 
-      // Click a tile to pick one unit, then the stepper appears.
-      const tile = tiles[2];
-      await click($('.bjm-tile-hit', tile));
-      const stepper = $('.qt-input', tile);
-      ok(!!stepper, 'picking a unit reveals the quantity input');
-      ok(stepper && stepper.value === '1', `it starts at 1 (${stepper && stepper.value})`);
-
-      // The headline of the request: type a big number instead of clicking +.
-      await typeInto(stepper, '150');
-      await blur(stepper);
-      const total = $('.bjm-total-val', modal);
-      ok(total && total.textContent.replace(/[^0-9]/g, '') === '15000',
-        `typing 150 sets the total to 15,000 without 150 clicks (got "${total && total.textContent.trim()}")`);
-
-      // It must not exceed what the player actually owns.
-      await typeInto($('.qt-input', tile), '9999');
-      await blur($('.qt-input', tile));
-      ok($('.qt-input', tile).value === '200', 'it clamps to the 200 the player actually has');
+      // The shared picker selects one unit per tile, exactly like Coinflip/RPS.
+      const tile = tiles[0];
+      await click(tile);
+      ok(tile.classList.contains('selected') || $$('.cf-inv-tile.selected').length === 1,
+        'clicking a tile selects one unit');
+      const confirm = $('.cf-confirm-btn', modal);
+      ok(!!confirm, 'the shared confirm button is present');
+      ok(confirm && /Blackjack Bet/i.test(confirm.textContent),
+        `the confirm button names the blackjack bet (${confirm && confirm.textContent.trim()})`);
+      ok(confirm && !confirm.disabled, 'the confirm button enables after one unit is picked');
     }
   }
 

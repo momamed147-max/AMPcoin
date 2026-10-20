@@ -613,6 +613,7 @@ const [sortBy] = useState('newest');
             <span className="cf-tab-count">{jackpotCount}</span>
           </Link>
           <Link to="/rps" className="cf-tab"><span className="cf-tab-label"><Icon name="rpsScissors" size={12} /> RPS</span><span className="cf-tab-count">{rpsCount}</span></Link>
+          <Link to="/blackjack" className="cf-tab"><span className="cf-tab-label"><Icon name="card" size={12} /> Blackjack</span></Link>
         </div>
         <div className="cf-topbar-right">
           {/* The palette is global, but a visible trigger is what tells anyone

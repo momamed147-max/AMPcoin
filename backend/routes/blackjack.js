@@ -405,124 +405,199 @@ function reclaimTables() {
   return reclaimed;
 }
 
-/** Put a table's unused dealer stock back where it came from. */
-function pickBotItems(target) {
+/**
+ * Pick the house bot's wager for a blackjack bet.
+ *
+ * The bot joins through the SAME seat function a human does. Its wager has to
+ * land in the published 5% band, and it should look like the dealer's wager:
+ * if the house owns the same pet the dealer staked, it mirrors that first and
+ * only fills the remaining value with the closest thing it has. That is what
+ * "joins with similar items (if it has them)" means in practice.
+ */
+function pickBotItems(target, creatorItems = []) {
   const recipient = getTaxRecipient();
   if (!recipient) return null;
   const inv = dbManager.getUserInventory(recipient.id);
-  const pool = ((inv && inv.items) || [])
-    .map((it) => ({
-      itemId: String(it.itemId || it.id),
-      name: it.name || it.itemName || 'Item',
-      itemName: it.name || it.itemName || 'Item',
-      value: Number(it.value || 0),
-      quantity: Math.max(1, parseInt(it.quantity || 1, 10) || 1),
-      rarity: it.rarity || 'common',
-      image: it.imageUrl || it.image || '',
-      imageUrl: it.imageUrl || it.image || ''
-    }))
-    .filter((it) => it.itemId && it.value > 0 && it.quantity > 0);
+
+  // Merge duplicate stacks before picking. An inventory can technically hold
+  // two entries for the same pet; treating them as one avoids the bot choosing
+  // a quantity it cannot actually cover.
+  const byId = new Map();
+  for (const it of (inv && inv.items) || []) {
+    const itemId = String(it.itemId || it.id || '');
+    if (!itemId) continue;
+    const value = Number(it.value || 0);
+    if (!(value > 0)) continue;
+    const quantity = Math.max(1, parseInt(it.quantity || 1, 10) || 1);
+    const existing = byId.get(itemId);
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      byId.set(itemId, {
+        itemId,
+        name: it.name || it.itemName || 'Item',
+        itemName: it.name || it.itemName || 'Item',
+        value,
+        quantity,
+        rarity: it.rarity || 'common',
+        image: it.imageUrl || it.image || '',
+        imageUrl: it.imageUrl || it.image || ''
+      });
+    }
+  }
+  const pool = [...byId.values()];
   if (!pool.length) return null;
 
-  const asc = [...pool].sort((a, b) => a.value - b.value);
-  const desc = [...pool].sort((a, b) => b.value - a.value);
-  const stock = new Map(pool.map((it) => [it.itemId, it.quantity]));
-  const picked = new Map();
-  let total = 0;
+  const lo = Math.max(1, Math.floor(target * (1 - VALUE_TOLERANCE)));
+  const hi = Math.ceil(target * (1 + VALUE_TOLERANCE));
+  const creator = Array.isArray(creatorItems) ? creatorItems : [];
+  const creatorIds = new Set(creator.map((it) => String(it.itemId || it.id || '')).filter(Boolean));
+  const creatorRarities = new Set(creator.map((it) => String(it.rarity || 'common')));
+  const creatorUnits = creator.reduce(
+    (sum, it) => sum + Math.max(1, parseInt(it.quantity || 1, 10) || 1),
+    0
+  );
+  const unitTarget = creatorUnits > 0 ? target / creatorUnits : 0;
 
-  // Positive q takes units, negative q puts them back. The two directions must
-  // be handled separately: Math.min(q, avail) with a negative q is always
-  // negative, so an undo would silently do nothing and the search would keep
-  // building on units it thought it had removed.
-  const take = (it, q) => {
-    const avail = stock.get(it.itemId) || 0;
-    if (q < 0) {
-      const entry = picked.get(it.itemId);
-      if (!entry || entry.quantity < 1) return;
-      entry.quantity -= 1;
-      if (entry.quantity === 0) picked.delete(it.itemId);
-      stock.set(it.itemId, avail + 1);
-      total -= it.value;
-      return;
+  const preference = (it) => {
+    if (creatorIds.has(String(it.itemId))) return 0;
+    if (creatorRarities.has(String(it.rarity || 'common'))) return 1;
+    return 2;
+  };
+  const ordered = [...pool].sort((a, b) => (
+    preference(a) - preference(b)
+    || (unitTarget ? Math.abs(a.value - unitTarget) - Math.abs(b.value - unitTarget) : 0)
+    || a.value - b.value
+  ));
+
+  // One attempt starts from a mirror of the dealer's stake; the second starts
+  // empty. Returning the first result that lands in the band means the bot
+  // only falls back to unrelated pets when it genuinely has nothing similar.
+  const attempt = (mirror) => {
+    const stock = new Map(pool.map((it) => [String(it.itemId), it.quantity]));
+    const picked = new Map();
+    let total = 0;
+
+    // Positive q takes units, negative q puts them back. The two directions
+    // must be handled separately: Math.min(q, avail) with a negative q is
+    // always negative, so an undo would silently do nothing.
+    const take = (it, q) => {
+      const key = String(it.itemId);
+      const avail = stock.get(key) || 0;
+      if (q < 0) {
+        const entry = picked.get(key);
+        if (!entry || entry.quantity < 1) return;
+        entry.quantity -= 1;
+        if (entry.quantity === 0) picked.delete(key);
+        stock.set(key, avail + 1);
+        total -= it.value;
+        return;
+      }
+      const n = Math.min(q, avail);
+      if (n <= 0) return;
+      stock.set(key, avail - n);
+      const entry = picked.get(key) || { ...it, quantity: 0 };
+      entry.quantity += n;
+      picked.set(key, entry);
+      total += it.value * n;
+    };
+    const fits = () => total >= lo && total <= hi;
+
+    if (mirror) {
+      // Mirror the dealer's actual pets first: same item, same quantity, when
+      // the house has enough of it.
+      for (const st of creator) {
+        const key = String(st.itemId || st.id || '');
+        const it = pool.find((candidate) => String(candidate.itemId) === key);
+        if (!it) continue;
+        const want = Math.max(1, parseInt(st.quantity || 1, 10) || 1);
+        take(it, Math.min(want, stock.get(key) || 0));
+      }
     }
-    const n = Math.min(q, avail);
-    if (n <= 0) return;
-    stock.set(it.itemId, avail - n);
-    const entry = picked.get(it.itemId) || { ...it, quantity: 0 };
-    entry.quantity += n;
-    picked.set(it.itemId, entry);
-    total += it.value * n;
-  };
 
-  // Put a whole stack back on the shelf and take it out of the pick.
-  const dropStack = (itemId) => {
-    const entry = picked.get(itemId);
-    if (!entry) return 0;
-    const value = entry.value * entry.quantity;
-    stock.set(itemId, (stock.get(itemId) || 0) + entry.quantity);
-    picked.delete(itemId);
-    total -= value;
-    return value;
-  };
+    // Trim over a mirror that came out too rich, least-similar first.
+    let guard = 0;
+    while (total > hi && picked.size && guard++ < 500) {
+      const victim = [...picked.values()].sort(
+        (a, b) => preference(b) - preference(a) || b.value - a.value
+      )[0];
+      take(victim, -1);
+    }
 
-  if (target > 0) {
-    // Aim within 1.25% of the target.
-    const lo = Math.max(1, Math.floor(target * 0.9875));
-    const hi = Math.ceil(target * 1.0125);
-
-    // Bounded search over 1-3 units. A greedy fill strands itself whenever no
-    // single stack fits the band, and a two-unit search still misses targets
-    // like 19020 that need 2020 + 8440 + 8440. Three covers every real case and
-    // keeps the work trivial.
-    let solved = false;
-    const avail = (it) => (stock.get(it.itemId) || 0) > 0;
-    for (let i = 0; i < asc.length && !solved; i++) {
-      const a = asc[i];
-      if (!avail(a)) continue;
-      if (a.value >= lo && a.value <= hi) { take(a, 1); solved = true; break; }
-      if (a.value > hi) break; // ascending: nothing later can start us either
-      take(a, 1);
-
-      for (let j = 0; j < asc.length && !solved; j++) {
-        const b = asc[j];
-        if (!avail(b) || (j === i && (stock.get(a.itemId) || 0) < 1)) continue;
-        if (total + b.value > hi) break;
-        take(b, 1);
-
-        for (let k = j; k < asc.length && !solved; k++) {
-          const c = asc[k];
-          if (!avail(c)) continue;
-          if (j === i && k === i && (stock.get(a.itemId) || 0) < 1) continue;
-          if (total + c.value > hi) break;
-          take(c, 1);
-          if (total >= lo) solved = true;
-          else take(c, -1); // over-shot the floor; undo and try a bigger filler
+    // Fill the rest one unit at a time. Prefer the dealer's own pet, then the
+    // same rarity, then whichever unit leaves the smallest rounding gap while
+    // still staying under the top of the band.
+    guard = 0;
+    while (total < lo && guard++ < 500) {
+      const room = hi - total;
+      let best = null;
+      let bestScore = Infinity;
+      for (const it of ordered) {
+        if ((stock.get(String(it.itemId)) || 0) < 1) continue;
+        if (it.value > room) continue;
+        const overshoot = Math.max(0, total + it.value - target);
+        const score = preference(it) * 1e9 + overshoot * 1e3 + Math.abs(target - total - it.value);
+        if (score < bestScore) {
+          bestScore = score;
+          best = it;
         }
-        if (!solved) take(b, -1);
       }
-      if (!solved) dropStack(a.itemId);
+      if (!best) break;
+      take(best, 1);
     }
 
-    // Nothing landed in the band: take the closest sensible approximation
-    // rather than nothing, so the bot can still play.
-    if (!solved) {
-      for (const it of desc) {
-        if (total >= lo) break;
-        take(it, Math.floor((lo - total) / it.value));
-      }
-      for (const it of asc) {
-        if (total >= lo) break;
-        if (total + it.value > hi) break;
-        take(it, 1);
-      }
-    }
+    if (!fits()) return null;
+    return { items: [...picked.values()], value: total };
+  };
+
+  const mirrored = attempt(true);
+  if (mirrored) return { recipient, ...mirrored };
+  const fallback = attempt(false);
+  if (fallback) return { recipient, ...fallback };
+  return null;
+}
+
+/**
+ * Remove `quantity` units of one item from an inventory, walking across
+ * duplicate stacks. removeItemFromUserInventory always removes from the first
+ * matching stack, so a merged bot pick larger than that stack would otherwise
+ * leave the rest of the pick unpaid.
+ */
+function removeItemUnits(userId, itemId, quantity) {
+  let remaining = Math.max(1, parseInt(quantity || 1, 10) || 1);
+  let guard = 0;
+  while (remaining > 0 && guard++ < 100) {
+    const inv = dbManager.getUserInventory(userId);
+    const stack = ((inv && inv.items) || [])
+      .find((it) => String(it.itemId) === String(itemId));
+    if (!stack) break;
+    const have = Math.max(1, parseInt(stack.quantity || 1, 10) || 1);
+    const take = Math.min(remaining, have);
+    dbManager.removeItemFromUserInventory(userId, itemId, take);
+    remaining -= take;
   }
-  if (total <= 0) {
-    const smallest = asc[0];
-    take(smallest, 1);
+  return remaining === 0;
+}
+
+/**
+ * Seat a player and deal the hand. Both the human join and the house bot use
+ * this exact function, so there is one join path on the server and no special
+ * bot-only payout semantics.
+ */
+function seatPlayer(table, seat) {
+  table.opponentId = seat.id;
+  table.opponentUsername = seat.username;
+  table.opponentAvatar = seat.avatar || '';
+  table.opponentItems = seat.items || [];
+  table.opponentValue = seat.value || 0;
+  table.opponentIsBot = seat.isBot === true;
+  table.playerStockOwner = seat.stockOwner || seat.id;
+  dealTableHand(table);
+
+  // A natural on either side settles immediately; two naturals push.
+  if (!settleNaturals(table)) {
+    table.status = 'in_progress';
   }
-  if (total <= 0) return null;
-  return { recipient, items: [...picked.values()], value: total };
 }
 
 /**
@@ -637,7 +712,7 @@ router.post('/tables', authenticateToken, (req, res) => {
     if (value <= 0) return res.status(400).json({ message: 'Those pets have no value' });
 
     for (const it of wagerStacks) {
-      dbManager.removeItemFromUserInventory(userId, it.itemId, it.quantity);
+      removeItemUnits(userId, it.itemId, it.quantity);
     }
 
     const table = {
@@ -696,8 +771,8 @@ router.post('/tables/:id/join', authenticateToken, (req, res) => {
     const userId = req.user.userId;
     const { selectedItems } = req.body || {};
     const { db, table } = findTable(req.params.id);
-    if (!table) return res.status(404).json({ message: 'Table not found' });
-    if (table.status !== 'waiting') return res.status(400).json({ message: 'That table is no longer open' });
+    if (!table) return res.status(404).json({ message: 'Bet not found' });
+    if (table.status !== 'waiting') return res.status(400).json({ message: 'That bet is no longer open' });
     if (table.creatorId === userId) return res.status(400).json({ message: 'You cannot play against yourself' });
     if (table.opponentId) return res.status(400).json({ message: 'That seat is taken' });
     if (!Array.isArray(selectedItems) || !selectedItems.length) {
@@ -734,26 +809,25 @@ router.post('/tables/:id/join', authenticateToken, (req, res) => {
     const hi = Math.ceil((table.creatorValue || 0) * (1 + VALUE_TOLERANCE));
     if (value < lo || value > hi) {
       return res.status(400).json({
-        message: `Your wager must be between ${lo.toLocaleString()} and ${hi.toLocaleString()} AMP to match this table.`
+        message: `Your wager must be between ${lo.toLocaleString()} and ${hi.toLocaleString()} AMP to match this bet.`
       });
     }
 
     for (const it of stacks) {
-      dbManager.removeItemFromUserInventory(userId, it.itemId, it.quantity);
+      removeItemUnits(userId, it.itemId, it.quantity);
     }
-    table.opponentId = userId;
-    table.opponentUsername = user.displayName || user.robloxUsername;
-    table.opponentAvatar = user.avatar || '';
-    table.opponentItems = stacks;
-    table.opponentValue = value;
-    // A human joiner backs the player seat from their own inventory.
-    table.playerStockOwner = userId;
-    dealTableHand(table);
 
-    // A natural on either side settles immediately; two naturals push.
-    if (!settleNaturals(table)) {
-      table.status = 'in_progress';
-    }
+    // Join through the one server-side seat function. The house bot calls the
+    // same function below, so a bot joining a bet is not a different code path.
+    seatPlayer(table, {
+      id: userId,
+      username: user.displayName || user.robloxUsername,
+      avatar: user.avatar || '',
+      items: stacks,
+      value,
+      stockOwner: userId,
+      isBot: false
+    });
     table.updatedAt = new Date().toISOString();
     dbManager.saveMainDb();
     dbManager.saveUsersDb();
@@ -773,37 +847,39 @@ router.post('/tables/:id/bot-join', authenticateToken, (req, res) => {
   try {
     const userId = req.user.userId;
     const { db, table } = findTable(req.params.id);
-    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (!table) return res.status(404).json({ message: 'Bet not found' });
     if (table.creatorId !== userId) {
       return res.status(403).json({ message: 'Only the dealer can call the house bot' });
     }
     if (table.status !== 'waiting' || table.opponentId) {
-      return res.status(400).json({ message: 'That table is no longer open' });
+      return res.status(400).json({ message: 'That bet is no longer open' });
     }
 
-    const pick = pickBotItems(table.creatorValue);
+    const pick = pickBotItems(table.creatorValue, table.creatorItems);
     if (!pick) {
       return res.status(400).json({ message: "The house dealer has no pets to wager. Ask an admin to stock the bot." });
     }
     for (const it of pick.items) {
-      dbManager.removeItemFromUserInventory(pick.recipient.id, it.itemId, it.quantity || 1);
+      removeItemUnits(pick.recipient.id, it.itemId, it.quantity || 1);
     }
 
     // The bot sits in the PLAYER seat: it is the one who hits and stands,
     // while the creator deals. The bot's stake came from the house account,
-    // so that is what must be refunded if the table is abandoned.
-    table.opponentId = `bot-${pick.recipient.id}`;
-    table.opponentUsername = pick.recipient.username || 'House Dealer';
-    table.opponentAvatar = '';
-    table.opponentItems = pick.items;
-    table.opponentValue = pick.value;
-    table.opponentIsBot = true;
-    table.creatorIsBot = false; // the creator is a human, and they deal
-    table.playerStockOwner = pick.recipient.id;
-    dealTableHand(table);
+    // so that is what must be refunded if the hand is abandoned. It uses the
+    // real account id (not a synthetic seat id) so every payout path resolves.
+    const botUser = (dbManager.getUsersDb().users || []).find((u) => u.id === pick.recipient.id) || {};
+    seatPlayer(table, {
+      id: pick.recipient.id,
+      username: botUser.customDisplayName || botUser.displayName || botUser.robloxDisplayName
+        || botUser.username || pick.recipient.username || 'House Bot',
+      avatar: botUser.avatar || '',
+      items: pick.items,
+      value: pick.value,
+      stockOwner: pick.recipient.id,
+      isBot: true
+    });
 
-    if (!settleNaturals(table)) {
-      table.status = 'in_progress';
+    if (table.status === 'in_progress') {
       // The bot has nobody to click for it, so it plays its whole hand now.
       // If the player stands, the dealer then plays in the same request.
       playBotHand(table);
@@ -825,7 +901,7 @@ router.post('/tables/:id/hit', authenticateToken, (req, res) => {
   try {
     const userId = req.user.userId;
     const { db, table } = findTable(req.params.id);
-    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (!table) return res.status(404).json({ message: 'Bet not found' });
     // The joiner is the player and takes the first turn. Only they may hit.
     if (table.opponentId !== userId) return res.status(403).json({ message: 'Not your hand' });
     if (table.status !== 'in_progress') return res.status(400).json({ message: 'Cannot hit right now' });
@@ -854,7 +930,7 @@ router.post('/tables/:id/stand', authenticateToken, (req, res) => {
   try {
     const userId = req.user.userId;
     const { db, table } = findTable(req.params.id);
-    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (!table) return res.status(404).json({ message: 'Bet not found' });
     // The joiner is the player; standing ends their turn and the dealer plays.
     if (table.opponentId !== userId) return res.status(403).json({ message: 'Not your hand' });
     if (table.status !== 'in_progress') return res.status(400).json({ message: 'Cannot stand right now' });
@@ -881,7 +957,7 @@ router.post('/tables/:id/stand', authenticateToken, (req, res) => {
 router.post('/tables/:id/bot-play', authenticateToken, (req, res) => {
   try {
     const { table } = findTable(req.params.id);
-    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (!table) return res.status(404).json({ message: 'Bet not found' });
     if (table.opponentIsBot !== true) return res.status(400).json({ message: 'That is not the house bot' });
     if (table.creatorId !== req.user.userId) {
       return res.status(403).json({ message: 'Only the dealer can finish the bot hand' });
@@ -904,7 +980,7 @@ router.post('/tables/:id/bot-play', authenticateToken, (req, res) => {
 router.get('/tables/:id', authenticateToken, (req, res) => {
   try {
     const { table } = findTable(req.params.id);
-    if (!table) return res.status(404).json({ message: 'Table not found' });
+    if (!table) return res.status(404).json({ message: 'Bet not found' });
     // publicTable decides visibility from the viewer's seat. A spectator gets
     // one dealer card, the player gets their own hand plus that one card, and
     // the dealer gets both hands.

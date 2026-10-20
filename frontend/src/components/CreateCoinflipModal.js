@@ -13,6 +13,9 @@ import './CreateCoinflipModal.css';
 const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory, gameType = 'coinflip', match = null }) => {
   const isRps = gameType === 'rps' || gameType === 'rps-join';
   const isRpsJoin = gameType === 'rps-join';
+  const isBlackjack = gameType === 'blackjack' || gameType === 'blackjack-join';
+  const isBlackjackJoin = gameType === 'blackjack-join';
+  const isJoin = isRpsJoin || isBlackjackJoin;
   const [selectedQty, setSelectedQty] = useState({}); // stackKey -> units selected
   const [selectedSide, setSelectedSide] = useState('heads');
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,10 +33,17 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
   const [rpsSide, setRpsSide] = useState('rock');
 
   const activeTurns = isRps && turnsOn ? turnCount : 1;
-  // RPS join must land inside the creator's accepted value band.
-  const joinLo = isRpsJoin ? Number(match?.minJoinValue || 0) : 0;
-  const joinHi = isRpsJoin ? Number(match?.maxJoinValue || Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
-  const joinTarget = isRpsJoin ? Number(match?.creatorValue || 0) : 0;
+  // A join has to land inside the creator's accepted value band. RPS and
+  // Blackjack publish the same minJoinValue/maxJoinValue fields.
+  const joinLo = isJoin ? Number(match?.minJoinValue || 0) : 0;
+  const joinHi = isJoin ? Number(match?.maxJoinValue || Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
+  const joinTarget = isJoin ? Number(match?.creatorValue || 0) : 0;
+  const joinName = isBlackjackJoin
+    ? (match?.creatorUsername || 'Dealer')
+    : (match?.playerOne?.displayName || match?.playerOne?.username || 'Player');
+  const joinAvatar = isBlackjackJoin
+    ? (match?.creatorAvatar || '/default-avatar.svg')
+    : (match?.playerOne?.avatar || '/default-avatar.svg');
 
   const showNotice = (message, type = 'info') => {
     setNotice({ message, type });
@@ -93,7 +103,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
   // Auto select: fill the wager with the highest-value items that still fit
   // inside the accepted range, then top up with a closer-fitting stack.
   const autoSelect = () => {
-    if (!isRps || !isRpsJoin || inventory.length === 0) return;
+    if (!isJoin || inventory.length === 0) return;
     const lo = Math.max(1, joinLo);
     const hi = joinHi;
     if (hi < lo) {
@@ -152,7 +162,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
       showNotice('Please select at least one item to bet', 'warning');
       return;
     }
-    if (isRpsJoin) {
+    if (isJoin) {
       const total = getTotalValue();
       if (total < joinLo || total > joinHi) {
         showNotice(`Your wager must be between ${joinLo.toLocaleString()} and ${joinHi.toLocaleString()} AMP.`, 'warning');
@@ -162,32 +172,37 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
 
     setLoading(true);
     try {
-      const rpsEndpoint = isRpsJoin ? `/api/rps/matches/${match?.id}/join` : '/api/rps';
-      const response = await fetch(`${API_BASE}${isRps ? rpsEndpoint : '/api/coinflip'}`, {
+      const endpoint = isRpsJoin
+        ? `/api/rps/matches/${match?.id}/join`
+        : isRps
+          ? '/api/rps'
+          : isBlackjackJoin
+            ? `/api/blackjack/tables/${match?.id}/join`
+            : isBlackjack
+              ? '/api/blackjack/tables'
+              : '/api/coinflip';
+      const selectedItems = selectedEntries.map(({ item, qty }) => ({
+        itemId: item.itemId || item.id,
+        name: item.details?.name || item.name,
+        quantity: qty,
+        value: item.value || item.details?.value || 0
+      }));
+      const payload = isRps
+        ? { rounds: activeTurns, side: rpsSide, selectedItems }
+        : isBlackjack
+          ? { selectedItems }
+          : {
+            selectedItems,
+            sideChosen: selectedSide,
+            maxJoinPets: limitationsOn ? (maxJoinPets === 0 ? null : maxJoinPets) : null
+          };
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
-        body: JSON.stringify(isRps ? {
-          rounds: activeTurns,
-          side: rpsSide,
-          selectedItems: selectedEntries.map(({ item, qty }) => ({
-            itemId: item.itemId || item.id,
-            name: item.details?.name || item.name,
-            quantity: qty,
-            value: item.value || item.details?.value || 0
-          }))
-        } : {
-          selectedItems: selectedEntries.map(({ item, qty }) => ({
-            itemId: item.itemId || item.id,
-            name: item.details?.name || item.name,
-            quantity: qty,
-            value: item.value || item.details?.value || 0
-          })),
-          sideChosen: selectedSide,
-          maxJoinPets: limitationsOn ? (maxJoinPets === 0 ? null : maxJoinPets) : null
-        })
+        body: JSON.stringify(payload)
       });
 
       const data = await response.json().catch(() => ({}));
@@ -213,12 +228,20 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
         if (response.status === 429) {
           showNotice('Too many requests — slow down a few seconds and try again.', 'error');
         } else {
-          showNotice(data.message || (isRps ? 'Failed to update the RPS bet' : 'Failed to create coinflip'), 'error');
+          showNotice(
+            data.message
+              || (isRps
+                ? 'Failed to update the RPS bet'
+                : isBlackjack
+                  ? 'Failed to update the Blackjack bet'
+                  : 'Failed to create coinflip'),
+            'error'
+          );
         }
       }
     } catch (error) {
-      console.error(`Error creating ${isRps ? 'RPS bet' : 'coinflip'}:`, error);
-      showNotice(`Error creating ${isRps ? 'RPS bet' : 'coinflip'}`, 'error');
+      console.error(`Error creating ${isRps ? 'RPS bet' : isBlackjack ? 'Blackjack bet' : 'coinflip'}:`, error);
+      showNotice(`Error creating ${isRps ? 'RPS bet' : isBlackjack ? 'Blackjack bet' : 'coinflip'}`, 'error');
     } finally {
       setLoading(false);
     }
@@ -260,16 +283,22 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
     return (
       <ModalPortal>
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={isRps ? 'RPS bet' : 'Create coinflip'}>
+        <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={isRps ? 'RPS bet' : isBlackjack ? 'Blackjack bet' : 'Create coinflip'}>
           <div className="modal-header">
-            <h2>{isRps ? (isRpsJoin ? 'Join RPS Bet' : 'Create RPS Bet') : 'Create Coinflip Game'}</h2>
+            <h2>
+              {isRps
+                ? (isRpsJoin ? 'Join RPS Bet' : 'Create RPS Bet')
+                : isBlackjack
+                  ? (isBlackjackJoin ? 'Join Blackjack Bet' : 'Create Blackjack Bet')
+                  : 'Create Coinflip Game'}
+            </h2>
             <button className="close-modal" onClick={onClose} aria-label="Close create bet">
               <Icon name="close" size={18} />
             </button>
           </div>
           <div className="loading-container">
             <div className="loading-spinner"></div>
-            <p>{isRps ? 'Preparing your items...' : 'Loading...'}</p>
+            <p>{isRps ? 'Preparing your items...' : isBlackjack ? 'Preparing your wager...' : 'Loading...'}</p>
           </div>
         </div>
       </div>
@@ -287,7 +316,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
           onClose={() => setNotice(null)}
         />
       )}
-      <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={isRps ? 'RPS bet' : 'Create coinflip'}>
+      <div className="cf-modal cf-join-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={isRps ? 'RPS bet' : isBlackjack ? 'Blackjack bet' : 'Create coinflip'}>
         <button className="cf-modal-close" onClick={onClose} aria-label="Close">
           <Icon name="close" size={15} />
         </button>
@@ -296,19 +325,26 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
           {/* Left: your side + limits + select controls */}
           <div className="cf-join-left">
             <div className="cf-join-vs-head">
-              <span className="cf-join-vs-label">{isRps ? (isRpsJoin ? 'JOINING' : 'POST RPS BET') : 'CREATE BET'}</span>
-              {isRpsJoin && (
+              <span className="cf-join-vs-label">
+                {isRps
+                  ? (isRpsJoin ? 'JOINING' : 'POST RPS BET')
+                  : isBlackjack
+                    ? (isBlackjackJoin ? 'JOINING BLACKJACK' : 'POST BLACKJACK BET')
+                    : 'CREATE BET'}
+              </span>
+              {isJoin && (
                 <div className="cf-join-vs-user">
                   <img
                     className="cf-join-vs-avatar"
-                    src={match?.playerOne?.avatar || '/default-avatar.svg'}
-                    alt={match?.playerOne?.displayName || 'Player'}
+                    src={joinAvatar}
+                    alt={joinName}
                     onError={(e) => { e.target.src = '/default-avatar.svg'; }}
                   />
                   <div className="cf-join-vs-meta">
-                    <span className="cf-join-vs-name">{match?.playerOne?.displayName || match?.playerOne?.username || 'Player'}</span>
+                    <span className="cf-join-vs-name">{joinName}</span>
                     <span className="cf-join-vs-side cf-rps-side-badge">
-                      <Icon name="rpsScissors" size={11} /> {joinTarget.toLocaleString()} AMP
+                      <Icon name={isBlackjackJoin ? 'card' : 'rpsScissors'} size={11} /> {joinTarget.toLocaleString()} AMP
+                      {isBlackjackJoin ? ' · dealer' : ''}
                     </span>
                   </div>
                 </div>
@@ -316,7 +352,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
               <div className="cf-join-vs-total">
                 <span className="cf-diamond-sm"><Icon name="diamond" size={11} /></span> {getTotalValue().toLocaleString()}
                 <span className="cf-join-vs-sub">
-                  {isRpsJoin
+                  {isJoin
                     ? `Join ${joinLo.toLocaleString()}–${joinHi.toLocaleString()}`
                     : `${selectedCount} items selected`}
                 </span>
@@ -385,7 +421,18 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
               </div>
             )}
 
-            {!isRps && (<>
+            {isBlackjack && (
+              <div className="cf-create-opt-group">
+                <div className="cf-join-bet-items-title">{isBlackjackJoin ? 'THE HAND' : 'YOUR ROLE'}</div>
+                <div className="cf-rps-turn-note">
+                  {isBlackjackJoin
+                    ? 'You are the player: hit or stand once the cards are dealt. Your wager must sit inside the dealer\'s 5% band.'
+                    : 'You are the dealer: post your wager, then wait for a player or let the house bot take the seat. Blackjack pays 3:2.'}
+                </div>
+              </div>
+            )}
+
+            {!isRps && !isBlackjack && (<>
               <div className="cf-create-opt-group">
                 <div className="cf-join-bet-items-title">YOUR SIDE</div>
               <div className="cf-create-side-row">
@@ -467,7 +514,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                 <button type="button" className="cf-join-action-btn" onClick={selectAll}>
                   Select All
                 </button>
-                {isRpsJoin && (
+                {isJoin && (
                   <button type="button" className="cf-join-action-btn" onClick={autoSelect} disabled={loading || inventory.length === 0}>
                     Auto Select
                   </button>
@@ -588,7 +635,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
           </div>
           <div className="cf-join-bottom-right">
             <div className="cf-join-selected-info">
-              {isRpsJoin ? (() => {
+              {isJoin ? (() => {
                 const total = getTotalValue();
                 const inRange = total >= joinLo && total <= joinHi;
                 if (selectedCount === 0) {
@@ -611,9 +658,15 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
             <button
               className="cf-confirm-btn"
               onClick={handleCreateCoinflip}
-              disabled={selectedCount === 0 || loading || (isRpsJoin && (getTotalValue() < joinLo || getTotalValue() > joinHi))}
+              disabled={selectedCount === 0 || loading || (isJoin && (getTotalValue() < joinLo || getTotalValue() > joinHi))}
             >
-              {loading ? (isRps ? 'Posting...' : 'Creating...') : isRps ? `${isRpsJoin ? 'Join' : 'Post'} RPS Bet (${getTotalValue().toLocaleString()} AMP)` : `Create Game (${getTotalValue().toLocaleString()} AMP)`}
+              {loading
+                ? (isJoin ? 'Joining...' : isBlackjack ? 'Posting...' : 'Creating...')
+                : isRps
+                  ? `${isRpsJoin ? 'Join' : 'Post'} RPS Bet (${getTotalValue().toLocaleString()} AMP)`
+                  : isBlackjack
+                    ? `${isBlackjackJoin ? 'Join' : 'Post'} Blackjack Bet (${getTotalValue().toLocaleString()} AMP)`
+                    : `Create Game (${getTotalValue().toLocaleString()} AMP)`}
             </button>
           </div>
         </div>
