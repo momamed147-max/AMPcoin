@@ -4,16 +4,34 @@ import { useAuth } from '../context/AuthContext';
 import Icon from '../components/Icon';
 import Logo from '../components/Logo';
 import { playError } from '../sound';
-import { getRememberedDevice } from '../rememberedDevice';
+import { API_BASE } from '../apiConfig';
+import {
+  getRememberedDevice,
+  getRememberedDevices,
+  saveRememberedDevice
+} from '../rememberedDevice';
 import './AuthPage.css';
 
 const LOCAL_DEV_TOOLS = process.env.NODE_ENV !== 'production';
+
+function rememberedAvatar(entry) {
+  if (entry?.avatar) return entry.avatar;
+  if (entry?.robloxUserId) {
+    return `https://www.roblox.com/headshot-thumbnail/image?userId=${entry.robloxUserId}&width=420&height=420&format=png`;
+  }
+  return '/default-avatar.svg';
+}
+
+function rememberedDisplayName(entry) {
+  return entry?.displayName || entry?.robloxDisplayName || entry?.username || 'Roblox account';
+}
 
 const LoginPage = () => {
   const initialRemembered = React.useMemo(() => getRememberedDevice(), []);
   const [step, setStep] = useState(1); // 1 = username, 2 = bio code
   const [robloxUsername, setRobloxUsername] = useState(initialRemembered?.username || '');
   const [rememberedDevice, setRememberedDevice] = useState(initialRemembered);
+  const [rememberedAccounts, setRememberedAccounts] = useState(() => getRememberedDevices());
   const [rememberMe, setRememberMe] = useState(!!initialRemembered);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -21,14 +39,65 @@ const LoginPage = () => {
   const [devName, setDevName] = useState('local-player-1');
   const [devLoading, setDevLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [sessionBusy, setSessionBusy] = useState('');
   const navigate = useNavigate();
   const {
     requestVerifyCode,
     verifyAndRegister,
     rememberedLogin,
+    forgetRememberedDevice,
     devLogin,
     loading: authLoading
   } = useAuth();
+
+  // Old remembered entries were saved before the profile snapshot existed.
+  // Resolve those lazily so the picker can still show a face and a name.
+  React.useEffect(() => {
+    const missing = rememberedAccounts.filter(
+      (entry) => entry.username && (!entry.avatar || !entry.displayName)
+    );
+    if (!missing.length) return undefined;
+    let cancelled = false;
+    (async () => {
+      const resolved = await Promise.all(missing.map(async (entry) => {
+        try {
+          const res = await fetch(
+            `${API_BASE}/api/users/profile/${encodeURIComponent(entry.username)}`
+          );
+          if (!res.ok) return null;
+          const profile = await res.json();
+          const avatar = profile.avatar
+            || (profile.robloxUserId
+              ? `https://www.roblox.com/headshot-thumbnail/image?userId=${profile.robloxUserId}&width=420&height=420&format=png`
+              : '');
+          const displayName = profile.displayName || profile.robloxDisplayName || entry.username;
+          const robloxUserId = profile.robloxUserId || entry.robloxUserId || null;
+          saveRememberedDevice({
+            ...entry,
+            displayName,
+            avatar,
+            robloxUserId
+          });
+          return { username: entry.username, displayName, avatar, robloxUserId };
+        } catch (_) {
+          return null;
+        }
+      }));
+      if (cancelled) return;
+      const updates = new Map(
+        resolved.filter(Boolean).map((item) => [item.username.toLowerCase(), item])
+      );
+      if (updates.size) {
+        setRememberedAccounts((list) => list.map((entry) => {
+          const update = updates.get(entry.username.toLowerCase());
+          return update ? { ...entry, ...update } : entry;
+        }));
+      }
+    })();
+    return () => { cancelled = true; };
+    // This runs once for the entries present when the login screen mounted.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const showLoginError = (message) => {
     setError(message);
@@ -46,8 +115,8 @@ const LoginPage = () => {
     setLoading(true);
     try {
       // A remembered browser skips the bio step entirely. If the token has
-      // expired or the network changed, fall through to the normal code flow
-      // instead of making the player start over.
+      // expired, fall through to the normal code flow instead of making the
+      // player start over.
       if (rememberMe && rememberedDevice) {
         const remembered = await rememberedLogin(username);
         if (remembered.success) {
@@ -100,6 +169,42 @@ const LoginPage = () => {
     // Switching to a different remembered account opts back in. Editing the
     // same one after unticking the box does not silently re-tick it.
     if (saved && saved.token !== rememberedDevice?.token) setRememberMe(true);
+  };
+
+  // One click on a remembered account exchanges its device token for a normal
+  // session. This is the path that deliberately skips the Roblox bio code.
+  const startRememberedAccount = async (entry) => {
+    if (!entry || sessionBusy) return;
+    setError('');
+    setSessionBusy(entry.username);
+    try {
+      const result = await rememberedLogin(entry.username);
+      if (result.success) {
+        navigate('/coinflip');
+        return;
+      }
+      showLoginError(result.message || 'Could not sign in from this device.');
+      setRememberedAccounts(getRememberedDevices());
+      if (String(entry.username).toLowerCase() === String(robloxUsername).toLowerCase()) {
+        setRememberedDevice(null);
+        setRememberMe(false);
+      }
+    } catch (err) {
+      showLoginError(err.message || 'Network error. Please try again.');
+    } finally {
+      setSessionBusy('');
+    }
+  };
+
+  const forgetAccount = async (entry, event) => {
+    event.stopPropagation();
+    if (!entry || sessionBusy) return;
+    await forgetRememberedDevice(entry.username);
+    setRememberedAccounts(getRememberedDevices());
+    if (String(entry.username).toLowerCase() === String(robloxUsername).toLowerCase()) {
+      setRememberedDevice(null);
+      setRememberMe(false);
+    }
   };
 
   const handleDevLogin = async (event) => {
@@ -157,10 +262,59 @@ const LoginPage = () => {
           <form onSubmit={handleGetCode}>
             <h2 className="auth-title">Sign In</h2>
             <p className="auth-sub">
-              {rememberedDevice
-                ? 'This device is remembered. Continue below without changing your Roblox bio.'
-                : 'Enter your Roblox username to get a verification code.'}
+              {rememberedAccounts.length
+                ? 'Pick an account that is already signed in on this device, or use a code.'
+                : rememberedDevice
+                  ? 'This device is remembered. Continue below without changing your Roblox bio.'
+                  : 'Enter your Roblox username to get a verification code.'}
             </p>
+
+            {rememberedAccounts.length > 0 && (
+              <section className="auth-saved" aria-label="Remembered accounts">
+                <div className="auth-saved-head">
+                  <span>Already signed in</span>
+                  <small>Remembered on this device</small>
+                </div>
+                <div className="auth-saved-list">
+                  {rememberedAccounts.map((entry) => {
+                    const busy = sessionBusy === entry.username;
+                    return (
+                      <div className="auth-saved-row" key={entry.username}>
+                        <button
+                          type="button"
+                          className="auth-saved-account"
+                          onClick={() => startRememberedAccount(entry)}
+                          disabled={!!sessionBusy || loading}
+                        >
+                          <img
+                            className="auth-saved-avatar"
+                            src={rememberedAvatar(entry)}
+                            alt=""
+                            onError={(e) => { e.currentTarget.src = '/default-avatar.svg'; }}
+                          />
+                          <span className="auth-saved-copy">
+                            <span className="auth-saved-name">{rememberedDisplayName(entry)}</span>
+                            <span className="auth-saved-user">@{entry.username}</span>
+                          </span>
+                          <span className="auth-saved-cta">{busy ? 'Signing in...' : 'Continue'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="auth-saved-forget"
+                          onClick={(event) => forgetAccount(entry, event)}
+                          disabled={!!sessionBusy}
+                          aria-label={`Forget ${entry.username}`}
+                          title="Forget this account on this device"
+                        >
+                          <Icon name="close" size={13} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="auth-saved-divider"><span>or use a code</span></div>
+              </section>
+            )}
 
             {error && <div className="auth-error" role="alert">{error}</div>}
 

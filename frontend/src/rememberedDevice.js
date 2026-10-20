@@ -57,6 +57,13 @@ function pruneExpired(store) {
   return clean;
 }
 
+export function getRememberedDevices() {
+  const store = pruneExpired(readStore());
+  return Object.values(store)
+    .filter((entry) => isUsable(entry))
+    .sort((a, b) => Date.parse(b.savedAt || 0) - Date.parse(a.savedAt || 0));
+}
+
 export function getRememberedDevice(username) {
   const store = pruneExpired(readStore());
   const key = keyFor(username);
@@ -65,20 +72,39 @@ export function getRememberedDevice(username) {
     return entry && isUsable(entry) ? entry : null;
   }
 
-  return Object.values(store)
-    .filter((entry) => isUsable(entry))
-    .sort((a, b) => Date.parse(b.savedAt || 0) - Date.parse(a.savedAt || 0))[0] || null;
+  return getRememberedDevices()[0] || null;
 }
 
-export function saveRememberedDevice({ username, token, expiresAt }) {
+/* Saving a rotated token must not erase the profile snapshot. Every identity
+   field is optional and falls back to the entry already on disk, so the login
+   picker keeps its name and avatar even when only the token changes. */
+export function saveRememberedDevice({
+  username,
+  token,
+  expiresAt,
+  displayName,
+  avatar,
+  robloxUserId,
+  robloxDisplayName
+}) {
   const key = keyFor(username);
   if (!key || !token || !expiresAt) return null;
   const store = pruneExpired(readStore());
+  const previous = store[key] || {};
+  // Refreshing only the profile snapshot must not reshuffle the login picker.
+  const sameToken = previous.token === token && previous.expiresAt === expiresAt;
   const entry = {
+    ...previous,
     username: String(username).trim(),
     token,
     expiresAt,
-    savedAt: new Date().toISOString()
+    savedAt: sameToken && previous.savedAt ? previous.savedAt : new Date().toISOString(),
+    displayName: displayName !== undefined ? displayName : (previous.displayName || ''),
+    avatar: avatar !== undefined ? avatar : (previous.avatar || ''),
+    robloxUserId: robloxUserId !== undefined ? robloxUserId : (previous.robloxUserId || null),
+    robloxDisplayName: robloxDisplayName !== undefined
+      ? robloxDisplayName
+      : (previous.robloxDisplayName || '')
   };
   store[key] = entry;
   writeStore(store);

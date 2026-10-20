@@ -748,6 +748,168 @@
   line-height: 1.4;
 }
 
+/* ── Remembered accounts ───────────────────────────────────────────────────
+   A returning browser already holds a valid device token. Asking it for a
+   Roblox bio code again is the failure this list exists to remove. Each row
+   is one account: face, display name, @username, and a one-click Continue.
+   The list only renders when at least one usable token was saved. */
+
+.auth-saved {
+  margin: 0 0 var(--sp-5);
+}
+
+.auth-saved-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.auth-saved-head > span {
+  color: var(--mut);
+  font-size: 0.61rem;
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.auth-saved-head small {
+  color: var(--faint);
+  font-size: 0.6rem;
+  text-align: right;
+}
+
+.auth-saved-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.auth-saved-row {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: color-mix(in srgb, var(--panel2) 72%, transparent);
+  transition: border-color var(--dur-2) var(--ease-2), background var(--dur-2) var(--ease-2);
+}
+
+.auth-saved-row:hover {
+  border-color: color-mix(in srgb, var(--acc) 46%, var(--line-strong));
+  background: color-mix(in srgb, var(--acc) 7%, var(--panel2));
+}
+
+.auth-saved-account {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.auth-saved-account:disabled {
+  cursor: default;
+  opacity: 0.72;
+}
+
+.auth-saved-account:focus-visible {
+  outline: 2px solid var(--acc-bright);
+  outline-offset: -2px;
+}
+
+.auth-saved-avatar {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg1);
+}
+
+.auth-saved-copy {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.auth-saved-name {
+  overflow: hidden;
+  color: var(--txt);
+  font-size: 0.78rem;
+  font-weight: var(--fw-semi);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-saved-user {
+  overflow: hidden;
+  color: var(--mut);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-saved-cta {
+  flex: 0 0 auto;
+  color: var(--acc-bright);
+  font-size: 0.63rem;
+  font-weight: var(--fw-semi);
+  letter-spacing: 0.02em;
+}
+
+.auth-saved-forget {
+  display: flex;
+  flex: 0 0 30px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color var(--dur-2) var(--ease-2), background var(--dur-2) var(--ease-2);
+}
+
+.auth-saved-forget:hover:not(:disabled) {
+  color: var(--txt);
+  background: color-mix(in srgb, var(--red) 16%, transparent);
+}
+
+.auth-saved-forget:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.auth-saved-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: var(--sp-4);
+  color: var(--faint);
+  font-size: 0.58rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.auth-saved-divider::before,
+.auth-saved-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
 /* ── Motion ──────────────────────────────────────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {

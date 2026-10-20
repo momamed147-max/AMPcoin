@@ -713,13 +713,12 @@ router.post('/remember-login', async (req, res) => {
       return res.status(401).json({ message: 'This device is not remembered. Verify with a code.' });
     }
 
+    // The token is the credential, not the network. Binding this to an IP
+    // broke every phone that switched from Wi-Fi to mobile data, and every
+    // deployment behind a proxy whose egress address moved. Keep the latest
+    // fingerprint for diagnostics but do not reject a valid token for it.
     const currentIpHash = hashRequestIp(req);
-    if (device.ipHash && currentIpHash && device.ipHash !== currentIpHash) {
-      return res.status(401).json({
-        message: 'This device changed networks. Verify with a code to trust it again.',
-        code: 'ip_changed'
-      });
-    }
+    if (currentIpHash) device.lastIpHash = currentIpHash;
 
     const now = new Date().toISOString();
     device.lastUsedAt = now;

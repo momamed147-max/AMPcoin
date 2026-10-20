@@ -93,8 +93,11 @@ const ok = (c, l) => { c ? pass++ : fail++; console.log(`  ${c ? 'PASS' : 'FAIL'
       await fetch(`${API}/api/blackjack/tables/${t.id}/bot-join`, { method: 'POST', headers: auth(me.token), body: '{}' });
       let cur = await (await fetch(`${API}/api/blackjack/tables/${t.id}`, { headers: auth(me.token) })).json();
       let guard = 0;
-      while (cur.status === 'in_progress' && guard++ < 10) {
-        const d = await (await fetch(`${API}/api/blackjack/tables/${t.id}/bot-play`, {
+      // The human is the player against the house dealer, so drive the real
+      // Hit/Stand buttons instead of a bot-play shortcut.
+      while (cur.status === 'in_progress' && guard++ < 20) {
+        const action = (cur.playerValue || 0) < 17 ? 'hit' : 'stand';
+        const d = await (await fetch(`${API}/api/blackjack/tables/${t.id}/${action}`, {
           method: 'POST', headers: auth(me.token), body: '{}'
         })).json();
         if (d.message) break;

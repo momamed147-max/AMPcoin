@@ -135,6 +135,8 @@ const { default: CommandPalette } = require(path.join(FRONTEND, 'src', 'componen
 const { default: TradingPage } = require(path.join(FRONTEND, 'src', 'pages', 'TradingPage.js'));
 const { default: UpgraderPage } = require(path.join(FRONTEND, 'src', 'pages', 'UpgraderPage.js'));
 const { default: QtyStepper } = require(path.join(FRONTEND, 'src', 'components', 'QtyStepper.js'));
+const { default: LoginPage } = require(path.join(FRONTEND, 'src', 'pages', 'LoginPage.js'));
+const rememberedDevice = require(path.join(FRONTEND, 'src', 'rememberedDevice.js'));
 // The page reads the user from AuthContext, so the test supplies one directly
 // rather than standing up the whole provider (which fetches on mount).
 const { AuthContext } = require(path.join(FRONTEND, 'src', 'context', 'AuthContext.js'));
@@ -363,6 +365,84 @@ const INVENTORY = [
         `the confirm button names the blackjack bet (${confirm && confirm.textContent.trim()})`);
       ok(confirm && !confirm.disabled, 'the confirm button enables after one unit is picked');
     }
+  }
+
+  section('the login screen lists remembered accounts with their profile');
+  {
+    const future = new Date(Date.now() + 86400000).toISOString();
+    const store = {
+      beta: {
+        username: 'Beta',
+        token: 'b'.repeat(64),
+        expiresAt: future,
+        savedAt: new Date(Date.now() - 1000).toISOString(),
+        displayName: 'Beta Display',
+        avatar: 'https://example.test/beta.png',
+        robloxUserId: 2
+      },
+      alpha: {
+        username: 'Alpha',
+        token: 'a'.repeat(64),
+        expiresAt: future,
+        savedAt: new Date(Date.now() - 5000).toISOString(),
+        displayName: 'Alpha Display',
+        avatar: 'https://example.test/alpha.png',
+        robloxUserId: 1
+      }
+    };
+    window.localStorage.setItem('ampcoin_remembered_devices_v1', JSON.stringify(store));
+    ok(rememberedDevice.getRememberedDevices().length === 2,
+      `the storage layer sees both tokens (${rememberedDevice.getRememberedDevices().length})`);
+    const loginCalls = [];
+    const forgotCalls = [];
+    const authValue = {
+      requestVerifyCode: async () => ({ success: true, code: 'ABC123' }),
+      verifyAndRegister: async () => ({ success: true }),
+      rememberedLogin: async (username) => {
+        loginCalls.push(username);
+        return { success: false, message: 'Test token rejected' };
+      },
+      forgetRememberedDevice: async (username) => {
+        forgotCalls.push(username);
+        rememberedDevice.removeRememberedDevice(username);
+      },
+      devLogin: async () => ({ success: true }),
+      loading: false
+    };
+
+    await render(
+      React.createElement(
+        AuthContext.Provider,
+        { value: authValue },
+        React.createElement(
+          MemoryRouter,
+          null,
+          React.createElement(LoginPage)
+        )
+      )
+    );
+
+    const cards = $$('.auth-saved-account');
+    ok(cards.length === 2, `both remembered accounts are listed (${cards.length})`);
+    ok(cards[0] && /Beta Display/.test(cards[0].textContent), 'the newest account is first');
+    ok(cards[0] && /@Beta/.test(cards[0].textContent), 'the Roblox username is shown beneath the display name');
+    const avatars = $$('.auth-saved-avatar').map((img) => img.getAttribute('src'));
+    ok(avatars.includes('https://example.test/beta.png') && avatars.includes('https://example.test/alpha.png'),
+      'each account shows its Roblox profile picture');
+
+    await click(cards[0]);
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    ok(loginCalls[0] === 'Beta', `clicking Continue skips the code and exchanges the token (${loginCalls[0]})`);
+
+    const alphaRow = $$('.auth-saved-row').find((row) => /@Alpha/.test(row.textContent));
+    const forget = alphaRow && alphaRow.querySelector('.auth-saved-forget');
+    ok(!!forget, 'each remembered row has a forget control');
+    if (forget) await click(forget);
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    ok(forgotCalls.includes('Alpha'), 'the forget button removes that device token');
+    ok($$('.auth-saved-account').length === 1, 'the forgotten account leaves the list');
+
+    window.localStorage.removeItem('ampcoin_remembered_devices_v1');
   }
 
   section('the Trading page mounts');

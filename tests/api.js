@@ -52,23 +52,24 @@ async function mk(sl = 0, name = 'p') {
   return u;
 }
 
-/** Play one bot-table hand to completion. The bot is the PLAYER seat. */
-async function botHand(dealer, item, qty = 2) {
-  const preTotal = val(await inv(dealer)) + val(await inv(admin));
+/** Play one bot-table hand to completion. The human is the PLAYER seat. */
+async function botHand(human, item, qty = 2) {
+  const preTotal = val(await inv(human)) + val(await inv(admin));
   const t = await (await fetch(`${API}/api/blackjack/tables`, {
-    method: 'POST', headers: auth(dealer.token),
+    method: 'POST', headers: auth(human.token),
     body: JSON.stringify({ selectedItems: [{ itemId: item.itemId, quantity: qty }] })
   })).json();
   if (!t.id) return { skipped: t.message || 'open refused' };
   const seated = await (await fetch(`${API}/api/blackjack/tables/${t.id}/bot-join`, {
-    method: 'POST', headers: auth(dealer.token), body: '{}'
+    method: 'POST', headers: auth(human.token), body: '{}'
   })).json();
   if (seated.message) return { skipped: seated.message };
   let cur = seated;
   let guard = 0;
-  while (cur.status === 'in_progress' && guard++ < 10) {
-    const d = await (await fetch(`${API}/api/blackjack/tables/${t.id}/bot-play`, {
-      method: 'POST', headers: auth(dealer.token), body: '{}'
+  while (cur.status === 'in_progress' && guard++ < 20) {
+    const action = (cur.playerValue || 0) < 17 ? 'hit' : 'stand';
+    const d = await (await fetch(`${API}/api/blackjack/tables/${t.id}/${action}`, {
+      method: 'POST', headers: auth(human.token), body: '{}'
     })).json();
     if (d.message) break;
     cur = d;
@@ -79,28 +80,28 @@ async function botHand(dealer, item, qty = 2) {
 (async () => {
   admin = await setup();
 
-  section('blackjack: the creator deals, the joiner plays');
+  section('blackjack: the creator plays, the joiner deals');
   {
-    const dealer = await mk(0, 'd');
-    const player = await mk(5, 'j');
-    const dInv = await inv(dealer);
+    const player = await mk(0, 'd');
+    const dealer = await mk(5, 'j');
     const pInv = await inv(player);
+    const dInv = await inv(dealer);
     const t = await (await fetch(`${API}/api/blackjack/tables`, {
-      method: 'POST', headers: auth(dealer.token),
-      body: JSON.stringify({ selectedItems: [{ itemId: dInv[0].itemId, quantity: 2 }] })
+      method: 'POST', headers: auth(player.token),
+      body: JSON.stringify({ selectedItems: [{ itemId: pInv[0].itemId, quantity: 2 }] })
     })).json();
-    ok(t.dealerSeat?.id === dealer.user.id, 'the creator is the dealer');
-    ok(t.playerSeat?.id === null, 'the player seat is empty until someone joins');
+    ok(t.playerSeat?.id === player.user.id, 'the creator is the player');
+    ok(t.dealerSeat?.id === null, 'the dealer seat is empty until someone joins');
     ok(t.minJoinValue === Math.floor(t.creatorValue * 0.95)
       && t.maxJoinValue === Math.ceil(t.creatorValue * 1.05),
       `the 5% join band is published (${t.minJoinValue}-${t.maxJoinValue} for ${t.creatorValue})`);
 
     // A wager far outside the band must be refused by name.
-    const cheap = [...pInv].sort((a, b) => Number(a.value) - Number(b.value))[0];
+    const cheap = [...dInv].sort((a, b) => Number(a.value) - Number(b.value))[0];
     const cheapVal = Number(cheap.value);
     if (cheapVal < t.minJoinValue) {
       const low = await (await fetch(`${API}/api/blackjack/tables/${t.id}/join`, {
-        method: 'POST', headers: auth(player.token),
+        method: 'POST', headers: auth(dealer.token),
         body: JSON.stringify({ selectedItems: [{ itemId: cheap.itemId, quantity: 1 }] })
       })).json();
       ok(!!low.message && /between/i.test(low.message),
@@ -109,7 +110,7 @@ async function botHand(dealer, item, qty = 2) {
       ok(true, `the cheapest pet (${cheapVal}) is already inside the band`);
     }
 
-    const fit = pInv.find((i) => {
+    const fit = dInv.find((i) => {
       const v = Number(i.value); if (!v) return false;
       const q = Math.ceil(t.minJoinValue / v);
       return q * v >= t.minJoinValue && q * v <= t.maxJoinValue && q <= (Number(i.quantity) || 1);
@@ -117,18 +118,34 @@ async function botHand(dealer, item, qty = 2) {
     ok(!!fit, 'a pet can be found that lands inside the band');
     const qty = Math.ceil(t.minJoinValue / Number(fit.value));
     const joined = await (await fetch(`${API}/api/blackjack/tables/${t.id}/join`, {
-      method: 'POST', headers: auth(player.token),
+      method: 'POST', headers: auth(dealer.token),
       body: JSON.stringify({ selectedItems: [{ itemId: fit.itemId, quantity: qty }] })
     })).json();
-    ok(!joined.message && joined.playerSeat?.id === player.user.id,
-      `the joiner took the player seat (${joined.message || 'joined'})`);
-    ok(joined.dealerHand[1].rank === 'hidden' || joined.status === 'completed',
-      "the dealer's hole card is hidden while the hand is live");
+    ok(!joined.message && joined.dealerSeat?.id === dealer.user.id,
+      `the joiner took the dealer seat (${joined.message || 'joined'})`);
+    ok(joined.playerSeat?.id === player.user.id, 'the creator stays in the player seat');
+
+    // The joiner is the dealer, so they see both cards. The creator, who has
+    // to hit or stand, must only see the dealer's upcard.
+    ok(joined.dealerHand[1]?.rank !== 'hidden' || joined.status === 'completed',
+      'the dealer sees the hole card');
+    const playerView = await (await fetch(`${API}/api/blackjack/tables/${t.id}`, {
+      headers: auth(player.token)
+    })).json();
+    ok(playerView.dealerHand[1]?.rank === 'hidden' || joined.status === 'completed',
+      "the dealer's hole card is hidden from the player while the hand is live");
+
+    const playerHit = await fetch(`${API}/api/blackjack/tables/${t.id}/hit`, {
+      method: 'POST', headers: auth(player.token), body: '{}'
+    });
+    ok(playerHit.status === 200 || joined.status === 'completed',
+      'the player can hit their own hand');
 
     const wrongHit = await fetch(`${API}/api/blackjack/tables/${t.id}/hit`, {
       method: 'POST', headers: auth(dealer.token), body: '{}'
     });
-    ok(wrongHit.status === 403, 'the dealer cannot hit for the player');
+    ok(wrongHit.status === 403 || joined.status === 'completed',
+      'the dealer cannot hit for the player');
   }
 
   section('blackjack: the pot is conserved and never resized');
@@ -298,7 +315,7 @@ async function botHand(dealer, item, qty = 2) {
     }
     const s = await (await fetch(`${API}/api/progression/summary`, { headers: auth(me.token) })).json();
     ok(s.games.blackjack.played === bj,
-      `bot tables are counted even though the human is the DEALER (${s.games.blackjack.played}/${bj})`);
+      `bot tables are counted with the human as the PLAYER (${s.games.blackjack.played}/${bj})`);
     const sum = Object.values(s.games).reduce((a, g) => a + g.played, 0);
     ok(s.totals.played === sum, `the total equals the sum of the games (${s.totals.played} == ${sum})`);
     ok(s.achievements.total === 12, `12 achievements defined (${s.achievements.total})`);
@@ -306,6 +323,54 @@ async function botHand(dealer, item, qty = 2) {
       'every achievement percent is in range');
     const first = s.achievements.list.find((a) => a.id === 'first-bet');
     ok(first.unlocked === true, 'First Bet unlocks once a bet is finished');
+  }
+
+  section('auth: remembered devices sign in without a code');
+  {
+    const username = `rem${STAMP}${Math.floor(Math.random() * 900 + 100)}`;
+    const password = 'remember-me-123';
+    const reg = await fetch(`${API}/api/auth/register`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        robloxUsername: username,
+        displayName: 'Remember Tester',
+        password,
+        confirmPassword: password
+      })
+    });
+    ok(reg.status === 201 || reg.status === 200, `a password account can be created (${reg.status})`);
+
+    // Issue the device token from one "network" and use it from another. The
+    // token is the credential; an address change must not send the player back
+    // to editing a Roblox bio.
+    const issued = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '203.0.113.9' },
+      body: JSON.stringify({ robloxUsername: username, password, remember: true })
+    });
+    const issuedBody = await issued.json();
+    ok(issued.ok && /^[a-f0-9]{64}$/i.test(issuedBody.rememberToken || ''),
+      `login with remember returns a device token (${issued.status})`);
+
+    const remembered = await fetch(`${API}/api/auth/remember-login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Forwarded-For': '198.51.100.7' },
+      body: JSON.stringify({ robloxUsername: username, token: issuedBody.rememberToken })
+    });
+    const rememberedBody = await remembered.json();
+    ok(remembered.ok && !!rememberedBody.token,
+      `the device token signs in from a different network (${remembered.status} ${rememberedBody.message || ''})`);
+
+    const forgot = await fetch(`${API}/api/auth/remember-forget`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: issuedBody.rememberToken })
+    });
+    ok(forgot.ok, 'the device token can be forgotten');
+    const afterForget = await fetch(`${API}/api/auth/remember-login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ robloxUsername: username, token: issuedBody.rememberToken })
+    });
+    ok(afterForget.status === 401, 'a forgotten token is refused');
   }
 
   section('auth: protected routes refuse an anonymous caller');

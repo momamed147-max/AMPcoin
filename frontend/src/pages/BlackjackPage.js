@@ -179,6 +179,7 @@ function BlackjackRow({ bet, onJoin, onView, onBot, isSelf, busy }) {
   const live = bet.status === 'in_progress';
   const dealer = bet.dealerSeat || {};
   const player = bet.playerSeat || {};
+  const hasDealer = !!dealer.id;
   const hasPlayer = !!player.id;
   const pot = Number(bet.potValue) || (Number(bet.creatorValue || 0) + Number(bet.opponentValue || 0));
 
@@ -186,17 +187,21 @@ function BlackjackRow({ bet, onJoin, onView, onBot, isSelf, busy }) {
     <div className={`cf-row bj-lobby-row ${live ? 'bj-row-live' : ''}`}>
       <div className="cf-row-players">
         <div className="cf-row-player">
-          <div className="cf-row-avatar-ring ring-heads">
-            <img
-              className="cf-row-avatar"
-              src={dealer.avatar || '/default-avatar.svg'}
-              alt={dealer.username || 'Dealer'}
-              onError={(event) => { event.currentTarget.src = '/default-avatar.svg'; }}
-            />
+          <div className={`cf-row-avatar-ring ${hasDealer ? 'ring-heads' : ''}`}>
+            {hasDealer ? (
+              <img
+                className="cf-row-avatar"
+                src={dealer.avatar || '/default-avatar.svg'}
+                alt={dealer.username || 'Dealer'}
+                onError={(event) => { event.currentTarget.src = '/default-avatar.svg'; }}
+              />
+            ) : (
+              <div className="cf-row-avatar cf-row-avatar-empty">?</div>
+            )}
             <span className="cf-row-chip-badge"><Icon name="card" size={18} /></span>
           </div>
-          <span className="cf-row-player-name" title={dealer.username || 'Dealer'}>
-            {dealer.username || 'Dealer'}
+          <span className={`cf-row-player-name ${hasDealer ? '' : 'is-waiting'}`} title={dealer.username || 'Open seat'}>
+            {hasDealer ? dealer.username : 'Open seat'}
           </span>
         </div>
         <span className="cf-row-vs">VS</span>
@@ -221,9 +226,11 @@ function BlackjackRow({ bet, onJoin, onView, onBot, isSelf, busy }) {
       </div>
 
       <div className="cf-row-items">
-        <ItemThumbs items={bet.creatorItems} limit={4} />
-        {hasPlayer && bet.opponentItems?.length > 0 && <span className="bj-row-vs-divider">+</span>}
-        {hasPlayer && <ItemThumbs items={bet.opponentItems} limit={4} />}
+        <ItemThumbs items={bet.dealerItems || []} limit={4} />
+        {(bet.dealerItems || []).length > 0 && (bet.playerItems || []).length > 0 && (
+          <span className="bj-row-vs-divider">+</span>
+        )}
+        <ItemThumbs items={bet.playerItems || []} limit={4} />
       </div>
 
       <div className="cf-row-value">
@@ -232,9 +239,9 @@ function BlackjackRow({ bet, onJoin, onView, onBot, isSelf, busy }) {
         </div>
         <div className="cf-row-range">
           {waiting
-            ? `Join ${compact(bet.minJoinValue)}-${compact(bet.maxJoinValue)}`
+            ? (isSelf ? 'Waiting for a dealer' : `Join ${compact(bet.minJoinValue)}-${compact(bet.maxJoinValue)}`)
             : live
-              ? (bet.viewerIsCreator || bet.viewerIsPlayer
+              ? (bet.viewerIsPlayer || bet.viewerIsDealer
                 ? `Hand live · ${bet.playerValue || 0} vs ${bet.dealerValue || 0}`
                 : 'Hand in progress')
               : 'Hand complete'}
@@ -249,7 +256,7 @@ function BlackjackRow({ bet, onJoin, onView, onBot, isSelf, busy }) {
               className="cf-bot-btn"
               onClick={() => onBot(bet)}
               disabled={busy === 'bot'}
-              title="Let the house bot take the player seat"
+              title="Let the house dealer take the other seat"
             >
               {busy === 'bot' ? '...' : 'Bot'}
             </button>
@@ -259,7 +266,7 @@ function BlackjackRow({ bet, onJoin, onView, onBot, isSelf, busy }) {
         {waiting && !isSelf && <button className="cf-join-btn" onClick={() => onJoin(bet)}>Join</button>}
         {!waiting && (
           <button className="cf-view-btn" onClick={() => onView(bet)}>
-            {live && (bet.viewerIsCreator || bet.viewerIsPlayer) ? 'Continue' : 'View'}
+            {live && (bet.viewerIsPlayer || bet.viewerIsDealer) ? 'Continue' : 'View'}
           </button>
         )}
       </div>
@@ -362,14 +369,16 @@ const BlackjackPage = ({ socket }) => {
     setViewId(bet.id);
     if (bet.status === 'completed') {
       const dealerWon = DEALER_WINS.includes(bet.result);
-      const message = bet.viewerIsCreator ? dealerResultMessage(bet) : (RESULT_COPY[bet.result]?.text || 'Hand over');
-      const tone = bet.result === 'push' ? 'info' : (bet.viewerIsCreator ? dealerWon : !dealerWon) ? 'success' : 'error';
+      const message = bet.viewerIsDealer ? dealerResultMessage(bet) : (RESULT_COPY[bet.result]?.text || 'Hand over');
+      const tone = bet.result === 'push' ? 'info' : (bet.viewerIsDealer ? dealerWon : !dealerWon) ? 'success' : 'error';
       showPopup(message, tone);
     } else {
       showPopup(
         bet.status === 'waiting'
-          ? 'Bet posted. Waiting for a player to join.'
-          : 'Cards dealt. Play your hand.',
+          ? 'Bet posted. Waiting for a dealer to join.'
+          : bet.viewerIsPlayer
+            ? 'Cards dealt. Hit or stand to play your hand.'
+            : 'Cards dealt. You are dealing — wait for the player.',
         'success'
       );
     }
@@ -429,9 +438,10 @@ const BlackjackPage = ({ socket }) => {
     refresh();
   };
 
-  // The dealer is the creator, so only they can call the house bot onto their
-  // own bet. The bot joins server-side through the same seat function a human
-  // uses, and its whole hand is resolved in this one request.
+  // The creator calls the house dealer onto their own waiting bet. The bot
+  // joins server-side through the same seat function a human uses, takes the
+  // DEALER seat, and leaves the creator as the player. The hand deliberately
+  // stays in progress: the creator now has real Hit and Stand buttons.
   const callHouse = async (target = myBet) => {
     if (!target) return;
     setSeq((s) => s + 1);
@@ -443,33 +453,10 @@ const BlackjackPage = ({ socket }) => {
     await fetchInventory();
     refresh();
     if (d.status === 'completed') {
-      const dealerWon = !PLAYER_WINS.includes(d.result) && d.result !== 'push';
-      showPopup(dealerResultMessage(d), dealerWon ? 'success' : d.result === 'push' ? 'info' : 'error');
+      const copy = RESULT_COPY[d.result];
+      if (copy) showPopup(copy.text, copy.tone === 'win' ? 'success' : copy.tone === 'loss' ? 'error' : 'info');
     } else {
-      showPopup('The house bot joined. Its hand will play automatically.', 'success');
-    }
-  };
-
-  // Fallback for a bot hand that was already in progress before bot-join
-  // became automatic. New bot joins finish in one call.
-  const runBot = async () => {
-    if (!myBet) return;
-    let cur = myBet;
-    let guard = 0;
-    while (cur.status === 'in_progress' && guard++ < 8) {
-      setSeq((s) => s + 1);
-      // eslint-disable-next-line no-await-in-loop
-      const d = await request(`/${myBet.id}/bot-play`, {}, 'bot-play');
-      if (!d) return;
-      cur = d;
-      setMyBet(d);
-      // eslint-disable-next-line no-await-in-loop
-      await new Promise((r) => setTimeout(r, 550));
-    }
-    if (cur.status === 'completed') {
-      showPopup(dealerResultMessage(cur), 'success');
-      await fetchInventory();
-      refresh();
+      showPopup('The house dealer joined. Hit or stand to play your hand.', 'success');
     }
   };
 
@@ -522,7 +509,7 @@ const BlackjackPage = ({ socket }) => {
             className="cf-topbar-btn cf-topbar-btn-gold"
             onClick={openCreate}
             disabled={inventoryLoading}
-            title="Post a new blackjack bet as the dealer"
+            title="Post a new blackjack bet as the player"
           >
             <Icon name="plus" size={13} /> Bet Items
           </button>
@@ -540,12 +527,15 @@ const BlackjackPage = ({ socket }) => {
         <div className="bj-active-note">
           <Icon name="target" size={14} />
           <span>
-            {activeBet.viewerIsCreator ? 'You are dealing' : 'You are playing'} this hand
             {activeBet.status === 'waiting'
-              ? ' — waiting for a player to join.'
-              : activeBet.viewerIsCreator
-                ? ' — the player is taking their turn.'
-                : ' — hit or stand to finish it.'}
+              ? (activeBet.viewerIsPlayer
+                ? 'You are playing this hand — waiting for a dealer to join.'
+                : 'This hand is waiting for a dealer.')
+              : activeBet.viewerIsDealer
+                ? 'You are dealing — the player is taking their turn.'
+                : activeBet.viewerIsPlayer
+                  ? 'You are playing — hit or stand to finish it.'
+                  : 'This hand is in progress.'}
           </span>
           <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewId(activeBet.id)}>Open</button>
         </div>
@@ -566,7 +556,7 @@ const BlackjackPage = ({ socket }) => {
           <div className="cf-empty">
             <div className="cf-empty-icon"><Icon name="card" size={34} /></div>
             <p>No open blackjack bets</p>
-            <p className="cf-empty-sub">Post an item wager and wait for a player — or let the house bot take the seat.</p>
+            <p className="cf-empty-sub">Post an item wager and wait for a dealer — or let the house bot deal to you.</p>
             <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreate}>
               <Icon name="plus" size={13} /> Create Blackjack Bet
             </button>
@@ -593,9 +583,8 @@ const BlackjackPage = ({ socket }) => {
           : result?.tone;
         const dealerHighlight = dBJ ? [0, 1] : (finished && dealerWon ? dHand.map((_, n) => n) : []);
         const playerHighlight = pBJ ? [0, 1] : (finished && !dealerWon && viewBet.result !== 'push' ? pHand.map((_, n) => n) : []);
-        const botTurn = inHand && pSeat.isBot;
-        // A bot has no way to press its own buttons, so the dealer's screen
-        // drives any stale bot hand. New joins resolve themselves server-side.
+        // Only the human in the player seat gets buttons. The house bot is
+        // always the dealer now, so it never holds the player seat.
         const canAct = inHand && iPlay && !pSeat.isBot;
 
         return (
@@ -651,7 +640,7 @@ const BlackjackPage = ({ socket }) => {
                     hiddenIndex={inHand && !iDeal ? 1 : -1}
                     highlight={dealerHighlight}
                     dimmed={finished && !dealerHighlight.length}
-                    empty={waiting ? 'waiting for a player to join' : 'dealing'}
+                    empty={waiting ? 'waiting for a dealer' : 'dealing'}
                   />
 
                   <Hand
@@ -662,22 +651,22 @@ const BlackjackPage = ({ socket }) => {
                     cards={pHand}
                     highlight={playerHighlight}
                     dimmed={finished && !playerHighlight.length}
-                    empty={waiting ? 'waiting for a player to join' : 'dealing'}
+                    empty={waiting ? 'waiting to deal' : 'dealing'}
                   />
                 </div>
 
                 <div className="cf-view-items-split bj-view-items">
                   <div className="cf-view-items-col">
                     <div className="bj-items-label">Dealer's wager</div>
-                    <ViewerItems items={viewBet.creatorItems || []} side="dealer" empty="No items" />
+                    <ViewerItems
+                      items={viewBet.dealerItems || []}
+                      side="dealer"
+                      empty={waiting ? 'Waiting for a dealer to join...' : 'No items'}
+                    />
                   </div>
                   <div className="cf-view-items-col">
                     <div className="bj-items-label">Player's wager</div>
-                    <ViewerItems
-                      items={viewBet.opponentItems || []}
-                      side="player"
-                      empty={waiting ? 'Waiting for a player to join...' : 'No items'}
-                    />
+                    <ViewerItems items={viewBet.playerItems || []} side="player" empty="No items" />
                   </div>
                 </div>
 
@@ -710,17 +699,17 @@ const BlackjackPage = ({ socket }) => {
 
                 <div className="cf-view-footer bj-view-footer">
                   <span className="cf-view-created">
-                    {waiting ? `Waiting for a player${viewBet.timeoutSeconds > 0 ? ` · ${viewBet.timeoutSeconds}s` : ''}` : `Created ${timeAgo(viewBet.createdAt)}`}
+                    {waiting ? `Waiting for a dealer${viewBet.timeoutSeconds > 0 ? ` · ${viewBet.timeoutSeconds}s` : ''}` : `Created ${timeAgo(viewBet.createdAt)}`}
                   </span>
 
-                  {waiting && iDeal && (
+                  {waiting && iPlay && (
                     <div className="cf-view-own-row">
                       <button className="cf-bot-btn" onClick={() => callHouse(viewBet)} disabled={busy === 'bot'}>
                         <Icon name="target" size={13} /> {busy === 'bot' ? 'Joining...' : 'Bot'}
                       </button>
                     </div>
                   )}
-                  {waiting && !iDeal && (
+                  {waiting && !iPlay && !iDeal && (
                     <button className="cf-view-join-btn" onClick={() => { closeView(); openJoin(viewBet); }}>
                       Join Bet ({Number(viewBet.minJoinValue || 0).toLocaleString()}-{Number(viewBet.maxJoinValue || 0).toLocaleString()} AMP)
                     </button>
@@ -737,13 +726,8 @@ const BlackjackPage = ({ socket }) => {
                     </div>
                   )}
 
-                  {botTurn && iDeal && (
-                    <button className="cf-view-join-btn" onClick={runBot} disabled={busy === 'bot-play'}>
-                      <Icon name="card" size={13} /> Play the bot's hand
-                    </button>
-                  )}
-                  {botTurn && !iDeal && (
-                    <span className="bj-footer-note">The house bot is playing its hand...</span>
+                  {inHand && iDeal && (
+                    <span className="bj-footer-note">Waiting for the player to hit or stand...</span>
                   )}
                   {finished && <button className="cf-view-btn" onClick={closeView}>Close</button>}
                 </div>

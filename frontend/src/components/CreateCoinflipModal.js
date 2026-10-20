@@ -39,7 +39,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
   const joinHi = isJoin ? Number(match?.maxJoinValue || Number.MAX_SAFE_INTEGER) : Number.MAX_SAFE_INTEGER;
   const joinTarget = isJoin ? Number(match?.creatorValue || 0) : 0;
   const joinName = isBlackjackJoin
-    ? (match?.creatorUsername || 'Dealer')
+    ? (match?.creatorUsername || 'Player')
     : (match?.playerOne?.displayName || match?.playerOne?.username || 'Player');
   const joinAvatar = isBlackjackJoin
     ? (match?.creatorAvatar || '/default-avatar.svg')
@@ -344,7 +344,7 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                     <span className="cf-join-vs-name">{joinName}</span>
                     <span className="cf-join-vs-side cf-rps-side-badge">
                       <Icon name={isBlackjackJoin ? 'card' : 'rpsScissors'} size={11} /> {joinTarget.toLocaleString()} AMP
-                      {isBlackjackJoin ? ' · dealer' : ''}
+                      {isBlackjackJoin ? ' · player' : ''}
                     </span>
                   </div>
                 </div>
@@ -426,8 +426,8 @@ const CreateCoinflipModal = ({ onClose, onCreated, userId, socket, userInventory
                 <div className="cf-join-bet-items-title">{isBlackjackJoin ? 'THE HAND' : 'YOUR ROLE'}</div>
                 <div className="cf-rps-turn-note">
                   {isBlackjackJoin
-                    ? 'You are the player: hit or stand once the cards are dealt. Your wager must sit inside the dealer\'s 5% band.'
-                    : 'You are the dealer: post your wager, then wait for a player or let the house bot take the seat. Blackjack pays 3:2.'}
+                    ? 'You are the dealer: the bet creator will hit or stand. Your wager must sit inside the player\'s 5% band.'
+                    : 'You are the player: post your wager, then wait for a dealer or call the house bot. Blackjack pays 3:2.'}
                 </div>
               </div>
             )}

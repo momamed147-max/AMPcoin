@@ -96,12 +96,19 @@ const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  const handleRememberedSession = useCallback((data, username, rememberRequested) => {
+  const handleRememberedSession = useCallback((data, account, rememberRequested) => {
+    const username = account?.robloxUsername || account?.username || account;
     if (rememberRequested === true && data?.rememberToken && data?.rememberExpiresAt) {
+      // Keep a profile snapshot beside the token so the login screen can show
+      // a face and a display name before the account is signed in.
       saveRememberedDevice({
         username,
         token: data.rememberToken,
-        expiresAt: data.rememberExpiresAt
+        expiresAt: data.rememberExpiresAt,
+        displayName: account?.displayName || account?.robloxDisplayName || '',
+        avatar: account?.avatar || '',
+        robloxUserId: account?.robloxUserId || null,
+        robloxDisplayName: account?.robloxDisplayName || ''
       });
       return true;
     }
@@ -206,7 +213,7 @@ const AuthProvider = ({ children }) => {
         const enhanced = enhanceUserWithRoblox(data.user, profileData);
         persistUser(enhanced);
         setUser(enhanced);
-        handleRememberedSession(data, enhanced.robloxUsername, credentials?.remember);
+        handleRememberedSession(data, enhanced, credentials?.remember);
 
         try {
           const userData = {
@@ -252,23 +259,24 @@ const AuthProvider = ({ children }) => {
         setUser(enhanced);
 
         // A future server version may rotate the device token on use. Keep the
-        // browser in step when it does, and leave the existing token alone when
-        // it does not.
-        if (data.rememberToken && data.rememberExpiresAt) {
-          saveRememberedDevice({
-            username: enhanced.robloxUsername || entry.username,
-            token: data.rememberToken,
-            expiresAt: data.rememberExpiresAt
-          });
-        }
+        // browser in step when it does, and refresh the profile snapshot either
+        // way so the picker shows the current display name and avatar.
+        saveRememberedDevice({
+          username: enhanced.robloxUsername || entry.username,
+          token: data.rememberToken || entry.token,
+          expiresAt: data.rememberExpiresAt || entry.expiresAt,
+          displayName: enhanced.displayName || '',
+          avatar: enhanced.avatar || '',
+          robloxUserId: enhanced.robloxUserId || null,
+          robloxDisplayName: enhanced.robloxDisplayName || ''
+        });
 
         return { success: true, user: enhanced, remembered: true };
       }
 
-      // A rejected token, or one used from a different network, is no longer
-      // useful on this browser. Remove it so the normal code flow can replace
-      // it cleanly, and revoke the server record so it does not linger. Server
-      // errors are left alone.
+      // A rejected token is no longer useful on this browser. Remove it so the
+      // normal code flow can replace it cleanly, and revoke the server record
+      // so it does not linger. Server errors are left alone.
       if (response.status === 401 || response.status === 403) {
         void forgetRememberedDevice(entry.username);
       }
@@ -382,7 +390,7 @@ const AuthProvider = ({ children }) => {
         const enhanced = enhanceUserWithRoblox(data.user, profileData);
         persistUser(enhanced);
         setUser(enhanced);
-        handleRememberedSession(data, enhanced.robloxUsername || robloxUsername, remember);
+        handleRememberedSession(data, enhanced, remember);
         return { success: true, user: enhanced };
       }
       return { success: false, message: data.message || 'Verification failed' };
