@@ -67,15 +67,67 @@
 }
 .ug-cell.green { background: var(--grn); box-shadow: 0 0 8px color-mix(in srgb, var(--grn) 55%, transparent); }
 .ug-cell.red { background: color-mix(in srgb, var(--red) 55%, transparent); }
+.ug-battery.spinning .ug-cell {
+  animation: ug-cell-wave .85s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -21ms);
+}
+@keyframes ug-cell-wave {
+  0%, 100% { opacity: .58; transform: scaleY(.82); }
+  50% { opacity: 1; transform: scaleY(1); }
+}
 /* a glow that trails the arrow while it is moving */
 .ug-fill {
   position: absolute; left: 0; top: 0; bottom: 0; pointer-events: none;
   background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--gold) 26%, transparent));
   transition: opacity .3s ease; opacity: 0;
 }
-.ug-battery.spinning .ug-fill { opacity: 1; }
+.ug-battery.spinning .ug-fill {
+  opacity: 1;
+  background-image: linear-gradient(90deg, transparent 20%, color-mix(in srgb, var(--gold) 42%, transparent) 50%, transparent 80%);
+  background-size: 140px 100%;
+  animation: ug-trail .55s linear infinite;
+}
+@keyframes ug-trail { from { background-position: -140px 0; } to { background-position: 140px 0; } }
 .ug-battery.won .ug-cell.green { filter: brightness(1.5); }
 .ug-battery.lost .ug-cell.red { filter: brightness(1.35); }
+.ug-battery.won { animation: ug-win-pop .55s cubic-bezier(.2, .8, .25, 1.3); }
+.ug-battery.lost { animation: ug-lose-shake .42s ease-in-out; }
+@keyframes ug-win-pop {
+  0% { transform: scale(1); }
+  42% { transform: scale(1.025); }
+  100% { transform: scale(1); }
+}
+@keyframes ug-lose-shake {
+  0%, 100% { transform: translateX(0); }
+  22% { transform: translateX(-4px); }
+  55% { transform: translateX(4px); }
+  78% { transform: translateX(-2px); }
+}
+/* a result ring that expands from the arrow's landing point */
+.ug-burst { position: absolute; inset: 0; pointer-events: none; border-radius: 10px; overflow: visible; }
+.ug-burst::before,
+.ug-burst::after {
+  content: ''; position: absolute; left: 50%; top: 50%; width: 9px; height: 9px;
+  border-radius: 50%; transform: translate(-50%, -50%); opacity: 0;
+}
+.ug-burst.win::before {
+  background: var(--gold);
+  box-shadow: 0 0 18px 6px color-mix(in srgb, var(--gold) 85%, transparent);
+  animation: ug-ring .7s ease-out forwards;
+}
+.ug-burst.win::after {
+  border: 2px solid var(--gold);
+  animation: ug-ring .9s .08s ease-out forwards;
+}
+.ug-burst.lose::before {
+  background: var(--red);
+  box-shadow: 0 0 16px 5px color-mix(in srgb, var(--red) 70%, transparent);
+  animation: ug-ring .5s ease-out forwards;
+}
+@keyframes ug-ring {
+  0% { opacity: .95; width: 9px; height: 9px; }
+  100% { opacity: 0; width: 240px; height: 70px; }
+}
 
 .ug-arrow {
   position: absolute; top: 3px; bottom: 3px; width: 3px; margin-left: -1.5px;
@@ -95,7 +147,12 @@
   to   { box-shadow: 0 0 16px var(--gold), 0 0 34px var(--gold); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .ug-battery.spinning .ug-arrow { animation: none; }
+  .ug-battery.spinning .ug-arrow,
+  .ug-battery.spinning .ug-cell,
+  .ug-battery.spinning .ug-fill { animation: none; }
+  .ug-battery.won,
+  .ug-battery.lost { animation: none; }
+  .ug-burst { display: none; }
 }
 
 .ug-battery-ends { display: flex; justify-content: space-between; font-size: .74rem; font-weight: 700; }

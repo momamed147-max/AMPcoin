@@ -155,7 +155,7 @@ async function botHand(dealer, item, qty = 2) {
 
       // The dealer must stand on a FLAT 17 and must hit a SOFT 17. It only
       // plays when the table ran a full round.
-      if (!['bust', 'blackjack'].includes(r.done.result)) {
+      if (!['bust', 'blackjack', 'dealer_blackjack', 'push'].includes(r.done.result)) {
         if (r.done.dealerValue < 17) illegalStops++;
         if (r.done.dealerValue === 17) {
           let total = 0; let aces = 0;

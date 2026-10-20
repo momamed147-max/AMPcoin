@@ -124,6 +124,31 @@ const totalValue = (stacks) => (Array.isArray(stacks) ? stacks : [])
 const totalUnits = (stacks) => (Array.isArray(stacks) ? stacks : [])
   .reduce((s, it) => s + Math.max(1, parseInt(it.quantity || 1, 10) || 1), 0);
 
+// The shelf can accumulate two rows for the same catalog item across restocks.
+// The UI selects by itemId, so expose one aggregated row per item; otherwise a
+// duplicate itemId generated duplicate React keys and a quantity box that only
+// counted one of the two stacks.
+function mergeStockRows(stacks) {
+  const byId = new Map();
+  for (const raw of stacks || []) {
+    const itemId = String(raw.itemId || raw.id || '');
+    if (!itemId) continue;
+    const qty = Math.max(1, parseInt(raw.quantity || 1, 10) || 1);
+    const hit = byId.get(itemId);
+    if (hit) {
+      hit.quantity += qty;
+    } else {
+      byId.set(itemId, { ...raw, itemId, quantity: qty });
+    }
+  }
+  return [...byId.values()];
+}
+
+const ampText = (n) => (Number(n) || 0).toLocaleString('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
+
 /** The multiplier a given upgrade selection represents. */
 function multiplierFor(potValue, upgradeValue) {
   if (!(potValue > 0)) return 0;
@@ -168,13 +193,36 @@ function reclaimAbandoned(store) {
   if (!active) return null;
   const startedAt = new Date(active.createdAt || 0).getTime();
   if (!startedAt || Date.now() - startedAt < ABANDONED_AFTER_MS) return null;
-  for (const st of active.potItems || []) credit(active.userId, st, st.quantity || 1);
-  restock(store, active.upgradeeItems);
-  active.status = 'abandoned';
+
+  // A round that never rolled still owns the pot and the reserved upgrade.
+  // A round that DID roll already moved both: /roll puts the pot on the shelf
+  // and either pays the win (awaiting claim) or restocks the reserved upgrade
+  // on a loss. Reclaiming those a second time duplicated every item, which was
+  // both a free-pets bug and a way to get the pot back after losing.
+  if (active.status === 'pending') {
+    for (const st of active.potItems || []) credit(active.userId, st, st.quantity || 1);
+    restock(store, active.upgradeeItems);
+    active.status = 'abandoned';
+  } else if (active.status === 'spinning') {
+    if (active.won) {
+      for (const st of active.payout || []) credit(active.userId, st, st.quantity || 1);
+      const recipient = getTaxRecipient();
+      for (const st of active.taxItems || []) {
+        if (recipient) credit(recipient.id, st, st.quantity || 1);
+        else restock(store, [st]);
+      }
+    }
+    active.status = 'settled';
+    emitToUser(active.userId, 'inventoryUpdate', { userId: active.userId });
+  } else {
+    return null;
+  }
+
   active.resolvedAt = new Date().toISOString();
   store.active = null;
   dbManager.saveMainDb();
   dbManager.saveUsersDb();
+  emitToAll('upgraderUpdate', { active: null, stockValue: totalValue(store.stock) });
   console.warn(`Upgrader: reclaimed abandoned round ${active.id} from ${active.username}`);
   return active;
 }
@@ -267,7 +315,7 @@ router.post('/stock', authenticateAdmin, (req, res) => {
     dbManager.saveMainDb();
     dbManager.saveUsersDb();
     emitToAll('upgraderUpdate', { active: formatRound(store.active), stockValue: totalValue(store.stock) });
-    res.json({ stock: store.stock, stockValue: totalValue(store.stock) });
+    res.json({ stock: mergeStockRows(store.stock), stockValue: totalValue(store.stock) });
   } catch (err) {
     console.error('Upgrader stock error:', err);
     res.status(500).json({ message: 'Server error' });
@@ -276,7 +324,7 @@ router.post('/stock', authenticateAdmin, (req, res) => {
 
 router.get('/stock', authenticateToken, (req, res) => {
   const store = getStore();
-  res.json({ stock: store.stock, stockValue: totalValue(store.stock), stockUnits: totalUnits(store.stock) });
+  res.json({ stock: mergeStockRows(store.stock), stockValue: totalValue(store.stock), stockUnits: totalUnits(store.stock) });
 });
 
 // ── Player: start a round ──────────────────────────────────────────────────
@@ -327,16 +375,19 @@ router.post('/round', authenticateToken, (req, res) => {
       const wantQty = Math.max(1, parseInt(sel.quantity || 1, 10) || 1);
       const matches = store.stock.filter((s) => String(s.itemId) === String(itemId));
       const available = matches.reduce((s, x) => s + (x.quantity || 1), 0);
-      if (available <= 0) {
+      if (available < wantQty) {
         restock(store, reserved);
         rollback();
-        return res.status(400).json({ message: `The upgrader is out of ${sel.name || itemId}` });
+        return res.status(400).json({
+          message: available <= 0
+            ? `The upgrader is out of ${sel.name || itemId}`
+            : `Only ${available} of ${sel.name || itemId} are on the shelf. Pick ${available} or fewer.`
+        });
       }
-      // Reserving exactly what left the shelf keeps the payout honest even if
-      // the same item sits on the shelf at two different values, and never
-      // trusts the name/value the client sent.
-      const qty = Math.min(wantQty, available);
-      for (const c of takeFromStock(store, itemId, qty)) reserved.push(c);
+      // Reserve exactly what the player selected. Paying a different amount
+      // because the shelf changed under them would make the odds and the
+      // advertised "you get back" value a lie.
+      for (const c of takeFromStock(store, itemId, wantQty)) reserved.push(c);
     }
     if (!reserved.length) {
       rollback();
@@ -354,11 +405,11 @@ router.post('/round', authenticateToken, (req, res) => {
       // Show the UNCAPPED odds, otherwise a hopeless selection reads as
       // "needs 60% but the maximum is 60%".
       const needed = (RETURN_RATE * 100) / multiplier;
-      const wantedValue = Math.round(potValue * MIN_MULTIPLIER).toLocaleString();
+      const wantedValue = ampText(potValue * MIN_MULTIPLIER);
       const short = upgradeValue < Math.round(potValue * MIN_MULTIPLIER) * 0.999;
       return res.status(400).json({
         message: short
-          ? `Only ${Math.round(upgradeValue).toLocaleString()} of that upgrade is on the shelf, which is `
+          ? `Only ${ampText(upgradeValue)} of that upgrade is on the shelf, which is `
             + `${multiplier.toFixed(2)}x your pot. You need at least ${wantedValue} (${MIN_MULTIPLIER}x) `
             + 'to be playable.'
           : `That upgrade is ${multiplier.toFixed(2)}x your pot, which would need ${needed.toFixed(1)}% `
@@ -497,8 +548,8 @@ router.post('/round/:id/claim', authenticateToken, (req, res) => {
       type: round.won ? 'reward' : 'info',
       title: round.won ? 'Upgrade successful' : 'Upgrade failed',
       message: round.won
-        ? `Upgraded ${round.potValue.toLocaleString()} AMP into ${round.payoutValue.toLocaleString()} AMP at ${Math.round(round.chance)}%.`
-        : `Lost ${round.potValue.toLocaleString()} AMP on the upgrade. Better luck next time.`
+        ? `Upgraded ${ampText(round.potValue)} AMP into ${ampText(round.payoutValue)} AMP at ${Math.round(round.chance)}%.`
+        : `Lost ${ampText(round.potValue)} AMP on the upgrade. Better luck next time.`
     });
     emitToUser(round.userId, 'inventoryUpdate', { userId: round.userId });
     emitToAll('upgraderUpdate', { active: null, stockValue: totalValue(store.stock) });
@@ -516,7 +567,7 @@ router.get('/state', authenticateToken, (req, res) => {
   res.json({
     active: formatRound(store.active),
     // the full shelf, so the client can let the player pick an upgrade
-    stock: store.stock,
+    stock: mergeStockRows(store.stock),
     stockValue: totalValue(store.stock),
     stockUnits: totalUnits(store.stock),
     houseEdge: HOUSE_EDGE,

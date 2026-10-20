@@ -62,10 +62,13 @@ function blackjackRecords(db, userId) {
         id: t.id,
         won: asPlayer
           ? ['win', 'blackjack', 'dealer_bust'].includes(t.result)
-          // As the dealer the user wins when the player busted or lost.
-          : ['loss', 'bust'].includes(t.result),
+          // As the dealer the user wins when the player busted, lost, or was
+          // beaten by a dealer natural.
+          : ['loss', 'bust', 'dealer_blackjack'].includes(t.result),
         staked: asPlayer ? num(t.opponentValue) : num(t.creatorValue),
-        profited: asPlayer ? playerProfit : -playerProfit,
+        profited: asPlayer
+          ? playerProfit
+          : (typeof t.dealerProfit === 'number' ? t.dealerProfit : -playerProfit),
         seat: asPlayer ? 'player' : 'dealer',
         result: t.result,
         at: t.updatedAt || t.createdAt

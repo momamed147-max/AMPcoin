@@ -16,6 +16,14 @@ const json = () => ({ 'Content-Type': 'application/json', ...auth() });
 
 const stackValue = (it) => (Number(it.value) || 0) * (Number(it.quantity) || 1);
 const CELLS = 40; // battery segments
+// AMP values are shown to two decimal places everywhere on this page. The old
+// `.toLocaleString()` read back as "1,000", so a 1,000.50 pot and a 1,000 pot
+// were indistinguishable.
+const AMP_FMT = new Intl.NumberFormat('en-US', {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2
+});
+const amp = (n) => AMP_FMT.format(Number(n) || 0);
 
 /**
  * Where the arrow stops, as a fraction of the track.
@@ -49,7 +57,7 @@ function ItemRow({ item, value, onChange, dimmed }) {
       />
       <div className="ug-item-body">
         <span className="ug-item-name">{item.name || item.itemName}</span>
-        <span className="ug-item-val"><Icon name="diamond" size={11} /> {(Number(item.value) || 0).toLocaleString()} each</span>
+        <span className="ug-item-val"><Icon name="diamond" size={11} /> {amp(item.value)} each</span>
         <ModBadges mods={item.mods || item.variantMods} />
       </div>
       <QtyStepper
@@ -165,21 +173,26 @@ const UpgraderPage = ({ socket }) => {
   const busyRound = busy || phase === 'spinning';
   const canStart = potItems.length > 0 && upItems.length > 0 && potValue > 0 && !tooSmall && !busyRound;
 
-  /** Sweep the arrow across the battery and let it settle on the real outcome. */
+  /**
+   * Sweep the arrow across the battery, swing back and forth with decreasing
+   * force, then settle on the cell that matches the server's result. The
+   * oscillation is what makes it read as a wheel rather than a progress bar.
+   */
   const runWheel = useCallback((won, chancePercent, duration = 4200) => {
     cancelAnimationFrame(rafRef.current);
     const target = landingPoint(chancePercent, won);
     const start = performance.now();
-    const ease = (t) => 1 - Math.pow(1 - t, 5);
-    const steps = (t) => {
-      const e = ease(t);
-      const overshoot = Math.sin(Math.min(1, t * 1.6) * Math.PI) * 26;
-      const back = t < 0.06 ? (t / 0.06) * (target - 50) : 0;
-      setArrow(50 + (target - 50 + overshoot + back) * e);
-      if (t < 1) rafRef.current = requestAnimationFrame(() => steps((performance.now() - start) / duration));
+    const steps = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 4);
+      // Three and a half passes, damped to zero exactly as it reaches target.
+      const swing = Math.sin(t * Math.PI * 7) * Math.pow(1 - t, 1.7) * 38;
+      const position = 50 + (target - 50) * eased + swing;
+      setArrow(Math.max(0.5, Math.min(99.5, position)));
+      if (t < 1) rafRef.current = requestAnimationFrame(steps);
       else setArrow(target);
     };
-    rafRef.current = requestAnimationFrame(() => steps(0));
+    rafRef.current = requestAnimationFrame(steps);
   }, []);
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
@@ -225,8 +238,8 @@ const UpgraderPage = ({ socket }) => {
       setRound(null);
       say(
         claimed.won
-          ? `Upgraded! ${claimed.potValue.toLocaleString()} AMP became ${claimed.payoutValue.toLocaleString()} AMP.`
-          : `Upgrade failed. You lost ${claimed.potValue.toLocaleString()} AMP.`,
+          ? `Upgraded! ${amp(claimed.potValue)} AMP became ${amp(claimed.payoutValue)} AMP.`
+          : `Upgrade failed. You lost ${amp(claimed.potValue)} AMP.`,
         claimed.won ? 'success' : 'error'
       );
     } catch {
@@ -270,12 +283,12 @@ const UpgraderPage = ({ socket }) => {
             <div className="ug-odds">
               <div className="ug-odds-col">
                 <span className="ug-label">You risk</span>
-                <strong className="ug-big">{potValue.toLocaleString()}</strong>
+                <strong className="ug-big">{amp(potValue)}</strong>
               </div>
               <span className="ug-arrow-sep">&rarr;</span>
               <div className="ug-odds-col">
                 <span className="ug-label">You get back</span>
-                <strong className="ug-big win">{upValue.toLocaleString()}</strong>
+                <strong className="ug-big win">{amp(upValue)}</strong>
               </div>
             </div>
 
@@ -299,10 +312,17 @@ const UpgraderPage = ({ socket }) => {
             <div className={`ug-battery ${phase === 'spinning' ? 'spinning' : ''} ${result ? (result.won ? 'won' : 'lost') : ''}`}>
               <div className="ug-battery-track">
                 {cells.map((green, i) => (
-                  <span key={i} className={`ug-cell ${green ? 'green' : 'red'}`} />
+                  <span
+                    key={i}
+                    className={`ug-cell ${green ? 'green' : 'red'}`}
+                    style={{ '--i': i }}
+                  />
                 ))}
                 <span className="ug-fill" style={{ width: `${arrow}%` }} />
                 <span className="ug-arrow" style={{ left: `${arrow}%` }} aria-hidden="true" />
+                {phase === 'done' && result && (
+                  <span className={`ug-burst ${result.won ? 'win' : 'lose'}`} aria-hidden="true" />
+                )}
               </div>
               <div className="ug-battery-ends">
                 <span className="ug-end lose">Lose everything</span>
@@ -310,12 +330,12 @@ const UpgraderPage = ({ socket }) => {
               </div>
             </div>
 
-            <div className="ug-verdict">
+            <div className="ug-verdict" aria-live="polite">
               {phase === 'spinning' && <span className="ug-dots"><span /><span /><span /></span>}
               {phase === 'done' && result && (
                 result.won
-                  ? <span className="ug-verdict-win"><Icon name="trophy" size={17} /> Upgraded to {result.payoutValue.toLocaleString()} AMP</span>
-                  : <span className="ug-verdict-lose"><Icon name="close" size={17} /> Lost {result.potValue.toLocaleString()} AMP</span>
+                  ? <span className="ug-verdict-win"><Icon name="trophy" size={17} /> Upgraded to {amp(result.payoutValue)} AMP</span>
+                  : <span className="ug-verdict-lose"><Icon name="close" size={17} /> Lost {amp(result.potValue)} AMP</span>
               )}
               {phase === 'idle' && !round && <span className="ug-idle">Pick the pets you risk and the pets you want back.</span>}
               {round && phase !== 'done' && <span className="ug-idle">Upgrade in progress...</span>}
@@ -325,7 +345,7 @@ const UpgraderPage = ({ socket }) => {
               <div className="ug-result-detail">
                 {result.won ? (
                   <>
-                    <span className="ug-plus">{result.potValue.toLocaleString()} became {result.payoutValue.toLocaleString()}</span>
+                    <span className="ug-plus">{amp(result.potValue)} became {amp(result.payoutValue)}</span>
                     <div className="ug-gain-list">
                       {(result.payout || []).map((x, i) => (
                         <span key={i} className="ug-gain">
@@ -344,7 +364,7 @@ const UpgraderPage = ({ socket }) => {
             {tooSmall && (
               <div className="ug-short-note">
                 {multiplier.toFixed(2)}x needs {rawChance.toFixed(1)}% to win, but the maximum is 60%.
-                Pick pets worth at least {(potValue * minMultiplier).toLocaleString()}.
+                Pick pets worth at least {amp(potValue * minMultiplier)}.
               </div>
             )}
 
@@ -374,7 +394,7 @@ const UpgraderPage = ({ socket }) => {
             </div>
             <div className="ug-total">
               <span>Total at risk</span>
-              <span><Icon name="diamond" size={13} /> {potValue.toLocaleString()}</span>
+              <span><Icon name="diamond" size={13} /> {amp(potValue)}</span>
             </div>
           </div>
 
@@ -383,7 +403,7 @@ const UpgraderPage = ({ socket }) => {
             <h3>You get back <span className="ug-count">{stockUnits} on the shelf</span></h3>
             <p className="ug-panel-sub">
               {potValue > 0
-                ? <>Needs {(potValue * minMultiplier).toLocaleString()} or more ({minMultiplier}x) to be playable.</>
+                ? <>Needs {amp(potValue * minMultiplier)} or more ({minMultiplier}x) to be playable.</>
                 : 'Taken from the upgrader stock when you start.'}
             </p>
             <div className="ug-list">
@@ -398,7 +418,7 @@ const UpgraderPage = ({ socket }) => {
             </div>
             <div className="ug-total">
               <span>Selected upgrade</span>
-              <span><Icon name="diamond" size={13} /> {upValue.toLocaleString()}</span>
+              <span><Icon name="diamond" size={13} /> {amp(upValue)}</span>
             </div>
           </div>
         </div>
@@ -418,14 +438,14 @@ const UpgraderPage = ({ socket }) => {
                 <span className="ug-history-detail">
                   {Number(h.multiplier || 0).toFixed(2)}x at {Number(h.chance || 0).toFixed(2)}%
                   {' · '}
-                  <Icon name="diamond" size={10} /> {Number(h.potValue || 0).toLocaleString()}
+                  <Icon name="diamond" size={10} /> {amp(h.potValue)}
                 </span>
               </div>
               <span className="ug-history-outcome">
                 {h.won === null ? 'in progress'
                   : h.won
-                    ? `+${Number(h.payoutValue || 0).toLocaleString()}`
-                    : `-${Number(h.potValue || 0).toLocaleString()}`}
+                    ? `+${amp(h.payoutValue)}`
+                    : `-${amp(h.potValue)}`}
               </span>
             </div>
           ))}

@@ -32,7 +32,18 @@ const RESULT_COPY = {
   dealer_bust: { text: 'Dealer busts - you win', tone: 'win' },
   push: { text: 'Push - wager returned', tone: 'push' },
   loss: { text: 'Dealer takes the pot', tone: 'loss' },
-  bust: { text: 'Bust - the dealer takes the pot', tone: 'loss' }
+  bust: { text: 'Bust - the dealer takes the pot', tone: 'loss' },
+  dealer_blackjack: { text: 'Dealer blackjack - you lose', tone: 'loss' }
+};
+
+const dealerResultMessage = (table) => {
+  if (!table) return 'Hand over';
+  if (table.result === 'push') return 'Push - both wagers returned';
+  if (table.result === 'dealer_blackjack') return 'Dealer blackjack - you win';
+  if (['win', 'blackjack', 'dealer_bust'].includes(table.result)) {
+    return 'The player beat you - the pot is theirs';
+  }
+  return 'You take the pot';
 };
 
 function Card({ card, index = 0, hidden, highlight, dimmed }) {
@@ -172,12 +183,19 @@ const BlackjackPage = ({ socket }) => {
     setSeq((s) => s + 1);
     setMyTable(t);
     setViewId(t.id);
-    showPopup(
-      t.status === 'waiting'
-        ? 'Bet posted. Waiting for a player to join.'
-        : 'Cards dealt. Play your hand.',
-      'success'
-    );
+    if (t.status === 'completed') {
+      const dealerWon = !['win', 'blackjack', 'dealer_bust', 'push'].includes(t.result);
+      const message = t.viewerIsCreator ? dealerResultMessage(t) : (RESULT_COPY[t.result]?.text || 'Hand over');
+      const tone = t.result === 'push' ? 'info' : (t.viewerIsCreator ? dealerWon : !dealerWon) ? 'success' : 'error';
+      showPopup(message, tone);
+    } else {
+      showPopup(
+        t.status === 'waiting'
+          ? 'Bet posted. Waiting for a player to join.'
+          : 'Cards dealt. Play your hand.',
+        'success'
+      );
+    }
     fetchInventory();
     refresh();
   };
@@ -224,19 +242,28 @@ const BlackjackPage = ({ socket }) => {
   };
 
   // The dealer is the creator, so only they can call the house bot onto their
-  // own table. This is "deal against the house" in one click.
-  const callHouse = async () => {
-    if (!myTable) return;
+  // own table. The server resolves the bot's whole hand in this one request,
+  // exactly like Coinflip's row-level Bot button.
+  const callHouse = async (target = myTable) => {
+    if (!target) return;
     setSeq((s) => s + 1);
-    const d = await request(`/${myTable.id}/bot-join`, {}, 'bot');
+    const d = await request(`/${target.id}/bot-join`, {}, 'bot');
     if (!d) return;
     setMyTable(d);
-    showPopup('The house bot is in. It will play after you stand.', 'success');
+    setViewId(d.id);
+    setSeq((s) => s + 1);
     await fetchInventory();
+    refresh();
+    if (d.status === 'completed') {
+      const dealerWon = !['win', 'blackjack', 'dealer_bust', 'push'].includes(d.result);
+      showPopup(dealerResultMessage(d), dealerWon ? 'success' : d.result === 'push' ? 'info' : 'error');
+    } else {
+      showPopup('The house bot is in. Its hand will play automatically.', 'success');
+    }
   };
 
-  // Drive the bot's hand. The bot is the player here, so it hits and stands and
-  // then the dealer's hand plays out server-side.
+  // Fallback for a bot table that was already in progress before bot-join
+  // became automatic. New bot join requests finish in one call.
   const runBot = async () => {
     if (!myTable) return;
     let cur = myTable;
@@ -252,9 +279,10 @@ const BlackjackPage = ({ socket }) => {
       await new Promise((r) => setTimeout(r, 550));
     }
     if (cur.status === 'completed') {
-      const copy = RESULT_COPY[cur.result];
-      showPopup(copy ? copy.text : 'Hand over', cur.result === 'win' || cur.result === 'blackjack' || cur.result === 'dealer_bust' ? 'error' : 'success');
+      const dealerWon = !['win', 'blackjack', 'dealer_bust', 'push'].includes(cur.result);
+      showPopup(dealerResultMessage(cur), dealerWon ? 'success' : cur.result === 'push' ? 'info' : 'error');
       await fetchInventory();
+      refresh();
     }
   };
 
@@ -265,8 +293,15 @@ const BlackjackPage = ({ socket }) => {
   }
 
   const me = user?.id;
-  const waiting = lobby.tables.filter((t) => t.status === 'waiting' && t.creatorId !== me);
-  const viewTable = viewId ? lobby.tables.find((t) => t.id === viewId) || myTable : null;
+  // A completed table stays visible so the result can be read, but it must not
+  // block posting or joining the next one.
+  const activeTable = myTable && myTable.status !== 'completed' ? myTable : null;
+  const waiting = lobby.tables.filter((t) => t.status === 'waiting');
+  const viewTable = viewId
+    ? (myTable && myTable.id === viewId
+      ? myTable
+      : lobby.tables.find((t) => t.id === viewId) || null)
+    : null;
 
   return (
     <div className="cf-page bj-page">
@@ -292,8 +327,8 @@ const BlackjackPage = ({ socket }) => {
           <button
             className="cf-topbar-btn cf-topbar-btn-gold"
             onClick={openCreate}
-            disabled={inventoryLoading || !!myTable}
-            title={myTable ? 'Finish your current table first' : 'Post a new blackjack bet'}
+            disabled={inventoryLoading || !!activeTable}
+            title={activeTable ? 'Finish your current table first' : 'Post a new blackjack bet'}
           >
             <Icon name="plus" size={13} /> Bet Items
           </button>
@@ -307,14 +342,14 @@ const BlackjackPage = ({ socket }) => {
         </div>
       )}
 
-      {myTable && (
+      {activeTable && (
         <div className="bj-active-note">
           <Icon name="target" size={14} />
           <span>
-            You have a table open &mdash; you are the {myTable.viewerIsCreator ? 'dealer' : 'player'}.
-            {myTable.status === 'waiting' ? ' Waiting for someone to join.' : ' Finish the hand to start another.'}
+            You have a table open &mdash; you are the {activeTable.viewerIsCreator ? 'dealer' : 'player'}.
+            {activeTable.status === 'waiting' ? ' Waiting for someone to join.' : ' Finish the hand to start another.'}
           </span>
-          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewId(myTable.id)}>Open</button>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setViewId(activeTable.id)}>Open</button>
         </div>
       )}
 
@@ -360,8 +395,23 @@ const BlackjackPage = ({ socket }) => {
             </div>
 
             <div className="cf-row-action">
-              {!myTable && <button className="cf-join-btn" onClick={() => openJoin(t)}>Join</button>}
-              {myTable && <span className="cf-row-cap">One table at a time</span>}
+              {t.creatorId === me ? (
+                <div className="cf-row-own-btns">
+                  <button
+                    className="cf-bot-btn"
+                    onClick={() => callHouse(t)}
+                    disabled={busy === 'bot'}
+                    title="Add the house bot to this table"
+                  >
+                    {busy === 'bot' ? '...' : 'Bot'}
+                  </button>
+                  <button className="cf-view-btn" onClick={() => setViewId(t.id)}>View</button>
+                </div>
+              ) : !activeTable ? (
+                <button className="cf-join-btn" onClick={() => openJoin(t)}>Join</button>
+              ) : (
+                <span className="cf-row-cap">One table at a time</span>
+              )}
             </div>
           </div>
         )) : (
@@ -369,7 +419,7 @@ const BlackjackPage = ({ socket }) => {
             <div className="cf-empty-icon"><Icon name="card" size={34} /></div>
             <p>No open blackjack bets</p>
             <p className="cf-empty-sub">Post an item wager to deal against it!</p>
-            <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreate} disabled={!!myTable}>
+            <button className="cf-topbar-btn cf-topbar-btn-gold" onClick={openCreate} disabled={!!activeTable}>
               <Icon name="plus" size={13} /> Create Blackjack Bet
             </button>
           </div>
@@ -389,9 +439,12 @@ const BlackjackPage = ({ socket }) => {
         const pBJ = pHand.length === 2 && viewTable.playerValue === 21;
         const dBJ = dHand.length === 2 && viewTable.dealerValue === 21;
         const result = finished ? RESULT_COPY[viewTable.result] : null;
+        const resultTone = result && iDeal && viewTable.result !== 'push'
+          ? (['win', 'blackjack', 'dealer_bust'].includes(viewTable.result) ? 'loss' : 'win')
+          : result?.tone;
         const iWon = finished && iPlay
           && ['win', 'blackjack', 'dealer_bust'].includes(viewTable.result);
-        const iLost = finished && iPlay && ['loss', 'bust'].includes(viewTable.result);
+        const iLost = finished && iPlay && ['loss', 'bust', 'dealer_blackjack'].includes(viewTable.result);
         const botTurn = inHand && pSeat.isBot;
         // A bot is always driven from the dealer's screen, since the bot has
         // no way to press its own buttons.
@@ -458,9 +511,11 @@ const BlackjackPage = ({ socket }) => {
                 />
 
                 {result && (
-                  <div className={`bj-result ${result.tone}`}>
+                  <div className={`bj-result ${resultTone}`}>
                     <strong>{iDeal && result.tone !== 'push'
-                      ? (result.tone === 'win' ? 'The player beat you' : 'You take the pot')
+                      ? (['win', 'blackjack', 'dealer_bust'].includes(viewTable.result)
+                        ? 'The player beat you'
+                        : 'You take the pot')
                       : result.text}</strong>
                     {iPlay && viewTable.profit > 0 && <span>+{viewTable.profit.toLocaleString()} AMP</span>}
                     {iPlay && viewTable.profit < 0 && <span>{viewTable.profit.toLocaleString()} AMP</span>}
@@ -472,6 +527,10 @@ const BlackjackPage = ({ socket }) => {
                         3:2 bonus rounded down {viewTable.bonusShortfall.toLocaleString()} by item value
                       </span>
                     )}
+                    {iDeal && viewTable.dealerProfit > 0 && <span>+{viewTable.dealerProfit.toLocaleString()} AMP</span>}
+                    {iDeal && viewTable.dealerProfit < 0 && <span>{viewTable.dealerProfit.toLocaleString()} AMP</span>}
+                    {iDeal && viewTable.tax > 0 && <span className="bj-tax">includes {viewTable.tax.toLocaleString()} tax</span>}
+                    {iDeal && viewTable.rake > 0 && <span className="bj-tax">+ {viewTable.rake.toLocaleString()} house edge</span>}
                   </div>
                 )}
 
@@ -483,7 +542,7 @@ const BlackjackPage = ({ socket }) => {
                         : 'Waiting for the hand to be dealt.'}
                     </div>
                     {iDeal && (
-                      <button className="cf-topbar-btn" onClick={callHouse} disabled={busy === 'bot'}>
+                      <button className="cf-topbar-btn" onClick={() => callHouse()} disabled={busy === 'bot'}>
                         <Icon name="target" size={13} /> Deal against the house
                       </button>
                     )}
