@@ -49,11 +49,12 @@
     radial-gradient(38% 42% at 22% 24%, var(--ambient-jade), transparent 68%),
     radial-gradient(30% 36% at 76% 18%, var(--ambient-gold), transparent 70%),
     radial-gradient(36% 34% at 58% 88%, var(--ambient-deep), transparent 72%);
-  filter: blur(52px);
+  /* The radial gradients are already smooth; blurring this full-screen layer
+     forced the compositor to rasterise a huge filtered texture on every
+     paint. The aurora itself still moves, but only as a transform. */
   opacity: 0.88;
   transform-origin: 50% 50%;
   animation: prestige-aurora 34s var(--ease-soft) infinite alternate;
-  will-change: transform, opacity;
 }
 
 .ambient-beam {
@@ -71,18 +72,12 @@
     transparent 100%
   );
   transform: rotate(-27deg);
-  filter: blur(22px);
   opacity: 0.78;
-  animation: prestige-beam 26s ease-in-out infinite alternate;
-  will-change: transform, opacity;
 }
 
 .ambient-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(76px);
-  mix-blend-mode: screen;
-  will-change: transform;
 }
 
 .ambient-orb-a {
@@ -91,7 +86,6 @@
   width: 62vw;
   height: 62vw;
   background: radial-gradient(circle, rgba(12, 201, 163, 0.3) 0%, rgba(12, 201, 163, 0) 68%);
-  animation: prestige-orb-a 30s ease-in-out infinite alternate;
 }
 
 .ambient-orb-b {
@@ -100,7 +94,6 @@
   width: 56vw;
   height: 56vw;
   background: radial-gradient(circle, rgba(246, 196, 90, 0.2) 0%, rgba(246, 196, 90, 0) 70%);
-  animation: prestige-orb-b 38s ease-in-out infinite alternate;
 }
 
 .ambient-orb-c {
@@ -109,7 +102,6 @@
   width: 56vw;
   height: 56vw;
   background: radial-gradient(circle, rgba(8, 155, 126, 0.2) 0%, rgba(8, 155, 126, 0) 70%);
-  animation: prestige-orb-c 44s ease-in-out infinite alternate;
 }
 
 /* Two long slabs of light, angled across the room. They are the thing the eye
@@ -119,16 +111,13 @@
   top: -38%;
   width: 18vw;
   height: 176vh;
-  filter: blur(34px);
   opacity: 0.7;
-  will-change: transform;
 }
 
 .ambient-shard-a {
   left: 14%;
   background: linear-gradient(180deg, transparent, rgba(103, 255, 214, 0.055) 38%, transparent 82%);
   transform: rotate(27deg);
-  animation: prestige-shard-a 32s ease-in-out infinite alternate;
 }
 
 .ambient-shard-b {
@@ -136,7 +125,6 @@
   width: 12vw;
   background: linear-gradient(180deg, transparent, rgba(246, 196, 90, 0.05) 44%, transparent 84%);
   transform: rotate(-22deg);
-  animation: prestige-shard-b 38s ease-in-out infinite alternate;
 }
 
 /* Orbital engraving in the top-right corner. Three incomplete rings turn at
@@ -149,8 +137,6 @@
   width: 108vmax;
   height: 108vmax;
   opacity: 0.8;
-  animation: prestige-orbit 120s linear infinite;
-  will-change: transform;
 }
 
 .ambient-rings i {
@@ -169,14 +155,12 @@
 .ambient-rings i:nth-child(2) {
   inset: 9%;
   border: 1px dashed rgba(246, 196, 90, 0.12);
-  animation: prestige-orbit 80s linear infinite reverse;
 }
 
 .ambient-rings i:nth-child(3) {
   inset: 20%;
   border: 1px solid rgba(103, 255, 214, 0.07);
   border-top-color: rgba(246, 196, 90, 0.2);
-  animation: prestige-orbit 54s linear infinite;
 }
 
 /* A perspective floor. It moves slowly toward the viewer, so the bottom of a
@@ -196,7 +180,6 @@
   mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 70%, transparent 100%);
   -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 34%, #000 70%, transparent 100%);
   opacity: 0.42;
-  animation: prestige-horizon 18s linear infinite;
 }
 
 .ambient-grid {
@@ -223,9 +206,6 @@
   background: rgba(219, 255, 244, 0.94);
   box-shadow: 0 0 9px rgba(103, 255, 214, 0.7);
   opacity: var(--star-opacity, 0.4);
-  animation-name: prestige-twinkle;
-  animation-timing-function: ease-in-out;
-  animation-iteration-count: infinite;
 }
 
 /* A single survey line crossing the room. Very slow, very faint - it is the
@@ -240,29 +220,6 @@
   box-shadow: 0 0 34px 10px rgba(12, 201, 163, 0.06);
   opacity: 0.55;
   animation: prestige-scan 26s ease-in-out infinite alternate;
-  will-change: transform;
-}
-
-.ambient-spotlight {
-  position: absolute;
-  left: var(--spot-x, 50%);
-  top: var(--spot-y, 24%);
-  width: min(920px, 90vw);
-  height: min(920px, 90vw);
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(103, 255, 214, 0.11) 0%, rgba(12, 201, 163, 0.035) 34%, transparent 66%);
-  transform: translate(-50%, -50%);
-  opacity: var(--spot-o, 0);
-  transition: opacity 0.55s var(--ease-1);
-  will-change: left, top;
-}
-
-.ambient-noise {
-  position: absolute;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E");
-  opacity: 0.022;
-  mix-blend-mode: overlay;
 }
 
 .ambient-vignette {
@@ -311,13 +268,11 @@ html[data-theme] .sidebar {
 
 html[data-theme] .sidebar {
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--bg1) 88%, transparent) 0%, color-mix(in srgb, var(--bg0) 92%, transparent) 100%) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--bg1) 96%, transparent) 0%, color-mix(in srgb, var(--bg0) 98%, transparent) 100%) !important;
   border-bottom: 1px solid var(--line-soft) !important;
   box-shadow:
     0 18px 54px -26px rgba(0, 0, 0, 0.92),
     inset 0 -1px 0 rgba(255, 255, 255, 0.025) !important;
-  backdrop-filter: blur(22px) saturate(135%);
-  -webkit-backdrop-filter: blur(22px) saturate(135%);
 }
 
 html[data-theme] .sidebar::after {
@@ -473,13 +428,11 @@ html[data-theme] .logout-btn:hover {
 html[data-theme] .header,
 html[data-theme] .header-new {
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--bg1) 86%, transparent), color-mix(in srgb, var(--bg0) 90%, transparent)) !important;
+    linear-gradient(180deg, color-mix(in srgb, var(--bg1) 96%, transparent), color-mix(in srgb, var(--bg0) 98%, transparent)) !important;
   border-bottom: 1px solid var(--line-soft) !important;
   box-shadow:
     0 22px 48px -32px rgba(0, 0, 0, 0.9),
     inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
 }
 
 html[data-theme] .header-page-icon {
@@ -610,7 +563,6 @@ html[data-theme] .notification-dropdown {
     color-mix(in srgb, var(--panel) 96%, transparent) !important;
   border-color: var(--line) !important;
   box-shadow: 0 28px 70px -24px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.045) !important;
-  backdrop-filter: blur(20px) saturate(130%);
 }
 
 html[data-theme] .notification-dd-header {
@@ -793,12 +745,15 @@ html[data-theme] .route-loading-text {
 }
 
 html[data-theme] .page-content {
-  animation: prestige-page-in 0.48s var(--ease-3) backwards;
+  animation: prestige-page-in 0.3s var(--ease-3) backwards;
 }
 
+/* No filter here: blurring the whole page for a third of a second is one of
+   the most expensive things a route transition can do. A short lift is enough
+   to signal the change without rasterising every layer twice. */
 @keyframes prestige-page-in {
-  from { opacity: 0; transform: translateY(12px); filter: blur(3px); }
-  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ============================================================================
@@ -889,8 +844,6 @@ html[data-theme] .cf-topbar {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 18px 44px -32px rgba(0, 0, 0, 0.9) !important;
-  backdrop-filter: blur(20px) saturate(130%);
-  -webkit-backdrop-filter: blur(20px) saturate(130%);
 }
 
 html[data-theme] .elev-2,
@@ -2144,9 +2097,12 @@ html[data-theme] .leaderboard-overlay,
 html[data-theme] .cp-overlay {
   background:
     radial-gradient(640px 380px at 50% 36%, color-mix(in srgb, var(--acc) 8%, transparent), transparent 72%),
-    rgba(2, 5, 10, 0.78) !important;
-  backdrop-filter: blur(12px) saturate(120%);
-  -webkit-backdrop-filter: blur(12px) saturate(120%);
+    rgba(2, 5, 10, 0.84) !important;
+  /* A full-screen backdrop blur has to re-read the page behind it every time
+     anything moves. The scrim already separates the dialog; keeping the blur
+     only made opening a modal stutter on integrated GPUs. */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html[data-theme] .wm-modal,
@@ -2166,8 +2122,8 @@ html[data-theme] .cp {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 50px 130px -42px rgba(0, 0, 0, 0.96) !important;
-  backdrop-filter: blur(24px) saturate(130%);
-  -webkit-backdrop-filter: blur(24px) saturate(130%);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html[data-theme] .modal.enhanced > .modal-header,
@@ -2219,8 +2175,7 @@ html[data-theme] .modal-footer {
   border-top-color: var(--line-soft) !important;
   background:
     linear-gradient(0deg, rgba(255, 255, 255, 0.02), transparent),
-    color-mix(in srgb, var(--bg1) 76%, transparent) !important;
-  backdrop-filter: blur(16px);
+    color-mix(in srgb, var(--bg1) 96%, transparent) !important;
 }
 
 html[data-theme] .toast-stack {
@@ -2231,11 +2186,10 @@ html[data-theme] .toast {
   border-color: var(--line) !important;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.045), transparent 50%),
-    color-mix(in srgb, var(--panel) 92%, transparent) !important;
+    color-mix(in srgb, var(--panel) 97%, transparent) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.06),
     0 24px 60px -28px rgba(0, 0, 0, 0.92) !important;
-  backdrop-filter: blur(18px);
 }
 
 html[data-theme] .toast-icon {
@@ -2489,56 +2443,11 @@ html[data-theme] .request-state p {
   100% { transform: rotate(3deg) scale(1.06) translate3d(1.5%, -1%, 0); opacity: 0.8; }
 }
 
-@keyframes prestige-beam {
-  0% { transform: rotate(-27deg) translate3d(-4%, -2%, 0); opacity: 0.45; }
-  100% { transform: rotate(-23deg) translate3d(9%, 3%, 0); opacity: 0.82; }
-}
-
-@keyframes prestige-shard-a {
-  0% { transform: rotate(27deg) translate3d(-3%, -1%, 0); opacity: 0.42; }
-  100% { transform: rotate(23deg) translate3d(7%, 2%, 0); opacity: 0.78; }
-}
-
-@keyframes prestige-shard-b {
-  0% { transform: rotate(-22deg) translate3d(4%, 1%, 0); opacity: 0.36; }
-  100% { transform: rotate(-17deg) translate3d(-6%, -2%, 0); opacity: 0.66; }
-}
-
-@keyframes prestige-orbit {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-
-@keyframes prestige-horizon {
-  from { background-position: 0 0, 0 0; }
-  to { background-position: 0 46px, 0 0; }
-}
-
 @keyframes prestige-scan {
   0% { transform: translateX(0); opacity: 0; }
   12% { opacity: 0.55; }
   88% { opacity: 0.55; }
   100% { transform: translateX(88vw); opacity: 0; }
-}
-
-@keyframes prestige-orb-a {
-  0% { transform: translate3d(-3%, -2%, 0) scale(1); }
-  100% { transform: translate3d(8%, 6%, 0) scale(1.12); }
-}
-
-@keyframes prestige-orb-b {
-  0% { transform: translate3d(2%, 4%, 0) scale(1.04); }
-  100% { transform: translate3d(-7%, -5%, 0) scale(0.94); }
-}
-
-@keyframes prestige-orb-c {
-  0% { transform: translate3d(-4%, 2%, 0) scale(0.96); }
-  100% { transform: translate3d(6%, -4%, 0) scale(1.1); }
-}
-
-@keyframes prestige-twinkle {
-  0%, 100% { opacity: calc(var(--star-opacity, 0.4) * 0.45); transform: scale(0.86); }
-  50% { opacity: var(--star-opacity, 0.4); transform: scale(1.12); }
 }
 
 @keyframes prestige-navline {
@@ -2563,7 +2472,6 @@ html[data-theme] .request-state p {
 @media (max-width: 1100px) {
   .ambient-orb {
     opacity: 0.72;
-    filter: blur(64px);
   }
 
   html[data-theme] .header,
@@ -2628,8 +2536,6 @@ html[data-theme] .request-state p {
     box-shadow:
       0 14px 40px -24px rgba(0, 0, 0, 0.95),
       inset 0 -1px 0 rgba(255, 255, 255, 0.025) !important;
-    backdrop-filter: blur(18px) saturate(125%);
-    -webkit-backdrop-filter: blur(18px) saturate(125%);
   }
 
   html[data-theme] .chat-column {
@@ -2674,8 +2580,6 @@ html[data-theme] .request-state p {
   html[data-theme] .leaderboard-overlay,
   html[data-theme] .cp-overlay {
     padding: 10px !important;
-    backdrop-filter: blur(8px) saturate(115%);
-    -webkit-backdrop-filter: blur(8px) saturate(115%);
   }
 
   html[data-theme] .jp-pot-value {
@@ -2993,7 +2897,6 @@ html[data-theme] .header-new::after {
   .ambient-horizon,
   .ambient-scan,
   .ambient-stars i,
-  .ambient-spotlight,
   html[data-theme] .sidebar::after,
   html[data-theme] .brand-live > span,
   html[data-theme] .online-dot,
@@ -3005,13 +2908,8 @@ html[data-theme] .header-new::after {
   html[data-theme] .boot-progress > span,
   html[data-theme] .route-progress > span,
   html[data-theme] .route-loader-ring,
-  html[data-theme] .route-loader-core,
-  .ambient-spotlight {
+  html[data-theme] .route-loader-core {
     animation: none !important;
-  }
-
-  .ambient-spotlight {
-    display: none;
   }
 
   html[data-theme] .page-content {

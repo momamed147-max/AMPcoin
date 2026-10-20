@@ -1004,8 +1004,8 @@ html[data-theme] .cf-list-end {
 
 html[data-theme] .cf-modal-overlay {
   background: rgba(1, 8, 6, 0.82);
-  backdrop-filter: blur(9px) saturate(120%);
-  -webkit-backdrop-filter: blur(9px) saturate(120%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 html[data-theme] .cf-view-modal {

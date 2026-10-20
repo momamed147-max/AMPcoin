@@ -67,7 +67,7 @@
   filter: blur(10px);
   opacity: 0.3;
   transform: scale(0.8);
-  animation: coin-aura 1.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: coin-aura 1.15s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   pointer-events: none;
 }
 
@@ -86,7 +86,7 @@
   margin-left: -39%;
   border-radius: 50%;
   background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.66), rgba(0, 0, 0, 0) 72%);
-  animation: coin-shadow 1.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation: coin-shadow 1.15s cubic-bezier(0.2, 0.7, 0.2, 1) both;
   transform-origin: center;
   pointer-events: none;
 }
@@ -101,12 +101,12 @@
   will-change: transform;
 }
 
-/* 1.9s: a fast release, a long hang at the top, then a short settle with one
-   bounce. The previous toss read as a loading spinner because it rotated at a
-   near-constant speed and never left the ground. */
+/* 1.15s: a fast release, a hang at the top, then a short settle with one
+   bounce. The old 1.9s toss looked dramatic but made every bet wait on it;
+   the same arc at nearly half the time reads as a snap, not a spinner. */
 .coin-flip-inner.coin-spinning {
-  animation: coin-toss 1.9s cubic-bezier(0.18, 0.72, 0.2, 1) both;
-  -webkit-animation: coin-toss 1.9s cubic-bezier(0.18, 0.72, 0.2, 1) both;
+  animation: coin-toss 1.15s cubic-bezier(0.18, 0.72, 0.2, 1) both;
+  -webkit-animation: coin-toss 1.15s cubic-bezier(0.18, 0.72, 0.2, 1) both;
 }
 
 /* ---------- Impact ---------- */
@@ -124,7 +124,7 @@
   box-shadow: 0 0 18px var(--spark-soft);
   opacity: 0;
   transform: translateZ(0) scale(0.35);
-  animation: coin-impact 1.9s cubic-bezier(0.16, 0.84, 0.28, 1) both;
+  animation: coin-impact 1.15s cubic-bezier(0.16, 0.84, 0.28, 1) both;
   pointer-events: none;
 }
 
@@ -148,7 +148,7 @@
   opacity: 0;
   transform: rotate(calc(var(--spark) * 30deg)) translateY(-6px) scaleY(0.25);
   transform-origin: 50% 100%;
-  animation: coin-spark 1.9s cubic-bezier(0.16, 0.84, 0.28, 1) both;
+  animation: coin-spark 1.15s cubic-bezier(0.16, 0.84, 0.28, 1) both;
   animation-delay: calc(var(--spark) * 7ms);
 }
 

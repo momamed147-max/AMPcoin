@@ -255,12 +255,14 @@ const [sortBy] = useState('newest');
     const side = (gameData.result || gameData.sideChosen || gameData.creatorSide || 'heads')
       .toLowerCase() === 'tails' ? 'tails' : 'heads';
     setChipAnim({ id: gameData.id, phase: 'flipping', side });
+    // The coin lands at 1.15s (CoinChip.css). Reveal the result as it settles
+    // instead of leaving the row spinning for three seconds.
     animTimers.current.push(setTimeout(() => {
       setChipAnim((prev) => (prev && prev.id === gameData.id ? { id: gameData.id, phase: 'landed', side } : prev));
-    }, 3000));
+    }, 1200));
     animTimers.current.push(setTimeout(() => {
       setChipAnim((prev) => (prev && prev.id === gameData.id ? null : prev));
-    }, 7000));
+    }, 3200));
   };
 
   useEffect(() => () => { animTimers.current.forEach(clearTimeout); }, []);
